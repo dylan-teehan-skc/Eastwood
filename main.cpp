@@ -8,8 +8,35 @@
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
 
+#include <cryptopp/osrng.h>
+#include <cryptopp/secblock.h>
+#include <cryptopp/xed25519.h>
+
 using namespace std;
 using namespace CryptoPP;
+
+void generateKeyPair() {
+    AutoSeededRandomPool rng;
+    x25519 curve;
+    
+    SecByteBlock privateKey(curve.PrivateKeyLength());
+    SecByteBlock publicKey(curve.PublicKeyLength());
+    
+    curve.GenerateKeyPair(rng, privateKey, publicKey);
+    
+    string privateKeyHex, publicKeyHex;
+    
+    HexEncoder privEncoder(new StringSink(privateKeyHex));
+    privEncoder.Put(privateKey, privateKey.size());
+    privEncoder.MessageEnd();
+    
+    HexEncoder pubEncoder(new StringSink(publicKeyHex));
+    pubEncoder.Put(publicKey, publicKey.size());
+    pubEncoder.MessageEnd();
+    
+    cout << "X25519 Private Key: " << privateKeyHex << endl;
+    cout << "X25519 Public Key: " << publicKeyHex << endl;
+}
 
 int main(int argc, char *argv[]) {
     CryptoPP::byte password[] = "password";
@@ -33,6 +60,8 @@ int main(int argc, char *argv[]) {
     encoder.MessageEnd();
     
     cout << "HKDF Result: " << result << endl;
+
+    generateKeyPair();
 
     return 0;
 }
