@@ -18,14 +18,56 @@ find_library(CRYPTOPP_LIBRARY
     NO_DEFAULT_PATH
 )
 
+# Find libsodium
+find_path(SODIUM_INCLUDE_DIR sodium.h
+    PATHS /opt/homebrew/include
+    /usr/local/include
+    /usr/include
+)
+find_library(SODIUM_LIBRARY
+    NAMES sodium libsodium
+    PATHS /opt/homebrew/lib
+    /usr/local/lib
+    /usr/lib
+)
+
+if(NOT SODIUM_INCLUDE_DIR OR NOT SODIUM_LIBRARY)
+    message(FATAL_ERROR "libsodium not found. Please install it using your package manager.")
+endif()
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-add_executable(Eastwood main.cpp)
-target_include_directories(Eastwood PRIVATE ${CRYPTOPP_INCLUDE_DIR})
+# Source files in cryptography directory
+set(CRYPTO_SOURCES
+    cryptography/DoubleRatchet.cpp
+    cryptography/x3dh.cpp
+    cryptography/CommunicationSession.cpp
+)
+
+# Header files in cryptography directory
+set(CRYPTO_HEADERS
+    cryptography/DoubleRatchet.h
+    cryptography/x3dh.h
+    cryptography/CommunicationSession.h
+)
+
+add_executable(Eastwood 
+    main.cpp
+    ${CRYPTO_SOURCES}
+    ${CRYPTO_HEADERS}
+)
+
+target_include_directories(Eastwood PRIVATE 
+    ${CRYPTOPP_INCLUDE_DIR}
+    ${SODIUM_INCLUDE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 target_link_libraries(Eastwood PRIVATE 
     Qt6::Widgets
     ${CRYPTOPP_LIBRARY}
+    ${SODIUM_LIBRARY}
 )
 
