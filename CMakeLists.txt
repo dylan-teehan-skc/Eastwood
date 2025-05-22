@@ -11,7 +11,7 @@ set(CMAKE_AUTOUIC ON)
 
 # Find Qt
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets UiTools)
-
+find_package(OpenSSL REQUIRED)
 # Find libsodium
 find_path(SODIUM_INCLUDE_DIR sodium.h
     PATHS /opt/homebrew/include
@@ -52,6 +52,10 @@ set(CRYPTO_HEADERS
         src/key_exchange/x3dh.h
         src/key_exchange/DeviceCommunicationSession.h
         src/key_exchange/utils.h
+        src/libraries/BaseClient.h
+        src/libraries/HTTPSClient.h
+        src/libraries/BaseClient.cpp
+        src/libraries/HTTPSClient.cpp
 )
 
 # Create executable
@@ -74,4 +78,6 @@ target_link_libraries(Eastwood PRIVATE
     Qt6::Widgets
     Qt6::UiTools
     ${SODIUM_LIBRARY}
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )

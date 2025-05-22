@@ -78,3 +78,5 @@ target_wrapper.*
 scripts/
 debug/
 saves/
+src/ui/windows/login/login_ui.py
+src/ui/windows/register/register_ui.py
