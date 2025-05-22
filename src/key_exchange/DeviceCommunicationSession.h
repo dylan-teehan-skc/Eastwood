@@ -9,11 +9,20 @@
 #include <sodium.h>
 #include <memory>
 
-class DeviceSendingCommunicationSession {
-private:
-    unsigned char* shared_secret;
+class DeviceCommunicationSession {
+public:
+    DeviceCommunicationSession();
+    virtual ~DeviceCommunicationSession();
+    virtual const unsigned char* getSharedSecret() const = 0;
+    virtual DoubleRatchet* getRatchet() = 0;
+    unsigned char* getDeviceSessionId();
+protected:
+    unsigned char* device_session_id;
     std::unique_ptr<DoubleRatchet> ratchet;
+    unsigned char* shared_secret;
+};
 
+class DeviceSendingCommunicationSession: public DeviceCommunicationSession {
 public:
     DeviceSendingCommunicationSession(
         const unsigned char* device_key_public,
@@ -26,18 +35,12 @@ public:
         const unsigned char* recipient_signed_prekey_signature,
         const unsigned char* recipient_ed25519_device_key_public);
     
-    ~DeviceSendingCommunicationSession();
-    
-    const unsigned char* getSharedSecret() const;
-    
-    DoubleRatchet* getRatchet();
+    ~DeviceSendingCommunicationSession() override;
+    const unsigned char* getSharedSecret() const override;
+    DoubleRatchet* getRatchet() override;
 };
 
-class DeviceReceivingCommunicationSession {
-private:
-    unsigned char* shared_secret;
-    std::unique_ptr<DoubleRatchet> ratchet;
-
+class DeviceReceivingCommunicationSession: public DeviceCommunicationSession {
 public:
     DeviceReceivingCommunicationSession(
         const unsigned char* initiator_device_key_public,
@@ -46,14 +49,11 @@ public:
         const unsigned char* device_key_private,
         const unsigned char* signed_prekey_public,
         const unsigned char* signed_prekey_private,
-        const unsigned char* onetime_prekey_public,
         const unsigned char* onetime_prekey_private);
     
-    ~DeviceReceivingCommunicationSession();
-    
-    const unsigned char* getSharedSecret() const;
-    
-    DoubleRatchet* getRatchet();
+    ~DeviceReceivingCommunicationSession() override;
+    const unsigned char* getSharedSecret() const override;
+    DoubleRatchet* getRatchet() override;
 };
 
 #endif //COMMUNICATIONSESSION_H
