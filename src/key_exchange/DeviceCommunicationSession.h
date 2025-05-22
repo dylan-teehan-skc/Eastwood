@@ -9,47 +9,47 @@
 #include <sodium.h>
 #include <memory>
 
-class SendingCommunicationSession {
+class DeviceSendingCommunicationSession {
 private:
     unsigned char* shared_secret;
     std::unique_ptr<DoubleRatchet> ratchet;
 
 public:
-    SendingCommunicationSession(
-        const unsigned char* identity_key_public,
-        const unsigned char* identity_key_private,
+    DeviceSendingCommunicationSession(
+        const unsigned char* device_key_public,
+        const unsigned char* device_key_private,
         const unsigned char* ephemeral_key_public,
         const unsigned char* ephemeral_key_private,
-        const unsigned char* recipient_identity_key_public,
+        const unsigned char* recipient_device_key_public,
         const unsigned char* recipient_signed_prekey_public,
         const unsigned char* recipient_onetime_prekey_public,
         const unsigned char* recipient_signed_prekey_signature,
-        const unsigned char* recipient_ed25519_identity_key_public);
+        const unsigned char* recipient_ed25519_device_key_public);
     
-    ~SendingCommunicationSession();
+    ~DeviceSendingCommunicationSession();
     
     const unsigned char* getSharedSecret() const;
     
     DoubleRatchet* getRatchet();
 };
 
-class ReceivingCommunicationSession {
+class DeviceReceivingCommunicationSession {
 private:
     unsigned char* shared_secret;
     std::unique_ptr<DoubleRatchet> ratchet;
 
 public:
-    ReceivingCommunicationSession(
-        const unsigned char* initiator_identity_key_public,
+    DeviceReceivingCommunicationSession(
+        const unsigned char* initiator_device_key_public,
         const unsigned char* initiator_ephemeral_key_public,
-        const unsigned char* identity_key_public,
-        const unsigned char* identity_key_private,
+        const unsigned char* device_key_public,
+        const unsigned char* device_key_private,
         const unsigned char* signed_prekey_public,
         const unsigned char* signed_prekey_private,
         const unsigned char* onetime_prekey_public,
         const unsigned char* onetime_prekey_private);
     
-    ~ReceivingCommunicationSession();
+    ~DeviceReceivingCommunicationSession();
     
     const unsigned char* getSharedSecret() const;
     
