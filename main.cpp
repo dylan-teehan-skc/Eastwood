@@ -13,114 +13,228 @@ std::string bin2hex(const unsigned char* bin, size_t len) {
     return oss.str();
 }
 
-void test_communication_sessions() {
-    std::cout << "\n===== TESTING COMMUNICATION SESSIONS =====" << std::endl;
+// Print details of a message header
+void print_message_header(const MessageHeader& header) {
+    std::cout << "  Public key: " << bin2hex(header.dh_public, crypto_kx_PUBLICKEYBYTES) << std::endl;
+    std::cout << "  Message index: " << header.message_index << std::endl;
+    std::cout << "  Previous chain length: " << header.prev_chain_length << std::endl;
+}
 
-    // Generate identity and ephemeral keys for Alice (initiator)
-    unsigned char alice_identity_priv[crypto_box_SECRETKEYBYTES];
-    unsigned char alice_identity_pub[crypto_box_PUBLICKEYBYTES];
-    crypto_box_keypair(alice_identity_pub, alice_identity_priv);
+void test_double_ratchet() {
+    std::cout << "\n===== COMPREHENSIVE DOUBLE RATCHET TESTING WITH COMMUNICATION SESSIONS =====" << std::endl;
     
-    unsigned char alice_ephemeral_priv[crypto_box_SECRETKEYBYTES];
-    unsigned char alice_ephemeral_pub[crypto_box_PUBLICKEYBYTES];
-    crypto_box_keypair(alice_ephemeral_pub, alice_ephemeral_priv);
+    // Generate keypairs for Alice and Bob
+    unsigned char alice_identity_public[crypto_box_PUBLICKEYBYTES];
+    unsigned char alice_identity_private[crypto_box_SECRETKEYBYTES];
+    crypto_box_keypair(alice_identity_public, alice_identity_private);
     
-    // Generate identity and prekeys for Bob (responder)
-    unsigned char bob_identity_priv[crypto_box_SECRETKEYBYTES];
-    unsigned char bob_identity_pub[crypto_box_PUBLICKEYBYTES];
-    crypto_box_keypair(bob_identity_pub, bob_identity_priv);
+    unsigned char alice_ephemeral_public[crypto_box_PUBLICKEYBYTES];
+    unsigned char alice_ephemeral_private[crypto_box_SECRETKEYBYTES];
+    crypto_box_keypair(alice_ephemeral_public, alice_ephemeral_private);
     
-    unsigned char bob_signed_prekey_priv[crypto_box_SECRETKEYBYTES]; 
-    unsigned char bob_signed_prekey_pub[crypto_box_PUBLICKEYBYTES];
-    crypto_box_keypair(bob_signed_prekey_pub, bob_signed_prekey_priv);
+    unsigned char bob_identity_public[crypto_box_PUBLICKEYBYTES];
+    unsigned char bob_identity_private[crypto_box_SECRETKEYBYTES];
+    crypto_box_keypair(bob_identity_public, bob_identity_private);
     
-    unsigned char bob_onetime_prekey_priv[crypto_box_SECRETKEYBYTES];
-    unsigned char bob_onetime_prekey_pub[crypto_box_PUBLICKEYBYTES];
-    crypto_box_keypair(bob_onetime_prekey_pub, bob_onetime_prekey_priv);
+    unsigned char bob_signed_prekey_public[crypto_box_PUBLICKEYBYTES];
+    unsigned char bob_signed_prekey_private[crypto_box_SECRETKEYBYTES];
+    crypto_box_keypair(bob_signed_prekey_public, bob_signed_prekey_private);
     
-    // Generate Ed25519 keypair for Bob's signature
-    unsigned char bob_ed25519_priv[crypto_sign_SECRETKEYBYTES];
-    unsigned char bob_ed25519_pub[crypto_sign_PUBLICKEYBYTES];
-    crypto_sign_keypair(bob_ed25519_pub, bob_ed25519_priv);
+    unsigned char bob_onetime_prekey_public[crypto_box_PUBLICKEYBYTES];
+    unsigned char bob_onetime_prekey_private[crypto_box_SECRETKEYBYTES];
+    crypto_box_keypair(bob_onetime_prekey_public, bob_onetime_prekey_private);
     
-    // Sign Bob's signed prekey using Ed25519 key
-    unsigned char bob_signed_prekey_sig[crypto_sign_BYTES];
+    // Generate Bob's Ed25519 identity key for signature verification
+    unsigned char bob_ed25519_public[crypto_sign_PUBLICKEYBYTES];
+    unsigned char bob_ed25519_private[crypto_sign_SECRETKEYBYTES];
+    crypto_sign_keypair(bob_ed25519_public, bob_ed25519_private);
+    
+    // Sign Bob's signed prekey
+    unsigned char bob_signed_prekey_signature[crypto_sign_BYTES];
     crypto_sign_detached(
-        bob_signed_prekey_sig,
-        nullptr,
-        bob_signed_prekey_pub,
-        crypto_box_PUBLICKEYBYTES,
-        bob_ed25519_priv
+        bob_signed_prekey_signature, 
+        nullptr, 
+        bob_signed_prekey_public, 
+        crypto_box_PUBLICKEYBYTES, 
+        bob_ed25519_private
     );
     
-    // Print keys for debugging
-    std::cout << "Alice identity key: " << bin2hex(alice_identity_pub, crypto_box_PUBLICKEYBYTES) << std::endl;
-    std::cout << "Alice ephemeral key: " << bin2hex(alice_ephemeral_pub, crypto_box_PUBLICKEYBYTES) << std::endl;
-    std::cout << "Bob identity key: " << bin2hex(bob_identity_pub, crypto_box_PUBLICKEYBYTES) << std::endl;
-    std::cout << "Bob signed prekey: " << bin2hex(bob_signed_prekey_pub, crypto_box_PUBLICKEYBYTES) << std::endl;
-    std::cout << "Bob signed prekey signature: " << bin2hex(bob_signed_prekey_sig, crypto_sign_BYTES) << std::endl;
-    std::cout << "Bob onetime prekey: " << bin2hex(bob_onetime_prekey_pub, crypto_box_PUBLICKEYBYTES) << std::endl;
-    
-    // Create Alice's sending session with all keys passed explicitly
+    // Create communication sessions
     SendingCommunicationSession alice(
-        alice_identity_pub,
-        alice_identity_priv,
-        alice_ephemeral_pub,
-        alice_ephemeral_priv,
-        bob_identity_pub,
-        bob_signed_prekey_pub,
-        bob_onetime_prekey_pub,
-        bob_signed_prekey_sig,
-        bob_ed25519_pub
+        alice_identity_public,
+        alice_identity_private,
+        alice_ephemeral_public,
+        alice_ephemeral_private,
+        bob_identity_public,
+        bob_signed_prekey_public,
+        bob_onetime_prekey_public,
+        bob_signed_prekey_signature,
+        bob_ed25519_public
     );
     
-    // Create Bob's receiving session with all keys passed explicitly
     ReceivingCommunicationSession bob(
-        alice_identity_pub,
-        alice_ephemeral_pub,
-        bob_identity_pub,
-        bob_identity_priv,
-        bob_signed_prekey_pub,
-        bob_signed_prekey_priv,
-        bob_onetime_prekey_pub,
-        bob_onetime_prekey_priv
+        alice_identity_public,
+        alice_ephemeral_public,
+        bob_identity_public,
+        bob_identity_private,
+        bob_signed_prekey_public,
+        bob_signed_prekey_private,
+        bob_onetime_prekey_public,
+        bob_onetime_prekey_private
     );
     
-    // Verify the shared secrets match
-    std::cout << "\nAlice's shared secret: " << bin2hex(alice.getSharedSecret(), KEY_LEN) << std::endl;
-    std::cout << "Bob's shared secret: " << bin2hex(bob.getSharedSecret(), KEY_LEN) << std::endl;
+    // Get the ratchet objects
+    DoubleRatchet* alice_ratchet = alice.getRatchet();
+    DoubleRatchet* bob_ratchet = bob.getRatchet();
     
-    bool shared_secrets_match = (memcmp(alice.getSharedSecret(), bob.getSharedSecret(), KEY_LEN) == 0);
-    std::cout << "Shared secrets match: " << (shared_secrets_match ? "YES" : "NO") << std::endl;
+    // Array to store message keys for later verification
+    const int NUM_MESSAGES = 10;  // Increased for out-of-order test
+    unsigned char* alice_keys[NUM_MESSAGES];
+    unsigned char* bob_keys[NUM_MESSAGES];
+    MessageHeader alice_headers[NUM_MESSAGES];
+    MessageHeader bob_headers[NUM_MESSAGES];
     
-    // Test Double Ratchet message exchange
-    std::cout << "\n-- Testing Double Ratchet Message Exchange --" << std::endl;
+    // Test multiple messages in the same chain
+    std::cout << "\n--- 1. Multiple messages in the same ratchet chain ---" << std::endl;
+    std::cout << "\nAlice sending 3 messages to Bob:" << std::endl;
     
-    unsigned char* alice_message_key = alice.getRatchet()->message_send();
-    std::cout << "Alice message key: " << bin2hex(alice_message_key, crypto_kdf_KEYBYTES) << std::endl;
-    std::cout << "Alice's new public key: " << bin2hex(alice.getRatchet()->get_public_key(), crypto_kx_PUBLICKEYBYTES) << std::endl;
+    // Alice sends 3 messages on her chain
+    for (int i = 0; i < 3; i++) {
+        std::cout << "\n[Alice → Bob: Message " << (i+1) << "]\n";
+        alice_keys[i] = alice_ratchet->message_send(alice_headers[i]);
+        std::cout << "  Message key: " << bin2hex(alice_keys[i], crypto_kdf_KEYBYTES) << std::endl;
+        print_message_header(alice_headers[i]);
+    }
     
-    unsigned char* bob_message_key = bob.getRatchet()->message_receive(alice.getRatchet()->get_public_key());
-    std::cout << "Bob message key: " << bin2hex(bob_message_key, crypto_kdf_KEYBYTES) << std::endl;
+    // Bob receives 3 messages from Alice
+    std::cout << "\nBob receiving 3 messages from Alice:" << std::endl;
+    for (int i = 0; i < 3; i++) {
+        std::cout << "\n[Bob receives message " << (i+1) << "]\n";
+        bob_keys[i] = bob_ratchet->message_receive(alice_headers[i]);
+        std::cout << "  Message key: " << bin2hex(bob_keys[i], crypto_kdf_KEYBYTES) << std::endl;
+        
+        // Check if the keys match
+        bool keys_match = (memcmp(alice_keys[i], bob_keys[i], crypto_kdf_KEYBYTES) == 0);
+        std::cout << "  Keys match: " << (keys_match ? "YES" : "NO") << std::endl;
+    }
     
-    bool message_keys_match = (memcmp(alice_message_key, bob_message_key, crypto_kdf_KEYBYTES) == 0);
-    std::cout << "Message keys match: " << (message_keys_match ? "YES" : "NO") << std::endl;
+    // Test DH ratchet rotation
+    std::cout << "\n--- 2. DH Ratchet rotation ---" << std::endl;
+    std::cout << "\nBob sending message to Alice (triggers DH ratchet on Alice's side):" << std::endl;
     
-    unsigned char* bob_response_key = bob.getRatchet()->message_send();
-    std::cout << "\nBob response key: " << bin2hex(bob_response_key, crypto_kdf_KEYBYTES) << std::endl;
-    std::cout << "Bob's new public key: " << bin2hex(bob.getRatchet()->get_public_key(), crypto_kx_PUBLICKEYBYTES) << std::endl;
+    // Bob sends a message back (this will cause a DH ratchet when Alice receives it)
+    bob_keys[3] = bob_ratchet->message_send(bob_headers[0]);
+    std::cout << "\n[Bob → Alice: Message 1]\n";
+    std::cout << "  Message key: " << bin2hex(bob_keys[3], crypto_kdf_KEYBYTES) << std::endl;
+    print_message_header(bob_headers[0]);
     
-    unsigned char* alice_response_key = alice.getRatchet()->message_receive(bob.getRatchet()->get_public_key());
-    std::cout << "Alice response key: " << bin2hex(alice_response_key, crypto_kdf_KEYBYTES) << std::endl;
+    // Alice receives Bob's message, which should trigger a DH ratchet
+    std::cout << "\nAlice receiving message from Bob (triggers DH ratchet):" << std::endl;
+    alice_keys[3] = alice_ratchet->message_receive(bob_headers[0]);
+    std::cout << "  Message key: " << bin2hex(alice_keys[3], crypto_kdf_KEYBYTES) << std::endl;
     
-    bool response_keys_match = (memcmp(bob_response_key, alice_response_key, crypto_kdf_KEYBYTES) == 0);
-    std::cout << "Response keys match: " << (response_keys_match ? "YES" : "NO") << std::endl;
+    bool keys_match = (memcmp(bob_keys[3], alice_keys[3], crypto_kdf_KEYBYTES) == 0);
+    std::cout << "  Keys match: " << (keys_match ? "YES" : "NO") << std::endl;
+    
+    // Alice sends a message after DH ratchet
+    std::cout << "\nAlice sending message after DH ratchet:" << std::endl;
+    alice_keys[4] = alice_ratchet->message_send(alice_headers[3]);
+    std::cout << "\n[Alice → Bob: Message after ratchet]\n";
+    std::cout << "  Message key: " << bin2hex(alice_keys[4], crypto_kdf_KEYBYTES) << std::endl;
+    print_message_header(alice_headers[3]);
+    
+    // Bob receives Alice's post-ratchet message
+    std::cout << "\nBob receiving message from Alice (after ratchet):" << std::endl;
+    bob_keys[4] = bob_ratchet->message_receive(alice_headers[3]);
+    std::cout << "  Message key: " << bin2hex(bob_keys[4], crypto_kdf_KEYBYTES) << std::endl;
+    
+    keys_match = (memcmp(alice_keys[4], bob_keys[4], crypto_kdf_KEYBYTES) == 0);
+    std::cout << "  Keys match: " << (keys_match ? "YES" : "NO") << std::endl;
+    
+    // Test out-of-order message handling
+    std::cout << "\n--- 3. Out-of-order message handling ---" << std::endl;
+    
+    // Alice sends 3 more messages
+    std::cout << "\nAlice sending 3 more messages to Bob:" << std::endl;
+    for (int i = 0; i < 3; i++) {
+        int index = 5 + i;
+        std::cout << "\n[Alice → Bob: Message " << (index-4) << "]\n";
+        alice_keys[index] = alice_ratchet->message_send(alice_headers[index-2]);
+        std::cout << "  Message key: " << bin2hex(alice_keys[index], crypto_kdf_KEYBYTES) << std::endl;
+        print_message_header(alice_headers[index-2]);
+    }
+    
+    // Bob receives these messages out of order: 3, 1, 2
+    std::cout << "\nBob receiving messages out of order (3, 1, 2):" << std::endl;
+    
+    // Message 3
+    std::cout << "\n[Bob receives message 3 first]\n";
+    bob_keys[7] = bob_ratchet->message_receive(alice_headers[5]);
+    std::cout << "  Message key: " << bin2hex(bob_keys[7], crypto_kdf_KEYBYTES) << std::endl;
+    keys_match = (memcmp(alice_keys[7], bob_keys[7], crypto_kdf_KEYBYTES) == 0);
+    std::cout << "  Keys match: " << (keys_match ? "YES" : "NO") << std::endl;
+    
+    // Message 1
+    std::cout << "\n[Bob receives message 1 second]\n";
+    bob_keys[5] = bob_ratchet->message_receive(alice_headers[3]);
+    std::cout << "  Message key: " << bin2hex(bob_keys[5], crypto_kdf_KEYBYTES) << std::endl;
+    keys_match = (memcmp(alice_keys[5], bob_keys[5], crypto_kdf_KEYBYTES) == 0);
+    std::cout << "  Keys match: " << (keys_match ? "YES" : "NO") << std::endl;
+    
+    // Message 2
+    std::cout << "\n[Bob receives message 2 last]\n";
+    bob_keys[6] = bob_ratchet->message_receive(alice_headers[4]);
+    std::cout << "  Message key: " << bin2hex(bob_keys[6], crypto_kdf_KEYBYTES) << std::endl;
+    keys_match = (memcmp(alice_keys[6], bob_keys[6], crypto_kdf_KEYBYTES) == 0);
+    std::cout << "  Keys match: " << (keys_match ? "YES" : "NO") << std::endl;
+    
+    // Another direction flip with out-of-order
+    std::cout << "\n--- 4. Direction flip with out-of-order messages ---" << std::endl;
+    
+    // Bob sends 2 messages to Alice
+    std::cout << "\nBob sending 2 messages to Alice:" << std::endl;
+    for (int i = 0; i < 2; i++) {
+        int index = 8 + i;
+        std::cout << "\n[Bob → Alice: Message " << (i+1) << "]\n";
+        bob_keys[index] = bob_ratchet->message_send(bob_headers[i+1]);
+        std::cout << "  Message key: " << bin2hex(bob_keys[index], crypto_kdf_KEYBYTES) << std::endl;
+        print_message_header(bob_headers[i+1]);
+    }
+    
+    // Alice receives these messages out of order: 2, 1
+    std::cout << "\nAlice receiving messages out of order (2, 1):" << std::endl;
+    
+    // Message 2
+    std::cout << "\n[Alice receives message 2 first]\n";
+    alice_keys[9] = alice_ratchet->message_receive(bob_headers[2]);
+    std::cout << "  Message key: " << bin2hex(alice_keys[9], crypto_kdf_KEYBYTES) << std::endl;
+    keys_match = (memcmp(bob_keys[9], alice_keys[9], crypto_kdf_KEYBYTES) == 0);
+    std::cout << "  Keys match: " << (keys_match ? "YES" : "NO") << std::endl;
+    
+    // Message 1
+    std::cout << "\n[Alice receives message 1 second]\n";
+    alice_keys[8] = alice_ratchet->message_receive(bob_headers[1]);
+    std::cout << "  Message key: " << bin2hex(alice_keys[8], crypto_kdf_KEYBYTES) << std::endl;
+    keys_match = (memcmp(bob_keys[8], alice_keys[8], crypto_kdf_KEYBYTES) == 0);
+    std::cout << "  Keys match: " << (keys_match ? "YES" : "NO") << std::endl;
+    
+    // Final verification
+    std::cout << "\n--- Final verification ---" << std::endl;
+    int match_count = 0;
+    for (int i = 0; i < NUM_MESSAGES; i++) {
+        bool match = (memcmp(alice_keys[i], bob_keys[i], crypto_kdf_KEYBYTES) == 0);
+        match_count += match ? 1 : 0;
+        std::cout << "Message " << (i+1) << ": " << (match ? "MATCH" : "MISMATCH") << std::endl;
+    }
+    
+    std::cout << "Total matching keys: " << match_count << "/" << NUM_MESSAGES << std::endl;
+    std::cout << "Double Ratchet test " << (match_count == NUM_MESSAGES ? "PASSED" : "FAILED") << std::endl;
     
     // Clean up
-    delete[] alice_message_key;
-    delete[] bob_message_key;
-    delete[] bob_response_key;
-    delete[] alice_response_key;
+    for (int i = 0; i < NUM_MESSAGES; i++) {
+        delete[] alice_keys[i];
+        delete[] bob_keys[i];
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -129,7 +243,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     
-    test_communication_sessions();
+    test_double_ratchet();
     
     return 0;
 }
