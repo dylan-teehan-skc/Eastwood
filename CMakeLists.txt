@@ -51,6 +51,7 @@ set(CRYPTO_HEADERS
         src/key_exchange/DoubleRatchet.h
         src/key_exchange/x3dh.h
         src/key_exchange/CommunicationSession.h
+        src/key_exchange/utils.h
 )
 
 # Create executable

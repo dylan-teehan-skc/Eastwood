@@ -1,4 +1,5 @@
 #include "DoubleRatchet.h"
+#include "utils.h"
 #include <cstring>
 #include <sodium.h>
 #include <stdexcept>
