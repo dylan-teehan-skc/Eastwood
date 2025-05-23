@@ -248,56 +248,53 @@ bool decrypt_file_with_hex_key(const std::string& encrypted_path, const std::str
     return decrypt_file_and_name(encrypted_path, output_dir, key);
 }
 
-// Takes in binary key
-std::string encrypt_message_given_key(const std::string& message, const std::string& key) {
+// Takes in binary key and message directly
+unsigned char* encrypt_message_given_key(unsigned char* message, size_t message_len, const unsigned char* key) {
     unsigned char nonce[crypto_aead_chacha20poly1305_IETF_NPUBBYTES];
     randombytes_buf(nonce, sizeof nonce);
 
-    std::vector<unsigned char> ciphertext(message.size() + crypto_aead_chacha20poly1305_IETF_ABYTES);
+    std::vector<unsigned char> ciphertext(message_len + crypto_aead_chacha20poly1305_IETF_ABYTES);
     unsigned long long ciphertext_len;
 
     crypto_aead_chacha20poly1305_ietf_encrypt(
         ciphertext.data(), &ciphertext_len,
-        reinterpret_cast<const unsigned char*>(message.data()), message.size(),
-        NULL, 0, NULL, nonce, 
-        reinterpret_cast<const unsigned char*>(key.data()));
+        message, message_len,
+        NULL, 0, NULL, nonce, key);
 
     std::vector<unsigned char> result(sizeof(nonce) + ciphertext_len);
     std::copy(nonce, nonce + sizeof(nonce), result.begin());
     std::copy(ciphertext.data(), ciphertext.data() + ciphertext_len, result.begin() + sizeof(nonce));
 
-    return bin_to_hex(result.data(), result.size());
+    return result.data();
 }
 
-std::string decrypt_message_given_key(const std::string& encrypted_data, const std::string& key) {
-
-    std::vector<unsigned char> binary_data = hex_string_to_binary(encrypted_data);
-    if (binary_data.empty() || binary_data.size() < crypto_aead_chacha20poly1305_IETF_NPUBBYTES) {
-        return "";
+// Takes in binary key and encrypted data directly
+unsigned char* decrypt_message_given_key(const unsigned char* encrypted_data, size_t encrypted_len, const unsigned char* key) {
+    if (encrypted_len < crypto_aead_chacha20poly1305_IETF_NPUBBYTES) {
+        return *"";
     }
-
 
     unsigned char nonce[crypto_aead_chacha20poly1305_IETF_NPUBBYTES];
-    std::copy(binary_data.begin(), binary_data.begin() + sizeof(nonce), nonce);
+    std::copy(encrypted_data, encrypted_data + sizeof(nonce), nonce);
 
-    std::vector<unsigned char> ciphertext(binary_data.begin() + sizeof(nonce), binary_data.end());
-    if (ciphertext.size() < crypto_aead_chacha20poly1305_IETF_ABYTES) {
-        return "";
+    const unsigned char* ciphertext = encrypted_data + sizeof(nonce);
+    size_t ciphertext_len = encrypted_len - sizeof(nonce);
+    
+    if (ciphertext_len < crypto_aead_chacha20poly1305_IETF_ABYTES) {
+        return nullptr;
     }
 
-
-    std::vector<unsigned char> plaintext(ciphertext.size() - crypto_aead_chacha20poly1305_IETF_ABYTES);
+    std::vector<unsigned char> plaintext(ciphertext_len - crypto_aead_chacha20poly1305_IETF_ABYTES);
     unsigned long long plaintext_len;
 
     if (crypto_aead_chacha20poly1305_ietf_decrypt(
             plaintext.data(), &plaintext_len,
             NULL,
-            ciphertext.data(), ciphertext.size(),
+            ciphertext, ciphertext_len,
             NULL, 0,
-            nonce, 
-            reinterpret_cast<const unsigned char*>(key.data())) != 0) {
-        return "";
+            nonce, key) != 0) {
+        return nullptr;
     }
 
-    return std::string(reinterpret_cast<char*>(plaintext.data()), plaintext_len);
+    return plaintext.data();
 }
