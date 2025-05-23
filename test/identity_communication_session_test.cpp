@@ -3,6 +3,7 @@
 #include <sstream>
 #include <sodium.h>
 #include "src/key_exchange/utils.h"
+#include "src/key_exchange/DoubleRatchet.h"
 #include <map>
 
 struct keyBundle {
@@ -264,7 +265,101 @@ void test_multi_device_session_management() {
     std::cout << "\n===== MULTI-DEVICE SESSION MANAGEMENT TEST COMPLETED =====" << std::endl;
 }
 
+void test_message_encryption_decryption() {
+    std::cout << "\n===== TESTING MESSAGE ENCRYPTION AND DECRYPTION =====" << std::endl;
+    
+    // Initialize libsodium
+    if (sodium_init() < 0) {
+        std::cerr << "Failed to initialize libsodium" << std::endl;
+        return;
+    }
+    
+    try {
+        // SETUP: Create devices for Alice and Bob
+        std::cout << "\n--- SETUP: Creating devices ---" << std::endl;
+        
+        // Generate key bundles for Alice and Bob
+        keyBundle alice_bundle = generateKeyBundle(true);
+        keyBundle bob_bundle = generateKeyBundle(true);
+        
+        // Generate X3DH root key (in a real scenario, this would come from X3DH)
+        unsigned char root_key[crypto_kdf_KEYBYTES];
+        randombytes_buf(root_key, crypto_kdf_KEYBYTES);
+        
+        // Initialize DoubleRatchet instances for both parties
+        DoubleRatchet alice_ratchet(
+            root_key,
+            *bob_bundle.signed_prekey_public,
+            *alice_bundle.ephemeral_key_public,
+            *alice_bundle.ephemeral_key_private
+        );
+        
+        DoubleRatchet bob_ratchet(
+            root_key,
+            *alice_bundle.signed_prekey_public,
+            *bob_bundle.ephemeral_key_public,
+            *bob_bundle.ephemeral_key_private
+        );
+        
+        // SCENARIO 1: Alice sends an encrypted message to Bob
+        std::cout << "\n--- SCENARIO 1: Alice sends an encrypted message to Bob ---" << std::endl;
+        
+        const char* alice_message = "Hello Bob, this is a secret message!";
+        std::cout << "Alice's original message: " << alice_message << std::endl;
+        
+        // Alice encrypts the message
+        Message encrypted_message = alice_ratchet.message_send((unsigned char*)alice_message);
+        std::cout << "Message encrypted with header: " << std::endl;
+        std::cout << "  DH Public Key: " << bin2hex(encrypted_message.header->dh_public, crypto_kx_PUBLICKEYBYTES) << std::endl;
+        std::cout << "  Message Index: " << encrypted_message.header->message_index << std::endl;
+        
+        // Bob decrypts the message
+        unsigned char* decrypted_message = bob_ratchet.message_receive(encrypted_message);
+        std::cout << "Bob decrypted message: " << (char*)decrypted_message << std::endl;
+        
+        // Verify the message was decrypted correctly
+        if (strcmp((char*)decrypted_message, alice_message) == 0) {
+            std::cout << "✅ Message decryption successful!" << std::endl;
+        } else {
+            std::cout << "❌ Message decryption failed!" << std::endl;
+        }
+        
+        // SCENARIO 2: Bob sends a reply to Alice
+        std::cout << "\n--- SCENARIO 2: Bob sends a reply to Alice ---" << std::endl;
+        
+        const char* bob_message = "Hi Alice, I received your message!";
+        std::cout << "Bob's original message: " << bob_message << std::endl;
+        
+        // Bob encrypts the message
+        Message bob_encrypted = bob_ratchet.message_send((unsigned char*)bob_message);
+        std::cout << "Message encrypted with header: " << std::endl;
+        std::cout << "  DH Public Key: " << bin2hex(bob_encrypted.header->dh_public, crypto_kx_PUBLICKEYBYTES) << std::endl;
+        std::cout << "  Message Index: " << bob_encrypted.header->message_index << std::endl;
+        
+        // Alice decrypts the message
+        unsigned char* alice_decrypted = alice_ratchet.message_receive(bob_encrypted);
+        std::cout << "Alice decrypted message: " << (char*)alice_decrypted << std::endl;
+        
+        // Verify the message was decrypted correctly
+        if (strcmp((char*)alice_decrypted, bob_message) == 0) {
+            std::cout << "✅ Message decryption successful!" << std::endl;
+        } else {
+            std::cout << "❌ Message decryption failed!" << std::endl;
+        }
+        
+        // Clean up
+        delete[] decrypted_message;
+        delete[] alice_decrypted;
+        
+        std::cout << "\n✅ Message encryption and decryption test completed successfully" << std::endl;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error during message encryption/decryption test: " << e.what() << std::endl;
+    }
+}
+
 int main() {
     test_multi_device_session_management();
+    test_message_encryption_decryption();
     return 0;
 } 

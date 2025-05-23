@@ -9,8 +9,6 @@
 #include <map>
 #include <unordered_map>
 
-std::string bin2hex(const unsigned char* bin, size_t len);
-
 struct Chain {
     unsigned char chain_key[crypto_kdf_KEYBYTES];
     int index;
@@ -21,6 +19,11 @@ struct MessageHeader {
     unsigned char dh_public[crypto_kx_PUBLICKEYBYTES]; // Sender's current ratchet public key
     int prev_chain_length;                             // Length of previous sending chain
     int message_index;                                 // Message number in the chain
+};
+
+struct Message {
+    MessageHeader *header;
+    unsigned char* message;
 };
 
 // Structure to identify a skipped message
@@ -46,10 +49,10 @@ public:
     ~DoubleRatchet();
 
     // Creates a message key and header for sending
-    unsigned char* message_send(MessageHeader& header);
+    Message message_send(unsigned char* message);
 
     // Processes a received message with header and returns the message key
-    unsigned char* message_receive(const MessageHeader& header);
+    unsigned char* message_receive(Message message);
 
     const unsigned char* get_public_key() const;
 
@@ -65,17 +68,17 @@ private:
     // Derive a message key from a chain key and updates the chain key
     unsigned char* derive_message_key(unsigned char* chain_key);
 
-    unsigned char root_key[crypto_kdf_KEYBYTES];
+    unsigned char root_key[crypto_kdf_KEYBYTES]{};
 
-    Chain send_chain;
-    Chain recv_chain;
+    Chain send_chain{};
+    Chain recv_chain{};
     
     int prev_send_chain_length; // Length of previous sending chain
 
-    unsigned char local_dh_public[crypto_kx_PUBLICKEYBYTES];
-    unsigned char local_dh_private[crypto_kx_SECRETKEYBYTES];
+    unsigned char local_dh_public[crypto_kx_PUBLICKEYBYTES]{};
+    unsigned char local_dh_private[crypto_kx_SECRETKEYBYTES]{};
 
-    unsigned char remote_dh_public[crypto_kx_PUBLICKEYBYTES];
+    unsigned char remote_dh_public[crypto_kx_PUBLICKEYBYTES]{};
     
     // Cache of message keys for skipped/out-of-order messages
     std::map<SkippedMessageKey, unsigned char*> skipped_message_keys;
