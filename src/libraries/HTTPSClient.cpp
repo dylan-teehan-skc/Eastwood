@@ -3,7 +3,7 @@
 //
 
 #include "./HTTPSClient.h"
-
+#include <iostream>
 using namespace webwood;
 void HTTPSClient::init() {
     SSL_library_init();
@@ -38,7 +38,7 @@ HTTPSClient::HTTPSClient(const std::string& certPath) : certPath(certPath) {
     }
 }
 
-std::string HTTPSClient::get(const std::string& host, const std::string& path, std::string& port) {
+std::string HTTPSClient::get(const std::string& host, const std::string& path, std::string& port, const std::string &headers) {
     int sock_fd = create_socket(host.c_str(), port.c_str());
     if (sock_fd < 0) {
         SSL_CTX_Deleter(ctx);
@@ -64,9 +64,10 @@ std::string HTTPSClient::get(const std::string& host, const std::string& path, s
     }
 
     std::string req =
-        "GET " + path + " HTTP/1.1\r\n" +
-        "Host: " + host + "\r\n" +
-        "Connection: close\r\n\r\n";
+        "GET " + path + " HTTP/1.1\n" +
+        "Host: " + host + "\n" +
+        headers + "\n" +
+        "Connection: close\n\n";
     SSL_write(ssl, req.c_str(), req.length());
 
     char buf[4096];
@@ -86,7 +87,7 @@ std::string HTTPSClient::get(const std::string& host, const std::string& path, s
 }
 
 
-std::string HTTPSClient::get(const std::string &host, const std::string &path) {
+std::string HTTPSClient::get(const std::string &host, const std::string &path, const std::string &headers) {
     int sock_fd = create_socket(host.c_str(), defaultPort(true).c_str());
     if (sock_fd < 0) {
         SSL_CTX_Deleter(ctx);
@@ -112,9 +113,10 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path) {
     }
 
     std::string req =
-        "GET " + path + " HTTP/1.1\r\n" +
-        "Host: " + host + "\r\n" +
-        "Connection: close\r\n\r\n";
+        "GET " + path + " HTTP/1.1\n" +
+        "Host: " + host + "\n" +
+        headers + "\n" +
+        "Connection: close\n\n";
     SSL_write(ssl, req.c_str(), req.length());
 
     char buf[4096];
@@ -133,7 +135,7 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path) {
     return response;
 }
 
-std::string HTTPSClient::post(const std::string& host, const std::string& path, const std::string& body) {
+std::string HTTPSClient::post(const std::string& host, const std::string& path, const std::string &headers, const std::string& body) {
     int sock_fd = create_socket(host.c_str(), defaultPort(true).c_str());
     if (sock_fd < 0) {
         SSL_CTX_Deleter(ctx);
@@ -160,12 +162,14 @@ std::string HTTPSClient::post(const std::string& host, const std::string& path, 
     }
 
     std::string request =
-        "POST " + path + " HTTP/1.1\r\n" +
-        "Host: " + host + "\r\n" +
-        "Content-Type: application/json\r\n" +
-        "Content-Length: " + std::to_string(body.size()) + "\r\n" +
-        "Connection: close\r\n\r\n" +
+        "POST " + path + " HTTP/1.1\n" +
+        "Host: " + host + "\n" +
+        headers + "\n" +
+        "Content-Type: application/json\n" +
+        "Content-Length: " + std::to_string(body.size()) + "\n" +
+        "Connection: close\n\n" +
         body;
+
 
     SSL_write(ssl, request.c_str(), request.length());
 
@@ -184,7 +188,7 @@ std::string HTTPSClient::post(const std::string& host, const std::string& path, 
     return response;
 }
 
-std::string HTTPSClient::post(const std::string& host, const std::string& path, const std::string& body, const std::string& port) {
+std::string HTTPSClient::post(const std::string& host, const std::string& path, const std::string &headers, const std::string& body, const std::string& port) {
     int sock_fd = create_socket(host.c_str(), port.c_str());
     if (sock_fd < 0) {
         SSL_CTX_Deleter(ctx);
@@ -211,11 +215,12 @@ std::string HTTPSClient::post(const std::string& host, const std::string& path, 
     }
 
     std::string request =
-        "POST " + path + " HTTP/1.1\r\n" +
-        "Host: " + host + "\r\n" +
-        "Content-Type: application/json\r\n" +
-        "Content-Length: " + std::to_string(body.size()) + "\r\n" +
-        "Connection: close\r\n\r\n" +
+        "POST " + path + " HTTP/1.1\n" +
+        "Host: " + host + "\n" +
+        headers + "\n" +
+        "Content-Type: application/json\n" +
+        "Content-Length: " + std::to_string(body.size()) + "\n" +
+        "Connection: close\n\n" +
         body;
 
     SSL_write(ssl, request.c_str(), request.length());

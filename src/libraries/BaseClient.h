@@ -16,7 +16,6 @@
 
 class BaseClient {
 public:
-    virtual std::string get(const std::string& host, const std::string& path) = 0;
     virtual ~BaseClient() = default;
     static int create_socket(const char* hostname, const char* port);
 };

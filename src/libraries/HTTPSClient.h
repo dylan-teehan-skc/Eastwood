@@ -20,10 +20,10 @@ namespace webwood {
         virtual ~HTTPSClient();
         HTTPSClient& operator=(const HTTPSClient&) = delete;
 
-        std::string get(const std::string& host, const std::string& path) override;
-        std::string get(const std::string& host, const std::string& path, std::string& port);
-        std::string post(const std::string& host, const std::string& path, const std::string& body);
-        std::string post(const std::string& host, const std::string& path, const std::string& body, const std::string& port);
+        std::string get(const std::string& host, const std::string& path , const std::string &headers);
+        std::string get(const std::string& host, const std::string& path, std::string& port, const std::string &headers);
+        std::string post(const std::string& host, const std::string& path, const std::string &headers, const std::string& body);
+        std::string post(const std::string& host, const std::string& path, const std::string &headers, const std::string &body, const std::string& port);
     private:
         std::string certPath;
         struct SSL_CTX_Deleter {

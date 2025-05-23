@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <cstring>
 
 static std::string bin2hex(const unsigned char* bin, size_t len) {
     std::ostringstream oss;
