@@ -41,22 +41,23 @@ endif()
 
 # Define frontend sources
 set(FRONTEND_SOURCES
-        src/ui/windows/login/login.cpp
-        src/ui/windows/login/login.h
-        src/ui/windows/login/login.ui
-        src/ui/windows/register/register.cpp
-        src/ui/windows/register/register.h
-        src/ui/windows/register/register.ui
-        src/ui/utils/messagebox.h
+    src/ui/windows/login/login.cpp
+    src/ui/windows/login/login.h
+    src/ui/windows/login/login.ui
+    src/ui/windows/register/register.cpp
+    src/ui/windows/register/register.h
+    src/ui/windows/register/register.ui
+    src/ui/utils/messagebox.h
 )
 
 # Define cryptography sources and headers
 set(CRYPTO_SOURCES
-        src/key_exchange/DoubleRatchet.cpp
-        src/key_exchange/x3dh.cpp
-        src/key_exchange/DeviceCommunicationSession.cpp
-        src/key_exchange/XChaCha20-Poly1305.cpp
-        src/key_exchange/utils/ConversionUtils.cpp
+    src/key_exchange/DoubleRatchet.cpp
+    src/key_exchange/x3dh.cpp
+    src/key_exchange/IdentityCommunicationSession.cpp
+    src/key_exchange/DeviceCommunicationSession.cpp
+    src/key_exchange/XChaCha20-Poly1305.cpp
+    src/key_exchange/utils/ConversionUtils.cpp
 )
 
 set(CRYPTO_HEADERS
@@ -78,15 +79,15 @@ set(CRYPTO_HEADERS
         src/endpoints/endpoints.h
 )
 
-# Create executable
+# Create main executable
 add_executable(Eastwood
-        src/main.cpp
+    src/main.cpp
     ${FRONTEND_SOURCES}
     ${CRYPTO_SOURCES}
     ${CRYPTO_HEADERS}
 )
 
-# Include directories and link libraries
+# Include directories and link libraries for main executable
 target_include_directories(Eastwood PRIVATE 
     ${SODIUM_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -102,3 +103,24 @@ target_link_libraries(Eastwood PRIVATE
     OpenSSL::Crypto
     nlohmann_json::nlohmann_json
 )
+
+# Create test executable
+add_executable(EastwoodTests
+    test/identity_communication_session_test.cpp
+    ${CRYPTO_SOURCES}
+)
+
+# Include directories and link libraries for tests
+target_include_directories(EastwoodTests PRIVATE 
+    ${SODIUM_INCLUDE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(EastwoodTests PRIVATE 
+    ${SODIUM_LIBRARY}
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
+
+# Add test
+add_test(NAME EastwoodTests COMMAND EastwoodTests)

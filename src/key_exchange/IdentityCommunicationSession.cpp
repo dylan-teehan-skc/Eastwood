@@ -4,17 +4,16 @@
 #include "IdentityCommunicationSession.h"
 #include "utils.h"
 
-IdentityCommunicationSession::IdentityCommunicationSession(std::vector<keyBundle> key_bundles)
-{
+IdentityCommunicationSession::IdentityCommunicationSession(keyBundle myBundle, std::vector<keyBundle> key_bundles, unsigned char* public_identity_key_1, unsigned char* public_identity_key_2)
+    : myBundle(myBundle) {
     // out of band verification between users
     size_t identity_session_key_len = sizeof(public_identity_key_1) + sizeof(public_identity_key_2);
     identity_session_id = concat_ordered(public_identity_key_1, crypto_box_PUBLICKEYBYTES, public_identity_key_2, crypto_box_PUBLICKEYBYTES, identity_session_key_len);
 
     updateSessionsFromKeyBundles(key_bundles);
-
 }
 
-IdentityCommunicationSession::updateSessionsFromKeyBundles(std::vector<keyBundle> key_bundles) {
+void IdentityCommunicationSession::updateSessionsFromKeyBundles(std::vector<keyBundle> key_bundles) {
     // create session for key bundle
     for (const auto & key_bundle : key_bundles) {
         createSessionFromKeyBundle(key_bundle);
@@ -55,6 +54,17 @@ void IdentityCommunicationSession::createSessionFromKeyBundle(keyBundle key_bund
     }
 }
 
-
+IdentityCommunicationSession::~IdentityCommunicationSession() {
+    // Clean up all device sessions
+    for (auto& pair : device_sessions) {
+        delete pair.second;
+    }
+    device_sessions.clear();
+    
+    // Clean up identity session ID
+    if (identity_session_id) {
+        delete[] identity_session_id;
+    }
+}
 
 #include "IdentityCommunicationSession.h"

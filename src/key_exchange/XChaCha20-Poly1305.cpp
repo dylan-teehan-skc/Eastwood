@@ -251,7 +251,7 @@ bool decrypt_file_with_hex_key(const std::string& encrypted_path, const std::str
 }
 
 // Takes in binary key and message directly
-unsigned char* encrypt_message_given_key(const unsigned char* message, const size_t message_len, const unsigned char* key) {
+std::vector<unsigned char> encrypt_message_given_key(const unsigned char* message, const size_t message_len, const unsigned char* key) {
     unsigned char nonce[crypto_aead_chacha20poly1305_IETF_NPUBBYTES];
     randombytes_buf(nonce, sizeof nonce);
 
@@ -267,13 +267,13 @@ unsigned char* encrypt_message_given_key(const unsigned char* message, const siz
     std::copy_n(nonce, sizeof(nonce), result.begin());
     std::copy_n(ciphertext.data(), ciphertext_len, result.begin() + sizeof(nonce));
 
-    return result.data();
+    return result;
 }
 
 // Takes in binary key and encrypted data directly
-unsigned char* decrypt_message_given_key(const unsigned char* encrypted_data, size_t encrypted_len, const unsigned char* key) {
+std::vector<unsigned char> decrypt_message_given_key(const unsigned char* encrypted_data, size_t encrypted_len, const unsigned char* key) {
     if (encrypted_len < crypto_aead_chacha20poly1305_IETF_NPUBBYTES) {
-        return nullptr;
+        return {};
     }
 
     unsigned char nonce[crypto_aead_chacha20poly1305_IETF_NPUBBYTES];
@@ -283,7 +283,7 @@ unsigned char* decrypt_message_given_key(const unsigned char* encrypted_data, si
     size_t ciphertext_len = encrypted_len - sizeof(nonce);
     
     if (ciphertext_len < crypto_aead_chacha20poly1305_IETF_ABYTES) {
-        return nullptr;
+        return {};
     }
 
     std::vector<unsigned char> plaintext(ciphertext_len - crypto_aead_chacha20poly1305_IETF_ABYTES);
@@ -295,8 +295,9 @@ unsigned char* decrypt_message_given_key(const unsigned char* encrypted_data, si
             ciphertext, ciphertext_len,
             nullptr, 0,
             nonce, key) != 0) {
-        return nullptr;
+        return {};
     }
 
-    return plaintext.data();
+    plaintext.resize(plaintext_len);
+    return plaintext;
 }

@@ -107,50 +107,51 @@ unsigned char* DoubleRatchet::derive_message_key(unsigned char* chain_key) {
     return message_key;
 }
 
-Message DoubleRatchet::message_send(unsigned char* message) {
+DeviceMessage DoubleRatchet::message_send(unsigned char* message) {
     // Perform DH ratchet step if needed (no ratchet on first message in chain)
     if (send_chain.index == 0) {
         dh_ratchet(nullptr, true);
     }
 
-    auto* header = new MessageHeader{};
+    DeviceMessage device_message;
+    device_message.header = new MessageHeader{};
+    
     // Populate header with current state
-    memcpy(header->dh_public, local_dh_public, crypto_kx_PUBLICKEYBYTES);
-    header->prev_chain_length = prev_send_chain_length;
-    header->message_index = send_chain.index;
+    memcpy(device_message.header->dh_public, local_dh_public, crypto_kx_PUBLICKEYBYTES);
+    device_message.header->prev_chain_length = prev_send_chain_length;
+    device_message.header->message_index = send_chain.index;
 
     // Derive message key for the current message
     unsigned char* message_key = derive_message_key(send_chain.chain_key);
+    std::cout << "[DEBUG] Sender derived message key: " << bin2hex(message_key, crypto_kdf_KEYBYTES) << std::endl;
+    std::cout.flush();
     
     // Increment the message index for the next message
     send_chain.index++;
 
     // Encrypt the message
-    // NOTE: The caller must provide the correct message length. Here, we assume null-terminated string for demo.
-    size_t message_len = strlen(reinterpret_cast<const char*>(message));
-    unsigned char* ciphertext = encrypt_message_given_key(message, message_len, message_key);
+    device_message.length = strlen(reinterpret_cast<const char*>(message));
+    std::vector<unsigned char> ciphertext_vec = encrypt_message_given_key(message, device_message.length, message_key);
+    device_message.ciphertext = new unsigned char[ciphertext_vec.size()];
+    memcpy(device_message.ciphertext, ciphertext_vec.data(), ciphertext_vec.size());
+    device_message.length = ciphertext_vec.size();
 
-    auto* msg = new unsigned char*;
-    *msg = ciphertext;
-
-    Message messageStruct{};
-    messageStruct.header = header;
-    messageStruct.message = ciphertext;
-    return messageStruct;
+    delete[] message_key;
+    return device_message;
 }
 
-unsigned char* DoubleRatchet::message_receive(Message message) {
+std::vector<unsigned char> DoubleRatchet::message_receive(const DeviceMessage& encrypted_message) {
     // check if we already have this message in our skipped keys cache
     SkippedMessageKey skipped_key_id = {
         {0}, 
-        message.header->message_index
+        encrypted_message.header->message_index
     };
-    memcpy(skipped_key_id.dh_public, message.header->dh_public, crypto_kx_PUBLICKEYBYTES);
+    memcpy(skipped_key_id.dh_public, encrypted_message.header->dh_public, crypto_kx_PUBLICKEYBYTES);
     
     auto it = skipped_message_keys.find(skipped_key_id);
     if (it != skipped_message_keys.end()) {
         // we have this message key cached
-        std::cout << "Found skipped message key in cache for index " << message.header->message_index << std::endl;
+        std::cout << "Found skipped message key in cache for index " << encrypted_message.header->message_index << std::endl;
         
         auto* message_key = new unsigned char[crypto_kdf_KEYBYTES];
         memcpy(message_key, it->second, crypto_kdf_KEYBYTES);
@@ -159,11 +160,14 @@ unsigned char* DoubleRatchet::message_receive(Message message) {
         delete[] it->second;
         skipped_message_keys.erase(it);
         
-        return message_key;
+        // Decrypt the message
+        std::vector<unsigned char> plaintext_vec = decrypt_message_given_key(encrypted_message.ciphertext, encrypted_message.length, message_key);
+        delete[] message_key;
+        return plaintext_vec;
     }
     
     // check if ratchet public key has changed (DH ratchet step)
-    bool new_ratchet = memcmp(message.header->dh_public, remote_dh_public, crypto_kx_PUBLICKEYBYTES) != 0;
+    bool new_ratchet = memcmp(encrypted_message.header->dh_public, remote_dh_public, crypto_kx_PUBLICKEYBYTES) != 0;
 
     if (new_ratchet) {
         std::cout << "New DH ratchet key detected" << std::endl;
@@ -171,10 +175,10 @@ unsigned char* DoubleRatchet::message_receive(Message message) {
         // skip any messages from the current receiving chain that we haven't received yet
         if (recv_chain.index > 0) {
             std::cout << "Caching skipped message keys from current chain (" << recv_chain.index 
-                      << " to " << (message.header->prev_chain_length - 1) << ")" << std::endl;
+                      << " to " << (encrypted_message.header->prev_chain_length - 1) << ")" << std::endl;
             
             // skip current receive chain
-            for (int i = recv_chain.index; i < message.header->prev_chain_length; i++) {
+            for (int i = recv_chain.index; i < encrypted_message.header->prev_chain_length; i++) {
                 unsigned char* skipped_key = derive_message_key(recv_chain.chain_key);
                 
                 SkippedMessageKey key_id = {{0}, i};
@@ -196,27 +200,27 @@ unsigned char* DoubleRatchet::message_receive(Message message) {
         }
         
         // perform DH ratchet with the new key
-        dh_ratchet(message.header->dh_public, false);
+        dh_ratchet(encrypted_message.header->dh_public, false);
         
         // reset receive chain index
         recv_chain.index = 0;
     }
     
     // skip any messages in the current chain that we haven't processed yet
-    if (message.header->message_index > recv_chain.index) {
+    if (encrypted_message.header->message_index > recv_chain.index) {
         std::cout << "Skipping ahead in receive chain from " << recv_chain.index 
-                  << " to " << message.header->message_index << std::endl;
+                  << " to " << encrypted_message.header->message_index << std::endl;
         
         // Store the original chain key so we can restore it after caching skipped keys
         unsigned char original_chain_key[crypto_kdf_KEYBYTES];
         memcpy(original_chain_key, recv_chain.chain_key, crypto_kdf_KEYBYTES);
         
         // Cache skipped message keys
-        for (int i = recv_chain.index; i < message.header->message_index; i++) {
+        for (int i = recv_chain.index; i < encrypted_message.header->message_index; i++) {
             unsigned char* skipped_key = derive_message_key(recv_chain.chain_key);
             
             SkippedMessageKey key_id = {{0}, i};
-            memcpy(key_id.dh_public, message.header->dh_public, crypto_kx_PUBLICKEYBYTES);
+            memcpy(key_id.dh_public, encrypted_message.header->dh_public, crypto_kx_PUBLICKEYBYTES);
             
             skipped_message_keys[key_id] = skipped_key;
             
@@ -235,8 +239,8 @@ unsigned char* DoubleRatchet::message_receive(Message message) {
         // restore the original chain key state before generating the message key
         memcpy(recv_chain.chain_key, original_chain_key, crypto_kdf_KEYBYTES);
         
-        // sdvance the chain to the current message index
-        for (int i = recv_chain.index; i < message.header->message_index; i++) {
+        // advance the chain to the current message index
+        for (int i = recv_chain.index; i < encrypted_message.header->message_index; i++) {
             unsigned char temp_key[crypto_kdf_KEYBYTES];
             if (crypto_kdf_derive_from_key(temp_key, crypto_kdf_KEYBYTES, 1, MSG_CTX, recv_chain.chain_key) != 0) {
                 throw std::runtime_error("Failed to derive temporary message key");
@@ -251,12 +255,16 @@ unsigned char* DoubleRatchet::message_receive(Message message) {
     
     // generate the message key
     unsigned char* message_key = derive_message_key(recv_chain.chain_key);
+    std::cout << "[DEBUG] Receiver derived message key: " << bin2hex(message_key, crypto_kdf_KEYBYTES) << std::endl;
+    std::cout.flush();
     
     // update the receive chain index
-    recv_chain.index = message.header->message_index + 1;
+    recv_chain.index = encrypted_message.header->message_index + 1;
 
-    unsigned char* plaintext = decrypt_message_given_key(message.message, sizeof(message.message), message_key);
-    return plaintext;
+    // Decrypt the message
+    std::vector<unsigned char> plaintext_vec = decrypt_message_given_key(encrypted_message.ciphertext, encrypted_message.length, message_key);
+    delete[] message_key;
+    return plaintext_vec;
 }
 
 const unsigned char* DoubleRatchet::get_public_key() const {

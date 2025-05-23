@@ -2,6 +2,7 @@
 #define XCHACHA20_POLY1305_H
 
 #include <string>
+#include <vector>
 
 // Utility functions
 bool hex_to_bin(const std::string& hex, unsigned char* bin, size_t bin_size);
@@ -23,9 +24,9 @@ bool decrypt_file_with_hex_key(const std::string& encrypted_path, const std::str
                               const std::string& hex_key);
 
 // Takes in binary key and message directly
-unsigned char* encrypt_message_given_key(const unsigned char* message, size_t message_len, const unsigned char* key);
+std::vector<unsigned char> encrypt_message_given_key(const unsigned char* message, size_t message_len, const unsigned char* key);
 
 // Takes in binary key and encrypted data directly
-unsigned char* decrypt_message_given_key(const unsigned char* encrypted_data, size_t encrypted_len, const unsigned char* key);
+std::vector<unsigned char> decrypt_message_given_key(const unsigned char* encrypted_data, size_t encrypted_len, const unsigned char* key);
 
 #endif // XCHACHA20_POLY1305_H 
