@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XCHACHA20_POLY1305_H
+#define XCHACHA20_POLY1305_H
 
 #include <string>
 
@@ -22,7 +23,7 @@ bool decrypt_file_with_hex_key(const std::string& encrypted_path, const std::str
                               const std::string& hex_key);
 
 // Takes in binary key and message directly
-unsigned char* encrypt_message_given_key(unsigned char* message, size_t message_len, const unsigned char* key);
+unsigned char* encrypt_message_given_key(const unsigned char* message, size_t message_len, const unsigned char* key);
 
 // Takes in binary key and encrypted data directly
 unsigned char* decrypt_message_given_key(const unsigned char* encrypted_data, size_t encrypted_len, const unsigned char* key);
