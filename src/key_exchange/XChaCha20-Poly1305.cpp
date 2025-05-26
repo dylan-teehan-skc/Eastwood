@@ -5,7 +5,7 @@
 #include <string>
 #include <filesystem>
 #include "XChaCha20-Poly1305.h"
-#include "utils/ConversionUtils.h"
+#include "../utils/ConversionUtils.h"
 #include <cstring>
 #include <algorithm>
 

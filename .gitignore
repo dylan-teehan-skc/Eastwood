@@ -4,7 +4,7 @@ build/
 *build-*/
 cmake-build-*/
 
-# IDE and editor files
+# IDE and editor filesenv
 .idea/
 .vscode/
 *.swp

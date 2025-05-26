@@ -52,12 +52,17 @@ set(FRONTEND_SOURCES
 
 # Define cryptography sources and headers
 set(CRYPTO_SOURCES
-    src/key_exchange/DoubleRatchet.cpp
-    src/key_exchange/x3dh.cpp
-    src/key_exchange/IdentityCommunicationSession.cpp
-    src/key_exchange/DeviceCommunicationSession.cpp
-    src/key_exchange/XChaCha20-Poly1305.cpp
-    src/key_exchange/utils/ConversionUtils.cpp
+        src/key_exchange/DoubleRatchet.cpp
+        src/key_exchange/x3dh.cpp
+        src/key_exchange/DeviceCommunicationSession.cpp
+        src/key_exchange/IdentityCommunicationSession.cpp
+        src/key_exchange/XChaCha20-Poly1305.cpp
+        src/utils/ConversionUtils.cpp
+        src/client_api_interactions/MakeAuthReq.cpp
+        src/client_api_interactions/MakeUnauthReq.cpp
+        src/libraries/BaseClient.cpp
+        src/libraries/HTTPSClient.cpp
+        src/endpoints/endpoints.cpp
 )
 
 set(CRYPTO_HEADERS
@@ -67,10 +72,8 @@ set(CRYPTO_HEADERS
         src/key_exchange/utils.h
         src/algorithms/algorithms.cpp
         src/algorithms/algorithms.h
-        src/algorithms/algorithms.cpp
-        src/algorithms/algorithms.h
         src/key_exchange/XChaCha20-Poly1305.h
-        src/key_exchange/utils/ConversionUtils.h
+        src/utils/ConversionUtils.h
         src/libraries/BaseClient.h
         src/libraries/HTTPSClient.h
         src/libraries/BaseClient.cpp
@@ -112,17 +115,22 @@ add_executable(EastwoodTests
     ${CRYPTO_SOURCES}
 )
 
-# Include directories and link libraries for tests
+# Configure test target
 target_include_directories(EastwoodTests PRIVATE 
     ${SODIUM_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/cereal/include
 )
 
 target_link_libraries(EastwoodTests PRIVATE 
     ${SODIUM_LIBRARY}
     OpenSSL::SSL
     OpenSSL::Crypto
+    nlohmann_json::nlohmann_json
 )
+
+# Enable testing
+enable_testing()
 
 # Add test
 add_test(NAME EastwoodTests COMMAND EastwoodTests)

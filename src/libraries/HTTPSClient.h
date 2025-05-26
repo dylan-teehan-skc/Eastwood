@@ -20,10 +20,11 @@ namespace webwood {
         virtual ~HTTPSClient();
         HTTPSClient& operator=(const HTTPSClient&) = delete;
 
-        std::string get(const std::string& host, const std::string& path , const std::string &headers);
+        std::string get(const std::string& host, const std::string& path, const std::string &headers);
         std::string get(const std::string& host, const std::string& path, std::string& port, const std::string &headers);
         std::string post(const std::string& host, const std::string& path, const std::string &headers, const std::string& body);
         std::string post(const std::string& host, const std::string& path, const std::string &headers, const std::string &body, const std::string& port);
+
     private:
         std::string certPath;
         struct SSL_CTX_Deleter {
@@ -40,6 +41,7 @@ namespace webwood {
         static std::string defaultPort(bool https = true) {
             return https ? "443" : "80";
         }
+        std::string formatHeaders(const std::string &headers);
 
     protected:
         void log(const std::string& msg);

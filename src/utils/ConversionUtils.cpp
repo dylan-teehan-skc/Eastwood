@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 bool hex_to_bin(const std::string& hex, unsigned char* bin, size_t bin_size) {
     if (hex.length() != bin_size * 2) return false;
@@ -51,3 +52,41 @@ std::vector<unsigned char> hex_string_to_binary(const std::string& hex_string) {
     
     return binary_data;
 }
+
+std::string load_env_variable(const std::string& key, const std::string& default_value) {
+    std::ifstream env_file("src/.env");
+    if (!env_file.is_open()) {
+        env_file.open(".env");
+        if (!env_file.is_open()) {
+            std::cerr << "Warning: Could not open .env file in either src/ or current directory" << std::endl;
+            return default_value;
+        }
+    }
+
+    std::string line;
+    while (std::getline(env_file, line)) {
+        // Skip empty lines and comments
+        if (line.empty() || line[0] == '#') continue;
+
+        // Find the position of the equals sign
+        size_t pos = line.find('=');
+        if (pos == std::string::npos) continue;
+
+        // Extract key and value
+        std::string current_key = line.substr(0, pos);
+        std::string value = line.substr(pos + 1);
+
+        // Trim whitespace
+        current_key.erase(0, current_key.find_first_not_of(" \t"));
+        current_key.erase(current_key.find_last_not_of(" \t") + 1);
+        value.erase(0, value.find_first_not_of(" \t"));
+        value.erase(value.find_last_not_of(" \t") + 1);
+
+        if (current_key == key) {
+            return value;
+        }
+    }
+
+    return default_value;
+}
+
