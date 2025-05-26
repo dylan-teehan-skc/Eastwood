@@ -2,9 +2,12 @@ name: Clang-Tidy on PR Files Only
 
 on:
   pull_request:
-    paths:
-      - 'src/**/*.cpp'
-      - 'src/**/*.h'
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   clang-tidy:
@@ -14,12 +17,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Needed to get full git history for diffing
+        fetch-depth: 0  # Needed to fetch full history for git diff
 
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-tidy cmake build-essential qt6-base-dev libqt6core6 libqt6gui6 libqt6widgets6 libssl-dev qt6-tools-dev qt6-tools-dev-tools libxkbcommon-dev libsodium-dev libvulkan-dev vulkan-headers
+        sudo apt-get install -y clang-tidy cmake build-essential qt6-base-dev libssl-dev \
+          qt6-tools-dev qt6-tools-dev-tools libxkbcommon-dev libsodium-dev libvulkan-dev
 
     - name: Configure project with CMake
       run: |
@@ -30,19 +34,73 @@ jobs:
     - name: Get list of changed C++ files
       id: changed-files
       run: |
-        echo "FILES=$(git diff --name-only origin/${{ github.base_ref }} | grep '^src/.*\.\(cpp\|h\)$' | xargs)" >> $GITHUB_OUTPUT
+        CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '.*\.(cpp|h|hpp|cc|cxx)$' || true)
+        echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
+
+        if [[ -n "$CHANGED_FILES" ]]; then
+          echo "FILES_FOUND=true" >> $GITHUB_ENV
+        else
+          echo "FILES_FOUND=false" >> $GITHUB_ENV
+        fi
+
+    - name: Check if any files were found
+      if: env.FILES_FOUND == 'false'
+      run: echo "No C++ files changed in this PR."
 
     - name: Run clang-tidy on changed files
-      if: steps.changed-files.outputs.FILES != ''
+      if: env.FILES_FOUND == 'true'
       run: |
-        cd build
-        echo "Checking files: ${{ steps.changed-files.outputs.FILES }}"
-        clang-tidy -p . ${{ steps.changed-files.outputs.FILES }} > tidy-report.txt || true
-        cat tidy-report.txt
+        echo "Changed files: $CHANGED_FILES"
+        clang-tidy -p build $CHANGED_FILES > build/tidy-report.txt 2>&1 || true
+        cat build/tidy-report.txt
 
     - name: Upload tidy report
-      if: steps.changed-files.outputs.FILES != ''
+      if: env.FILES_FOUND == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: clang-tidy-report
         path: build/tidy-report.txt
+
+    - name: Comment PR with clang-tidy results
+      if: env.FILES_FOUND == 'true' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = 'build/tidy-report.txt';
+          if (fs.existsSync(path)) {
+            const report = fs.readFileSync(path, 'utf8').trim();
+            const changedFiles = process.env.CHANGED_FILES || '<file-list>';
+
+            const body = report
+              ? `## 🔍 Clang-Tidy Report
+
+            \`\`\`
+            ${report}
+            \`\`\`
+
+            ---
+
+            <details>
+            <summary>💡 How to fix most issues</summary>
+
+            Most issues can be fixed automatically with:
+
+            \`\`\`bash
+            clang-tidy -p build --fix-errors ${changedFiles}
+            \`\`\`
+
+            This will apply suggested fixes to the files in-place.
+
+            > 💡 Tip: Run this locally and inspect the diffs before committing.
+
+            </details>`
+                          : '## ✅ Clang-Tidy Report\n\nNo issues found in the changed files! 🎉';
+
+                        github.rest.issues.createComment({
+                          issue_number: context.issue.number,
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          body
+                        });
+                      }
