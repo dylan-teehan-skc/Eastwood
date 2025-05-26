@@ -30,7 +30,7 @@ class IdentityCommunicationSession {
     // identity session key = two identity keys together in alphabetical order hashed
     // this is our out of band code to verify
 public:
-    IdentityCommunicationSession(keyBundle myBundle, std::vector<keyBundle>, unsigned char* , unsigned char*);
+    IdentityCommunicationSession(const keyBundle &myBundle, const std::vector<keyBundle> &, const unsigned char* , const unsigned char*);
     // use vector of keybundles to establish per device sessions
     // ensure to make sure the device session does not already exist
     // device session id of two device ids in alphabetical order hashed
@@ -40,8 +40,8 @@ private:
     unsigned char* identity_session_id;
     std::map<unsigned char*, DeviceCommunicationSession*> device_sessions;
 
-    void createSessionFromKeyBundle(keyBundle);
-    void updateSessionsFromKeyBundles(std::vector<keyBundle>);
+    void createSessionFromKeyBundle(const keyBundle &);
+    void updateSessionsFromKeyBundles(const std::vector<keyBundle> &);
 };
 
 

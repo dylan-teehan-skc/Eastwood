@@ -310,7 +310,7 @@ void test_message_encryption_decryption() {
         // Alice encrypts the message
         DeviceMessage encrypted_message = alice_ratchet.message_send((unsigned char*)alice_message);
         std::cout << "Message encrypted with header: " << std::endl;
-        std::cout << "  DH Public Key: " << bin2hex(encrypted_message.header->dh_public, crypto_kx_PUBLICKEYBYTES) << std::endl;
+        std::cout << "  DH Public Key: " << bin2hex(encrypted_message.header->dh_public.data(), encrypted_message.header->dh_public.size()) << std::endl;
         std::cout << "  Message Index: " << encrypted_message.header->message_index << std::endl;
         
         // Bob decrypts the message
@@ -332,7 +332,7 @@ void test_message_encryption_decryption() {
         // Bob encrypts the message
         DeviceMessage bob_encrypted = bob_ratchet.message_send((unsigned char*)bob_message);
         std::cout << "Message encrypted with header: " << std::endl;
-        std::cout << "  DH Public Key: " << bin2hex(bob_encrypted.header->dh_public, crypto_kx_PUBLICKEYBYTES) << std::endl;
+        std::cout << "  DH Public Key: " << bin2hex(bob_encrypted.header->dh_public.data(), bob_encrypted.header->dh_public.size()) << std::endl;
         std::cout << "  Message Index: " << bob_encrypted.header->message_index << std::endl;
         
         // Alice decrypts the message

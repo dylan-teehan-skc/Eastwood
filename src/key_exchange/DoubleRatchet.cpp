@@ -26,10 +26,16 @@ DoubleRatchet::DoubleRatchet(const unsigned char* x3dh_root_key,
     memset(send_chain.chain_key, 0, crypto_kdf_KEYBYTES);
     memset(recv_chain.chain_key, 0, crypto_kdf_KEYBYTES);
     
-    memcpy(local_dh_public, local_public_ephemeral, crypto_box_PUBLICKEYBYTES);
-    memcpy(local_dh_private, local_private_ephemeral, crypto_box_PUBLICKEYBYTES);
-    memcpy(root_key, x3dh_root_key, crypto_box_PUBLICKEYBYTES);
-    memcpy(remote_dh_public, remote_public_signed_prekey, crypto_box_PUBLICKEYBYTES);
+    // Use vectors for all binary fields
+    local_dh_public.resize(crypto_box_PUBLICKEYBYTES);
+    local_dh_private.resize(crypto_box_PUBLICKEYBYTES);
+    root_key.resize(crypto_box_PUBLICKEYBYTES);
+    remote_dh_public.resize(crypto_box_PUBLICKEYBYTES);
+    
+    memcpy(local_dh_public.data(), local_public_ephemeral, crypto_box_PUBLICKEYBYTES);
+    memcpy(local_dh_private.data(), local_private_ephemeral, crypto_box_PUBLICKEYBYTES);
+    memcpy(root_key.data(), x3dh_root_key, crypto_box_PUBLICKEYBYTES);
+    memcpy(remote_dh_public.data(), remote_public_signed_prekey, crypto_box_PUBLICKEYBYTES);
     
     std::cout << "DoubleRatchet initialized with root key: ";
     for (unsigned char i : root_key)
@@ -37,24 +43,26 @@ DoubleRatchet::DoubleRatchet(const unsigned char* x3dh_root_key,
     std::cout << std::endl;
 }
 
+DoubleRatchet::DoubleRatchet()
+    : root_key(), local_dh_public(), local_dh_private(), remote_dh_public(),
+      send_chain{}, recv_chain{}, prev_send_chain_length(0), skipped_message_keys() {
+    // All members are default-initialized (empty vectors, zeroed chains, etc.)
+}
+
 DoubleRatchet::~DoubleRatchet() {
-    // clean up any remaining cached message keys
-    for (auto& pair : skipped_message_keys) {
-        delete[] pair.second;
-    }
-    skipped_message_keys.clear();
+    // No manual cleanup needed - vectors and smart pointers handle it
 }
 
 void DoubleRatchet::dh_ratchet(const unsigned char* remote_public_key, bool is_sending) {
     if (is_sending) {
         // When sending, generate a new DH keypair
-        crypto_kx_keypair(local_dh_public, local_dh_private);
+        crypto_kx_keypair(local_dh_public.data(), local_dh_private.data());
     } else if (remote_public_key) {
         // When receiving, store the length of the current sending chain
         prev_send_chain_length = send_chain.index;
         
         // Update remote public key with the one from the message
-        memcpy(remote_dh_public, remote_public_key, crypto_kx_PUBLICKEYBYTES);
+        memcpy(remote_dh_public.data(), remote_public_key, crypto_kx_PUBLICKEYBYTES);
         
         // Reset sending chain index when we start a new one
         send_chain.index = 0;
@@ -62,7 +70,7 @@ void DoubleRatchet::dh_ratchet(const unsigned char* remote_public_key, bool is_s
     
     // Compute shared secret using DH
     unsigned char shared_secret[crypto_scalarmult_BYTES];
-    if (crypto_scalarmult(shared_secret, local_dh_private, remote_dh_public) != 0) {
+    if (crypto_scalarmult(shared_secret, local_dh_private.data(), remote_dh_public.data()) != 0) {
         throw std::runtime_error("Error in crypto_scalarmult");
     }
     
@@ -73,7 +81,7 @@ void DoubleRatchet::dh_ratchet(const unsigned char* remote_public_key, bool is_s
 void DoubleRatchet::kdf_ratchet(const unsigned char* shared_secret, unsigned char* chain_key, bool is_sending) {
     // Combine root_key and shared_secret
     unsigned char combined[64];
-    memcpy(combined, root_key, crypto_kdf_KEYBYTES);
+    memcpy(combined, root_key.data(), crypto_kdf_KEYBYTES);
     memcpy(combined + crypto_kdf_KEYBYTES, shared_secret, crypto_scalarmult_BYTES);
 
     unsigned char master_key[crypto_kdf_KEYBYTES];
@@ -82,7 +90,7 @@ void DoubleRatchet::kdf_ratchet(const unsigned char* shared_secret, unsigned cha
     crypto_generichash(master_key, crypto_kdf_KEYBYTES, combined, sizeof combined, nullptr, 0);
 
     // Derive new root_key using ROOT context
-    if (crypto_kdf_derive_from_key(root_key, crypto_kdf_KEYBYTES, 1, ROOT_CTX, master_key) != 0) {
+    if (crypto_kdf_derive_from_key(root_key.data(), crypto_kdf_KEYBYTES, 1, ROOT_CTX, master_key) != 0) {
         throw std::runtime_error("Failed to derive new root key");
     }
 
@@ -92,10 +100,10 @@ void DoubleRatchet::kdf_ratchet(const unsigned char* shared_secret, unsigned cha
     }
 }
 
-unsigned char* DoubleRatchet::derive_message_key(unsigned char* chain_key) {
+std::vector<unsigned char> DoubleRatchet::derive_message_key(unsigned char* chain_key) {
     // Derive message key from chain key
-    auto* message_key = new unsigned char[crypto_kdf_KEYBYTES];
-    if (crypto_kdf_derive_from_key(message_key, crypto_kdf_KEYBYTES, 1, MSG_CTX, chain_key) != 0) {
+    std::vector<unsigned char> message_key(crypto_kdf_KEYBYTES);
+    if (crypto_kdf_derive_from_key(message_key.data(), crypto_kdf_KEYBYTES, 1, MSG_CTX, chain_key) != 0) {
         throw std::runtime_error("Failed to derive message key");
     }
 
@@ -107,68 +115,47 @@ unsigned char* DoubleRatchet::derive_message_key(unsigned char* chain_key) {
     return message_key;
 }
 
-DeviceMessage DoubleRatchet::message_send(unsigned char* message) {
-    // Perform DH ratchet step if needed (no ratchet on first message in chain)
+DeviceMessage DoubleRatchet::message_send(const unsigned char* message) {
     if (send_chain.index == 0) {
         dh_ratchet(nullptr, true);
     }
 
     DeviceMessage device_message;
-    device_message.header = new MessageHeader{};
-    
-    // Populate header with current state
-    memcpy(device_message.header->dh_public, local_dh_public, crypto_kx_PUBLICKEYBYTES);
+    device_message.header = std::make_shared<MessageHeader>();
+    device_message.header->dh_public.resize(crypto_kx_PUBLICKEYBYTES);
+    std::copy(local_dh_public.begin(), local_dh_public.end(), device_message.header->dh_public.begin());
     device_message.header->prev_chain_length = prev_send_chain_length;
     device_message.header->message_index = send_chain.index;
 
-    // Derive message key for the current message
-    unsigned char* message_key = derive_message_key(send_chain.chain_key);
-    std::cout << "[DEBUG] Sender derived message key: " << bin2hex(message_key, crypto_kdf_KEYBYTES) << std::endl;
+    std::vector<unsigned char> message_key = derive_message_key(send_chain.chain_key);
+    std::cout << "[DEBUG] Sender derived message key: " << bin2hex(message_key.data(), crypto_kdf_KEYBYTES) << std::endl;
     std::cout.flush();
-    
-    // Increment the message index for the next message
     send_chain.index++;
 
-    // Encrypt the message
-    device_message.length = strlen(reinterpret_cast<const char*>(message));
-    std::vector<unsigned char> ciphertext_vec = encrypt_message_given_key(message, device_message.length, message_key);
-    device_message.ciphertext = new unsigned char[ciphertext_vec.size()];
-    memcpy(device_message.ciphertext, ciphertext_vec.data(), ciphertext_vec.size());
-    device_message.length = ciphertext_vec.size();
+    size_t msg_len = strlen(reinterpret_cast<const char*>(message));
+    device_message.ciphertext = encrypt_message_given_key(message, msg_len, message_key.data());
+    device_message.length = device_message.ciphertext.size();
 
-    delete[] message_key;
     return device_message;
 }
 
 std::vector<unsigned char> DoubleRatchet::message_receive(const DeviceMessage& encrypted_message) {
-    // check if we already have this message in our skipped keys cache
     SkippedMessageKey skipped_key_id = {
-        {0}, 
+        encrypted_message.header->dh_public,
         encrypted_message.header->message_index
     };
-    memcpy(skipped_key_id.dh_public, encrypted_message.header->dh_public, crypto_kx_PUBLICKEYBYTES);
-    
     auto it = skipped_message_keys.find(skipped_key_id);
     if (it != skipped_message_keys.end()) {
-        // we have this message key cached
-        std::cout << "Found skipped message key in cache for index " << encrypted_message.header->message_index << std::endl;
-        
-        auto* message_key = new unsigned char[crypto_kdf_KEYBYTES];
-        memcpy(message_key, it->second, crypto_kdf_KEYBYTES);
-        
-        // remove the used key from the cache
-        delete[] it->second;
+        std::vector<unsigned char> plaintext = decrypt_message_given_key(
+            encrypted_message.ciphertext.data(), 
+            encrypted_message.ciphertext.size(), 
+            it->second.data()
+        );
         skipped_message_keys.erase(it);
-        
-        // Decrypt the message
-        std::vector<unsigned char> plaintext_vec = decrypt_message_given_key(encrypted_message.ciphertext, encrypted_message.length, message_key);
-        delete[] message_key;
-        return plaintext_vec;
+        return plaintext;
     }
-    
-    // check if ratchet public key has changed (DH ratchet step)
-    bool new_ratchet = memcmp(encrypted_message.header->dh_public, remote_dh_public, crypto_kx_PUBLICKEYBYTES) != 0;
 
+    bool new_ratchet = encrypted_message.header->dh_public != std::vector<unsigned char>(remote_dh_public.begin(), remote_dh_public.end());
     if (new_ratchet) {
         std::cout << "New DH ratchet key detected" << std::endl;
         
@@ -179,28 +166,26 @@ std::vector<unsigned char> DoubleRatchet::message_receive(const DeviceMessage& e
             
             // skip current receive chain
             for (int i = recv_chain.index; i < encrypted_message.header->prev_chain_length; i++) {
-                unsigned char* skipped_key = derive_message_key(recv_chain.chain_key);
+                std::vector<unsigned char> skipped_key = derive_message_key(recv_chain.chain_key);
                 
                 SkippedMessageKey key_id = {{0}, i};
-                memcpy(key_id.dh_public, remote_dh_public, crypto_kx_PUBLICKEYBYTES);
+                memcpy(key_id.dh_public.data(), remote_dh_public.data(), crypto_kx_PUBLICKEYBYTES);
                 
-                skipped_message_keys[key_id] = skipped_key;
+                skipped_message_keys[key_id] = std::move(skipped_key);
                 
                 std::cout << "  Cached key for message " << i << " in previous chain: " 
-                          << bin2hex(skipped_key, crypto_kdf_KEYBYTES) << std::endl;
+                          << bin2hex(skipped_key.data(), crypto_kdf_KEYBYTES) << std::endl;
                 
                 // enforce maximum cache size by removing oldest keys if needed
                 if (skipped_message_keys.size() > MAX_SKIPPED_MESSAGE_KEYS) {
-                    auto oldest = skipped_message_keys.begin();
-                    delete[] oldest->second;
-                    skipped_message_keys.erase(oldest);
+                    skipped_message_keys.erase(skipped_message_keys.begin());
                     std::cout << "  Removed oldest key from cache due to size limit" << std::endl;
                 }
             }
         }
         
         // perform DH ratchet with the new key
-        dh_ratchet(encrypted_message.header->dh_public, false);
+        dh_ratchet(encrypted_message.header->dh_public.data(), false);
         
         // reset receive chain index
         recv_chain.index = 0;
@@ -217,21 +202,19 @@ std::vector<unsigned char> DoubleRatchet::message_receive(const DeviceMessage& e
         
         // Cache skipped message keys
         for (int i = recv_chain.index; i < encrypted_message.header->message_index; i++) {
-            unsigned char* skipped_key = derive_message_key(recv_chain.chain_key);
+            std::vector<unsigned char> skipped_key = derive_message_key(recv_chain.chain_key);
             
             SkippedMessageKey key_id = {{0}, i};
-            memcpy(key_id.dh_public, encrypted_message.header->dh_public, crypto_kx_PUBLICKEYBYTES);
+            memcpy(key_id.dh_public.data(), encrypted_message.header->dh_public.data(), crypto_kx_PUBLICKEYBYTES);
             
-            skipped_message_keys[key_id] = skipped_key;
+            skipped_message_keys[key_id] = std::move(skipped_key);
             
             std::cout << "  Cached key for skipped message " << i << ": " 
-                      << bin2hex(skipped_key, crypto_kdf_KEYBYTES) << std::endl;
+                      << bin2hex(skipped_key.data(), crypto_kdf_KEYBYTES) << std::endl;
             
             // enforce maximum cache size
             if (skipped_message_keys.size() > MAX_SKIPPED_MESSAGE_KEYS) {
-                auto oldest = skipped_message_keys.begin();
-                delete[] oldest->second;
-                skipped_message_keys.erase(oldest);
+                skipped_message_keys.erase(skipped_message_keys.begin());
                 std::cout << "  Removed oldest key from cache due to size limit" << std::endl;
             }
         }
@@ -254,25 +237,23 @@ std::vector<unsigned char> DoubleRatchet::message_receive(const DeviceMessage& e
     }
     
     // generate the message key
-    unsigned char* message_key = derive_message_key(recv_chain.chain_key);
-    std::cout << "[DEBUG] Receiver derived message key: " << bin2hex(message_key, crypto_kdf_KEYBYTES) << std::endl;
+    std::vector<unsigned char> message_key = derive_message_key(recv_chain.chain_key);
+    std::cout << "[DEBUG] Receiver derived message key: " << bin2hex(message_key.data(), crypto_kdf_KEYBYTES) << std::endl;
     std::cout.flush();
     
     // update the receive chain index
     recv_chain.index = encrypted_message.header->message_index + 1;
 
     // Decrypt the message
-    std::vector<unsigned char> plaintext_vec = decrypt_message_given_key(encrypted_message.ciphertext, encrypted_message.length, message_key);
-    delete[] message_key;
-    return plaintext_vec;
+    return decrypt_message_given_key(encrypted_message.ciphertext.data(), encrypted_message.ciphertext.size(), message_key.data());
 }
 
 const unsigned char* DoubleRatchet::get_public_key() const {
-    return local_dh_public;
+    return local_dh_public.data();
 }
 
 void DoubleRatchet::print_state() const {
-    std::cout << "Root key: " << bin2hex(root_key, crypto_kdf_KEYBYTES) << std::endl;
+    std::cout << "Root key: " << bin2hex(root_key.data(), crypto_kdf_KEYBYTES) << std::endl;
     std::cout << "Send chain (index " << send_chain.index << "): " 
               << bin2hex(send_chain.chain_key, crypto_kdf_KEYBYTES) << std::endl;
     std::cout << "Recv chain (index " << recv_chain.index << "): " 

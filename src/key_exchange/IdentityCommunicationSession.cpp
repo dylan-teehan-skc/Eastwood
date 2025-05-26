@@ -4,7 +4,7 @@
 #include "IdentityCommunicationSession.h"
 #include "utils.h"
 
-IdentityCommunicationSession::IdentityCommunicationSession(keyBundle myBundle, std::vector<keyBundle> key_bundles, unsigned char* public_identity_key_1, unsigned char* public_identity_key_2)
+IdentityCommunicationSession::IdentityCommunicationSession(const keyBundle &myBundle, const std::vector<keyBundle> &key_bundles, const unsigned char* public_identity_key_1, const unsigned char* public_identity_key_2)
     : myBundle(myBundle) {
     // out of band verification between users
     size_t identity_session_key_len = sizeof(public_identity_key_1) + sizeof(public_identity_key_2);
@@ -13,14 +13,14 @@ IdentityCommunicationSession::IdentityCommunicationSession(keyBundle myBundle, s
     updateSessionsFromKeyBundles(key_bundles);
 }
 
-void IdentityCommunicationSession::updateSessionsFromKeyBundles(std::vector<keyBundle> key_bundles) {
+void IdentityCommunicationSession::updateSessionsFromKeyBundles(const std::vector<keyBundle> &key_bundles) {
     // create session for key bundle
     for (const auto & key_bundle : key_bundles) {
         createSessionFromKeyBundle(key_bundle);
     }
 }
 
-void IdentityCommunicationSession::createSessionFromKeyBundle(keyBundle key_bundle) {
+void IdentityCommunicationSession::createSessionFromKeyBundle(const keyBundle &key_bundle) {
     //1. compute device_session_id
     size_t identity_session_key_len = sizeof(myBundle.device_key_public) + sizeof(key_bundle.device_key_public);
     unsigned char* device_session_id_new = concat_ordered(*myBundle.device_key_public, crypto_box_PUBLICKEYBYTES, *key_bundle.device_key_public, crypto_box_PUBLICKEYBYTES, identity_session_key_len);
@@ -67,4 +67,3 @@ IdentityCommunicationSession::~IdentityCommunicationSession() {
     }
 }
 
-#include "IdentityCommunicationSession.h"
