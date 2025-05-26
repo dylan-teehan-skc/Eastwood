@@ -17,7 +17,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Needed to fetch full history for git diff
+        fetch-depth: 0
 
     - name: Install dependencies
       run: |
@@ -35,34 +35,36 @@ jobs:
       id: changed-files
       run: |
         CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '.*\.(cpp|h|hpp|cc|cxx)$' || true)
-        echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
 
         if [[ -n "$CHANGED_FILES" ]]; then
-          echo "FILES_FOUND=true" >> $GITHUB_ENV
+          echo "files_found=true" >> $GITHUB_OUTPUT
+          CHANGED_FILES_ESCAPED=$(echo "$CHANGED_FILES" | tr '\n' ' ')
+          echo "changed_files=$CHANGED_FILES_ESCAPED" >> $GITHUB_OUTPUT
         else
-          echo "FILES_FOUND=false" >> $GITHUB_ENV
+          echo "files_found=false" >> $GITHUB_OUTPUT
+          echo "changed_files=" >> $GITHUB_OUTPUT
         fi
 
     - name: Check if any files were found
-      if: env.FILES_FOUND == 'false'
+      if: steps.changed-files.outputs.files_found == 'false'
       run: echo "No C++ files changed in this PR."
 
     - name: Run clang-tidy on changed files
-      if: env.FILES_FOUND == 'true'
+      if: steps.changed-files.outputs.files_found == 'true'
       run: |
-        echo "Changed files: $CHANGED_FILES"
-        clang-tidy -p build $CHANGED_FILES > build/tidy-report.txt 2>&1 || true
+        echo "Changed files: ${{ steps.changed-files.outputs.changed_files }}"
+        clang-tidy -p build ${{ steps.changed-files.outputs.changed_files }} > build/tidy-report.txt 2>&1 || true
         cat build/tidy-report.txt
 
     - name: Upload tidy report
-      if: env.FILES_FOUND == 'true'
+      if: steps.changed-files.outputs.files_found == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: clang-tidy-report
         path: build/tidy-report.txt
 
     - name: Comment PR with clang-tidy results
-      if: env.FILES_FOUND == 'true' && always()
+      if: steps.changed-files.outputs.files_found == 'true'
       uses: actions/github-script@v7
       with:
         script: |
@@ -70,37 +72,37 @@ jobs:
           const path = 'build/tidy-report.txt';
           if (fs.existsSync(path)) {
             const report = fs.readFileSync(path, 'utf8').trim();
-            const changedFiles = process.env.CHANGED_FILES || '<file-list>';
+            const changedFiles = `${{ steps.changed-files.outputs.changed_files }}` || '<file-list>';
 
             const body = report
               ? `## 🔍 Clang-Tidy Report
 
-            \`\`\`
-            ${report}
-            \`\`\`
+          \`\`\`
+          ${report}
+          \`\`\`
 
-            ---
+          ---
 
-            <details>
-            <summary>💡 How to fix most issues</summary>
+          <details>
+          <summary>💡 How to fix most issues</summary>
 
-            Most issues can be fixed automatically with:
+          Most issues can be fixed automatically with:
 
-            \`\`\`bash
-            clang-tidy -p build --fix-errors ${changedFiles}
-            \`\`\`
+          \`\`\`bash
+          clang-tidy -p build --fix-errors ${changedFiles}
+          \`\`\`
 
-            This will apply suggested fixes to the files in-place.
+          This will apply suggested fixes to the files in-place.
 
-            > 💡 Tip: Run this locally and inspect the diffs before committing.
+          > 💡 Tip: Run this locally and inspect the diffs before committing.
 
-            </details>`
-                          : '## ✅ Clang-Tidy Report\n\nNo issues found in the changed files! 🎉';
+          </details>`
+                        : '## ✅ Clang-Tidy Report\n\nNo issues found in the changed files! 🎉';
 
-                        github.rest.issues.createComment({
-                          issue_number: context.issue.number,
-                          owner: context.repo.owner,
-                          repo: context.repo.repo,
-                          body
-                        });
-                      }
+                      github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body
+                      });
+                    }
