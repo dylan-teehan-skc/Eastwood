@@ -1,0 +1,4 @@
+#ifndef REGISTER_DEVICE_H
+#define REGISTER_DEVICE_H
+
+#endif //REGISTER_DEVICE_H

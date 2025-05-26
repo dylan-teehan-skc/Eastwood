@@ -77,6 +77,8 @@ set(CRYPTO_HEADERS
         src/libraries/HTTPSClient.cpp
         src/endpoints/endpoints.cpp
         src/endpoints/endpoints.h
+        src/auth/register_device/register_device.h
+        src/auth/register_user/register_user.h
 )
 
 # Create main executable
