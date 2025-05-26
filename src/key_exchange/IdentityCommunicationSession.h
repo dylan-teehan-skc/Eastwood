@@ -35,6 +35,9 @@ public:
     // ensure to make sure the device session does not already exist
     // device session id of two device ids in alphabetical order hashed
     ~IdentityCommunicationSession();
+
+    void send_msg(const std::vector<unsigned char>& message) const;
+    void recv_msg(Message msg) const;
 private:
     keyBundle myBundle;
     unsigned char* identity_session_id;

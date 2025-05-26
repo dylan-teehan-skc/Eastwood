@@ -39,6 +39,9 @@ public:
     void serialize(Archive& ar) {
         ar(device_session_id, ratchet, shared_secret);
     }
+
+    void send_msg(std::vector<unsigned char> message) const;
+    void recv_msg(const DeviceMessage &msg) const;
 protected:
     std::vector<uint8_t> device_session_id;
     std::unique_ptr<DoubleRatchet> ratchet;

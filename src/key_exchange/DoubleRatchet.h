@@ -24,6 +24,7 @@ struct MessageHeader {
     std::vector<unsigned char> dh_public; // Sender's current ratchet public key
     int prev_chain_length;
     int message_index;
+    std::vector<unsigned char> device_session_id;
 
     template<class Archive>
     void serialize(Archive& ar) {
@@ -104,7 +105,6 @@ public:
     const unsigned char* get_public_key() const;
     const std::vector<unsigned char>& getRootKey() const { return root_key; }
     void print_state() const;
-
 private:
     // Performs a Diffie-Hellman ratchet step and updates the root key and chain key
     void dh_ratchet(const unsigned char* remote_public_key, bool is_sending);

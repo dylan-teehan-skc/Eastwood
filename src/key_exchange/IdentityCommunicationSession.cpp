@@ -67,3 +67,14 @@ IdentityCommunicationSession::~IdentityCommunicationSession() {
     }
 }
 
+void IdentityCommunicationSession::send_msg(const std::vector<unsigned char> &message) const {
+    for (const auto&[fst, snd] : device_sessions) {
+        snd->send_msg(message);
+    }
+}
+
+void IdentityCommunicationSession::recv_msg(Message msg) const {
+    device_sessions[std::string<msg.header->device_session_id>()]->recv_msg(msg);
+}
+
+

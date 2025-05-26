@@ -2,12 +2,21 @@
 #include <iostream>
 #include <sstream>
 #include "utils.h"
+#include "x3dh.h"
 
 DeviceCommunicationSession::DeviceCommunicationSession() 
     : device_session_id(), ratchet(nullptr), shared_secret() {
     // Initialize base class - common functionality can be implemented here
     std::cout << "\n===== INITIALIZING DEVICE COMMUNICATION SESSION =====" << std::endl;
 }
+
+void DeviceCommunicationSession::send_msg(std::vector<unsigned char> message) const {
+    ratchet->message_send(message.data());
+};
+
+void DeviceCommunicationSession::recv_msg(const DeviceMessage &msg) const {
+    ratchet->message_receive(msg);
+};
 
 const std::vector<uint8_t>& DeviceCommunicationSession::getDeviceSessionId() const {
     return device_session_id;
