@@ -1,0 +1,48 @@
+name: Clang-Tidy on PR Files Only
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.cpp'
+      - 'src/**/*.h'
+
+jobs:
+  clang-tidy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Needed to get full git history for diffing
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-tidy cmake build-essential
+
+    - name: Configure project with CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    - name: Get list of changed C++ files
+      id: changed-files
+      run: |
+        echo "FILES=$(git diff --name-only origin/${{ github.base_ref }} | grep '^src/.*\.\(cpp\|h\)$' | xargs)" >> $GITHUB_OUTPUT
+
+    - name: Run clang-tidy on changed files
+      if: steps.changed-files.outputs.FILES != ''
+      run: |
+        cd build
+        echo "Checking files: ${{ steps.changed-files.outputs.FILES }}"
+        clang-tidy -p . ${{ steps.changed-files.outputs.FILES }} > tidy-report.txt || true
+        cat tidy-report.txt
+
+    - name: Upload tidy report
+      if: steps.changed-files.outputs.FILES != ''
+      uses: actions/upload-artifact@v3
+      with:
+        name: clang-tidy-report
+        path: build/tidy-report.txt
