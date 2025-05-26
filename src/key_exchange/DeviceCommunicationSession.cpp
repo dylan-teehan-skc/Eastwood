@@ -1,24 +1,28 @@
 #include "DeviceCommunicationSession.h"
+#include <stdexcept>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include "utils.h"
-#include "x3dh.h"
+
+static void print_key(const char* name, const unsigned char* key, size_t len) {
+    std::ostringstream oss;
+    for (size_t i = 0; i < len; ++i)
+        oss << std::hex << std::setw(2) << std::setfill('0') << (int)key[i];
+    std::cout << name << ": " << oss.str() << std::endl;
+}
 
 DeviceCommunicationSession::DeviceCommunicationSession() 
-    : device_session_id(), ratchet(nullptr), shared_secret() {
+    : shared_secret(nullptr), ratchet(nullptr), device_session_id(nullptr) {
     // Initialize base class - common functionality can be implemented here
     std::cout << "\n===== INITIALIZING DEVICE COMMUNICATION SESSION =====" << std::endl;
 }
 
-void DeviceCommunicationSession::send_msg(std::vector<unsigned char> message) const {
-    ratchet->message_send(message.data());
-};
+DeviceCommunicationSession::~DeviceCommunicationSession() {
+    // Base class destructor - will be called after derived class destructors
+}
 
-void DeviceCommunicationSession::recv_msg(const DeviceMessage &msg) const {
-    ratchet->message_receive(msg);
-};
-
-const std::vector<uint8_t>& DeviceCommunicationSession::getDeviceSessionId() const {
+unsigned char* DeviceCommunicationSession::getDeviceSessionId() {
     return device_session_id;
 }
 
@@ -34,39 +38,37 @@ DeviceSendingCommunicationSession::DeviceSendingCommunicationSession(
     const unsigned char* recipient_ed25519_device_key_public
 ) : DeviceCommunicationSession() {
 
-    size_t out_len;
-    unsigned char* session_id_ptr = concat_ordered(device_key_public, crypto_box_PUBLICKEYBYTES, 
-                                                 recipient_device_key_public, crypto_box_PUBLICKEYBYTES, 
-                                                 out_len);
-    device_session_id = std::vector<uint8_t>(session_id_ptr, session_id_ptr + out_len);
-    delete[] session_id_ptr;
+    size_t device_session_key_len = sizeof(device_key_public) + sizeof(recipient_device_key_public);
+    device_session_id = concat_ordered(device_key_public, crypto_box_PUBLICKEYBYTES, recipient_device_key_public, crypto_box_PUBLICKEYBYTES, device_session_key_len);
 
-    unsigned char* shared_secret_ptr = x3dh_initiator(
+    shared_secret = x3dh_initiator(
         device_key_private,
         ephemeral_key_private,
         recipient_device_key_public,
         recipient_signed_prekey_public,
         recipient_onetime_prekey_public,
         recipient_signed_prekey_signature,
-        recipient_ed25519_device_key_public
+        recipient_ed25519_device_key_public // ed converted curve for verification
     );
-    shared_secret = std::vector<uint8_t>(shared_secret_ptr, shared_secret_ptr + crypto_kx_SESSIONKEYBYTES);
-    delete[] shared_secret_ptr;
 
-    // SEND POST REQUEST TO /handshake/identity_key
+    // SEND POST REQUET TO /handshake/identity_key
     // request contains;
     // recipients public signed prekey, recipients public onetime prekey
     // initiator (my) public device key, initiatior (my) public ephemeral key
     
     ratchet = std::make_unique<DoubleRatchet>(
-        shared_secret.data(),
+        shared_secret,
         recipient_signed_prekey_public,
         ephemeral_key_public,
         ephemeral_key_private
     );
 }
 
-const std::vector<uint8_t>& DeviceSendingCommunicationSession::getSharedSecret() const {
+DeviceSendingCommunicationSession::~DeviceSendingCommunicationSession() {
+    delete[] shared_secret;
+}
+
+const unsigned char* DeviceSendingCommunicationSession::getSharedSecret() const {
     return shared_secret;
 }
 
@@ -83,32 +85,29 @@ DeviceReceivingCommunicationSession::DeviceReceivingCommunicationSession(
     const unsigned char* signed_prekey_private,
     const unsigned char* onetime_prekey_private
 ) : DeviceCommunicationSession() {
-    size_t out_len;
-    unsigned char* session_id_ptr = concat_ordered(device_key_public, crypto_box_PUBLICKEYBYTES, 
-                                                 initiator_device_key_public, crypto_box_PUBLICKEYBYTES, 
-                                                 out_len);
-    device_session_id = std::vector<uint8_t>(session_id_ptr, session_id_ptr + out_len);
-    delete[] session_id_ptr;
-
-    unsigned char* shared_secret_ptr = x3dh_responder(
+    size_t device_session_key_len = sizeof(device_key_public) + sizeof(initiator_device_key_public);
+    device_session_id = concat_ordered(device_key_public, crypto_box_PUBLICKEYBYTES, initiator_device_key_public, crypto_box_PUBLICKEYBYTES, device_session_key_len);
+    shared_secret = x3dh_responder(
         initiator_device_key_public,
         initiator_ephemeral_key_public,
         device_key_private,
         signed_prekey_private,
         onetime_prekey_private
     );
-    shared_secret = std::vector<uint8_t>(shared_secret_ptr, shared_secret_ptr + crypto_kx_SESSIONKEYBYTES);
-    delete[] shared_secret_ptr;
     
     ratchet = std::make_unique<DoubleRatchet>(
-        shared_secret.data(),
+        shared_secret,
         initiator_ephemeral_key_public,
         signed_prekey_public,
         signed_prekey_private
     );
 }
 
-const std::vector<uint8_t>& DeviceReceivingCommunicationSession::getSharedSecret() const {
+DeviceReceivingCommunicationSession::~DeviceReceivingCommunicationSession() {
+    delete[] shared_secret;
+}
+
+const unsigned char* DeviceReceivingCommunicationSession::getSharedSecret() const {
     return shared_secret;
 }
 
