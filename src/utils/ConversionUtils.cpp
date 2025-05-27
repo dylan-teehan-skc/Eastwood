@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <filesystem>
 
 bool hex_to_bin(const std::string& hex, unsigned char* bin, size_t bin_size) {
     if (hex.length() != bin_size * 2) return false;
@@ -54,13 +55,36 @@ std::vector<unsigned char> hex_string_to_binary(const std::string& hex_string) {
 }
 
 std::string load_env_variable(const std::string& key, const std::string& default_value) {
-    std::ifstream env_file("src/.env");
-    if (!env_file.is_open()) {
-        env_file.open(".env");
-        if (!env_file.is_open()) {
-            std::cerr << "Warning: Could not open .env file in either src/ or current directory" << std::endl;
-            return default_value;
+    namespace fs = std::filesystem;
+    
+    fs::path exe_path = fs::current_path();
+    fs::path current = exe_path;
+    fs::path env_path;
+    bool found = false;
+    while (current != current.parent_path()) { 
+        if (fs::exists(current / "src")) {
+            if (fs::exists(current / "src" / ".env")) {
+                env_path = current / "src" / ".env";
+                found = true;
+                break;
+            } else if (fs::exists(current / ".env")) {
+                env_path = current / ".env";
+                found = true;
+                break;
+            }
         }
+        current = current.parent_path();
+    }
+    
+    if (!found) {
+        std::cerr << "Warning: Could not find .env file by searching up from: " << exe_path << std::endl;
+        return default_value;
+    }
+
+    std::ifstream env_file(env_path);
+    if (!env_file.is_open()) {
+        std::cerr << "Warning: Could not open .env file at: " << env_path << std::endl;
+        return default_value;
     }
 
     std::string line;
