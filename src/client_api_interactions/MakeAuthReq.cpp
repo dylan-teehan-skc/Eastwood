@@ -70,29 +70,26 @@ std::string post_auth(const json& data, const std::string& endpoint = "/") {
                         request_body.length(), 
                         private_key);
 
-    // convert headers to base64
-    char b64_public_key[crypto_sign_PUBLICKEYBYTES * 2];
-    char b64_signature[crypto_sign_BYTES * 2];
-    char b64_session_key[crypto_aead_xchacha20poly1305_ietf_KEYBYTES * 2];
+    // convert headers to hex
+    char hex_public_key[crypto_sign_PUBLICKEYBYTES * 2];
+    char hex_signature[crypto_sign_BYTES * 2];
+    char hex_session_key[crypto_aead_xchacha20poly1305_ietf_KEYBYTES * 2];
 
-    sodium_bin2base64(b64_public_key, sizeof(b64_public_key),
-                    public_key, crypto_sign_PUBLICKEYBYTES,
-                    sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+    sodium_bin2hex(hex_public_key, sizeof(hex_public_key),
+                    public_key, crypto_sign_PUBLICKEYBYTES);
 
-    sodium_bin2base64(b64_signature, sizeof(b64_signature),
-                    signature, crypto_sign_BYTES,
-                    sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+    sodium_bin2hex(hex_signature, sizeof(hex_signature),
+                    signature, crypto_sign_BYTES);
 
-    sodium_bin2base64(b64_session_key, sizeof(b64_session_key),
-                    session_key, crypto_aead_xchacha20poly1305_ietf_KEYBYTES,
-                    sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+    sodium_bin2hex(hex_session_key, sizeof(hex_session_key),
+                    session_key, crypto_aead_xchacha20poly1305_ietf_KEYBYTES);
 
 
     std::map<std::string, std::string> headers = {
         {"Content-Type", "application/json"},
-        {"public_key", b64_public_key},
-        {"signature", b64_signature},
-        {"session_key", b64_session_key}
+        {"public_key", hex_public_key},
+        {"signature", hex_signature},
+        {"session_key", hex_session_key}
     };
 
     // Convert the map of headers into a single string
