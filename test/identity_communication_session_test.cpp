@@ -5,6 +5,9 @@
 #include "src/key_exchange/utils.h"
 #include "src/key_exchange/DoubleRatchet.h"
 #include <map>
+#include <gtest/gtest.h>
+#include "src/sessions/IdentityCommunicationSession.h"
+#include <memory>
 
 struct keyBundle {
     bool isSending;
@@ -31,54 +34,46 @@ keyBundle generateKeyBundle(bool isSending) {
     bundle.isSending = isSending;
     
     // Allocate memory for all keys
-    *bundle.device_key_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
-    *bundle.device_key_private = new unsigned char[crypto_box_SECRETKEYBYTES];
+    bundle.device_key_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
+    bundle.device_key_private = new unsigned char[crypto_box_SECRETKEYBYTES];
+    bundle.ephemeral_key_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
+    bundle.ephemeral_key_private = new unsigned char[crypto_box_SECRETKEYBYTES];
+    bundle.signed_prekey_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
+    bundle.signed_prekey_private = new unsigned char[crypto_box_SECRETKEYBYTES];
+    bundle.onetime_prekey_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
+    bundle.onetime_prekey_private = new unsigned char[crypto_box_SECRETKEYBYTES];
+    bundle.signed_prekey_signature = new unsigned char[crypto_sign_BYTES];
+    bundle.ed25519_device_key_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
+    bundle.ed25519_device_key_private = new unsigned char[crypto_sign_SECRETKEYBYTES];
     
-    *bundle.ed25519_device_key_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
-    *bundle.ed25519_device_key_private = new unsigned char[crypto_sign_SECRETKEYBYTES];
+    // Generate keys
+    crypto_box_keypair(bundle.device_key_public, bundle.device_key_private);
+    crypto_box_keypair(bundle.ephemeral_key_public, bundle.ephemeral_key_private);
+    crypto_box_keypair(bundle.signed_prekey_public, bundle.signed_prekey_private);
+    crypto_box_keypair(bundle.onetime_prekey_public, bundle.onetime_prekey_private);
+    crypto_sign_keypair(bundle.ed25519_device_key_public, bundle.ed25519_device_key_private);
     
-    *bundle.ephemeral_key_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
-    *bundle.ephemeral_key_private = new unsigned char[crypto_box_SECRETKEYBYTES];
-    
-    *bundle.signed_prekey_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
-    *bundle.signed_prekey_private = new unsigned char[crypto_box_SECRETKEYBYTES];
-    *bundle.signed_prekey_signature = new unsigned char[crypto_sign_BYTES];
-    
-    *bundle.onetime_prekey_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
-    *bundle.onetime_prekey_private = new unsigned char[crypto_box_SECRETKEYBYTES];
-    
-    // Generate key pairs
-    crypto_box_keypair(*bundle.device_key_public, *bundle.device_key_private);
-    crypto_sign_keypair(*bundle.ed25519_device_key_public, *bundle.ed25519_device_key_private);
-    crypto_box_keypair(*bundle.ephemeral_key_public, *bundle.ephemeral_key_private);
-    crypto_box_keypair(*bundle.signed_prekey_public, *bundle.signed_prekey_private);
-    crypto_box_keypair(*bundle.onetime_prekey_public, *bundle.onetime_prekey_private);
-    
-    // Sign the prekey
-    crypto_sign_detached(
-        *bundle.signed_prekey_signature,
-        nullptr,
-        *bundle.signed_prekey_public,
-        crypto_box_PUBLICKEYBYTES,
-        *bundle.ed25519_device_key_private
-    );
+    // Sign the signed prekey
+    crypto_sign_detached(bundle.signed_prekey_signature, nullptr,
+                        bundle.signed_prekey_public, crypto_box_PUBLICKEYBYTES,
+                        bundle.ed25519_device_key_private);
     
     return bundle;
 }
 
 // Helper function to clean up a key bundle
 void cleanupKeyBundle(keyBundle& bundle) {
-    delete[] *bundle.device_key_public;
-    delete[] *bundle.device_key_private;
-    delete[] *bundle.ed25519_device_key_public;
-    delete[] *bundle.ed25519_device_key_private;
-    delete[] *bundle.ephemeral_key_public;
-    delete[] *bundle.ephemeral_key_private;
-    delete[] *bundle.signed_prekey_public;
-    delete[] *bundle.signed_prekey_private;
-    delete[] *bundle.signed_prekey_signature;
-    delete[] *bundle.onetime_prekey_public;
-    delete[] *bundle.onetime_prekey_private;
+    delete[] bundle.device_key_public;
+    delete[] bundle.device_key_private;
+    delete[] bundle.ephemeral_key_public;
+    delete[] bundle.ephemeral_key_private;
+    delete[] bundle.signed_prekey_public;
+    delete[] bundle.signed_prekey_private;
+    delete[] bundle.onetime_prekey_public;
+    delete[] bundle.onetime_prekey_private;
+    delete[] bundle.signed_prekey_signature;
+    delete[] bundle.ed25519_device_key_public;
+    delete[] bundle.ed25519_device_key_private;
 }
 
 // Helper function to simulate device session ID creation
@@ -266,90 +261,47 @@ void test_multi_device_session_management() {
 }
 
 void test_message_encryption_decryption() {
-    std::cout << "\n===== TESTING MESSAGE ENCRYPTION AND DECRYPTION =====" << std::endl;
-    
-    // Initialize libsodium
     if (sodium_init() < 0) {
-        std::cerr << "Failed to initialize libsodium" << std::endl;
-        return;
+        FAIL() << "Failed to initialize libsodium";
     }
+
+    // Generate key bundles for Alice and Bob
+    keyBundle alice_bundle = generateKeyBundle(true);
+    keyBundle bob_bundle = generateKeyBundle(false);
     
-    try {
-        // SETUP: Create devices for Alice and Bob
-        std::cout << "\n--- SETUP: Creating devices ---" << std::endl;
-        
-        // Generate key bundles for Alice and Bob
-        keyBundle alice_bundle = generateKeyBundle(true);
-        keyBundle bob_bundle = generateKeyBundle(true);
-        
-        // Generate X3DH root key (in a real scenario, this would come from X3DH)
-        unsigned char root_key[crypto_kdf_KEYBYTES];
-        randombytes_buf(root_key, crypto_kdf_KEYBYTES);
-        
-        // Initialize DoubleRatchet instances for both parties
-        DoubleRatchet alice_ratchet(
-            root_key,
-            *bob_bundle.signed_prekey_public,
-            *alice_bundle.ephemeral_key_public,
-            *alice_bundle.ephemeral_key_private
-        );
-        
-        DoubleRatchet bob_ratchet(
-            root_key,
-            *alice_bundle.ephemeral_key_public,
-            *bob_bundle.signed_prekey_public,
-            *bob_bundle.signed_prekey_private
-        );
-        
-        // SCENARIO 1: Alice sends an encrypted message to Bob
-        std::cout << "\n--- SCENARIO 1: Alice sends an encrypted message to Bob ---" << std::endl;
-        
-        const char* alice_message = "Hello Bob, this is a secret message!";
-        std::cout << "Alice's original message: " << alice_message << std::endl;
-        
-        // Alice encrypts the message
-        DeviceMessage encrypted_message = alice_ratchet.message_send((unsigned char*)alice_message);
-        std::cout << "Message encrypted with header: " << std::endl;
-        std::cout << "  DH Public Key: " << bin2hex(encrypted_message.header->dh_public, crypto_kx_PUBLICKEYBYTES) << std::endl;
-        std::cout << "  Message Index: " << encrypted_message.header->message_index << std::endl;
-        
-        // Bob decrypts the message
-        std::vector<unsigned char> bob_plaintext = bob_ratchet.message_receive(encrypted_message);
-        std::cout << "Bob decrypted message: " << std::string(bob_plaintext.begin(), bob_plaintext.end()) << std::endl;
-        // Verify the message was decrypted correctly
-        if (std::string(bob_plaintext.begin(), bob_plaintext.end()) == alice_message) {
-            std::cout << "✅ Message decryption successful!" << std::endl;
-        } else {
-            std::cout << "❌ Message decryption failed!" << std::endl;
-        }
-        
-        // SCENARIO 2: Bob sends a reply to Alice
-        std::cout << "\n--- SCENARIO 2: Bob sends a reply to Alice ---" << std::endl;
-        
-        const char* bob_message = "Hi Alice, I received your message!";
-        std::cout << "Bob's original message: " << bob_message << std::endl;
-        
-        // Bob encrypts the message
-        DeviceMessage bob_encrypted = bob_ratchet.message_send((unsigned char*)bob_message);
-        std::cout << "Message encrypted with header: " << std::endl;
-        std::cout << "  DH Public Key: " << bin2hex(bob_encrypted.header->dh_public, crypto_kx_PUBLICKEYBYTES) << std::endl;
-        std::cout << "  Message Index: " << bob_encrypted.header->message_index << std::endl;
-        
-        // Alice decrypts the message
-        std::vector<unsigned char> alice_plaintext = alice_ratchet.message_receive(bob_encrypted);
-        std::cout << "Alice decrypted message: " << std::string(alice_plaintext.begin(), alice_plaintext.end()) << std::endl;
-        // Verify the message was decrypted correctly
-        if (std::string(alice_plaintext.begin(), alice_plaintext.end()) == bob_message) {
-            std::cout << "✅ Message decryption successful!" << std::endl;
-        } else {
-            std::cout << "❌ Message decryption failed!" << std::endl;
-        }
-        
-        std::cout << "\n✅ Message encryption and decryption test completed successfully" << std::endl;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Error during message encryption/decryption test: " << e.what() << std::endl;
-    }
+    // Create identity keys
+    unsigned char* alice_identity_key = new unsigned char[crypto_box_PUBLICKEYBYTES];
+    unsigned char* bob_identity_key = new unsigned char[crypto_box_PUBLICKEYBYTES];
+    crypto_box_keypair(alice_identity_key, nullptr);
+    crypto_box_keypair(bob_identity_key, nullptr);
+    
+    // Create sessions
+    std::vector<keyBundle> alice_bundles = {bob_bundle};
+    std::vector<keyBundle> bob_bundles = {alice_bundle};
+    
+    auto alice_session = std::make_unique<IdentityCommunicationSession>(
+        alice_bundle, alice_bundles, alice_identity_key, bob_identity_key);
+    auto bob_session = std::make_unique<IdentityCommunicationSession>(
+        bob_bundle, bob_bundles, bob_identity_key, alice_identity_key);
+    
+    // Test message
+    const char* test_message = "Hello, Bob!";
+    size_t message_len = strlen(test_message);
+    auto message = std::make_unique<unsigned char[]>(message_len + 1);
+    memcpy(message.get(), test_message, message_len + 1);
+    
+    // Send message from Alice to Bob
+    alice_session->message_send(message.get());
+    
+    // Clean up
+    cleanupKeyBundle(alice_bundle);
+    cleanupKeyBundle(bob_bundle);
+    delete[] alice_identity_key;
+    delete[] bob_identity_key;
+}
+
+TEST(IdentityCommunicationSessionTest, MessageEncryptionDecryption) {
+    test_message_encryption_decryption();
 }
 
 int main() {

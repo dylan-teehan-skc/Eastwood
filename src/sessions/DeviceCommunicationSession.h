@@ -2,8 +2,10 @@
 // Created by Josh Sloggett on 21/05/2025.
 //
 
-#ifndef COMMUNICATIONSESSION_H
-#define COMMUNICATIONSESSION_H
+#ifndef DEVICECOMMUNICATIONSESSION_H
+#define DEVICECOMMUNICATIONSESSION_H
+
+#include <memory>
 #include "../key_exchange/DoubleRatchet.h"
 #include "../key_exchange/x3dh.h"
 #include <sodium.h>
@@ -16,8 +18,12 @@ public:
     virtual const unsigned char* getSharedSecret() const = 0;
     virtual DoubleRatchet* getRatchet() = 0;
     unsigned char* getDeviceSessionId();
+
+    void message_send(unsigned char* message);
+    void message_receive(DeviceMessage message);
 protected:
     unsigned char* device_session_id;
+    const unsigned char *device_id;
     std::unique_ptr<DoubleRatchet> ratchet;
     unsigned char* shared_secret;
 };

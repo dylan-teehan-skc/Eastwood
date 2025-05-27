@@ -4,26 +4,30 @@
 
 #ifndef IDENTITYCOMMUNICATIONSESSION_H
 #define IDENTITYCOMMUNICATIONSESSION_H
+
 #include <vector>
+#include <map>
 #include "DeviceCommunicationSession.h"
+#include "../key_exchange/DoubleRatchet.h"
+#include "../key_exchange/utils.h"
 
 struct keyBundle {
     bool isSending;
-    unsigned char* device_key_public[crypto_box_PUBLICKEYBYTES];
-    unsigned char* device_key_private[crypto_box_SECRETKEYBYTES];
+    unsigned char* device_key_public;
+    unsigned char* device_key_private;
 
-    unsigned char* ed25519_device_key_public[crypto_sign_PUBLICKEYBYTES];
-    unsigned char* ed25519_device_key_private[crypto_sign_SECRETKEYBYTES];
+    unsigned char* ed25519_device_key_public;
+    unsigned char* ed25519_device_key_private;
 
-    unsigned char* ephemeral_key_public[crypto_box_PUBLICKEYBYTES];
-    unsigned char* ephemeral_key_private[crypto_box_SECRETKEYBYTES];
+    unsigned char* ephemeral_key_public;
+    unsigned char* ephemeral_key_private;
 
-    unsigned char* signed_prekey_public[crypto_box_PUBLICKEYBYTES];
-    unsigned char* signed_prekey_private[crypto_box_SECRETKEYBYTES];
-    unsigned char* signed_prekey_signature[crypto_sign_BYTES];
+    unsigned char* signed_prekey_public;
+    unsigned char* signed_prekey_private;
+    unsigned char* signed_prekey_signature;
 
-    unsigned char* onetime_prekey_public[crypto_box_PUBLICKEYBYTES];
-    unsigned char* onetime_prekey_private[crypto_box_SECRETKEYBYTES];
+    unsigned char* onetime_prekey_public;
+    unsigned char* onetime_prekey_private;
 };
 
 class IdentityCommunicationSession {
@@ -35,7 +39,14 @@ public:
     // ensure to make sure the device session does not already exist
     // device session id of two device ids in alphabetical order hashed
     ~IdentityCommunicationSession();
-    void updateSessionsFromKeyBundles(std::vector<keyBundle>);
+
+    void message_send(unsigned char* message);
+    void message_receive(DeviceMessage message);
+
+    // Public methods for testing
+    const std::map<unsigned char*, DeviceCommunicationSession*>& getDeviceSessions() const { return device_sessions; }
+    void updateSessionsFromKeyBundles(std::vector<keyBundle> key_bundles);
+
 private:
     keyBundle myBundle;
     unsigned char* identity_session_id;
@@ -43,7 +54,5 @@ private:
 
     void createSessionFromKeyBundle(keyBundle);
 };
-
-
 
 #endif //IDENTITYCOMMUNICATIONSESSION_H

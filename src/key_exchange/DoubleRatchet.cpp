@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <sstream>
 #include "XChaCha20-Poly1305.h"
+#include "src/endpoints/endpoints.h"
 
 // Context strings for key derivation - must be exactly 8 bytes
 const char* const ROOT_CTX = "DRROOT01";
@@ -107,7 +108,7 @@ unsigned char* DoubleRatchet::derive_message_key(unsigned char* chain_key) {
     return message_key;
 }
 
-DeviceMessage DoubleRatchet::message_send(unsigned char* message) {
+DeviceMessage DoubleRatchet::message_send(unsigned char* message, const unsigned char* device_id) {
     // Perform DH ratchet step if needed (no ratchet on first message in chain)
     if (send_chain.index == 0) {
         dh_ratchet(nullptr, true);
@@ -120,6 +121,7 @@ DeviceMessage DoubleRatchet::message_send(unsigned char* message) {
     memcpy(device_message.header->dh_public, local_dh_public, crypto_kx_PUBLICKEYBYTES);
     device_message.header->prev_chain_length = prev_send_chain_length;
     device_message.header->message_index = send_chain.index;
+    memcpy(device_message.header->device_id, device_id, crypto_box_PUBLICKEYBYTES);
 
     // Derive message key for the current message
     unsigned char* message_key = derive_message_key(send_chain.chain_key);
@@ -130,13 +132,16 @@ DeviceMessage DoubleRatchet::message_send(unsigned char* message) {
     send_chain.index++;
 
     // Encrypt the message
-    device_message.length = strlen(reinterpret_cast<const char*>(message));
-    std::vector<unsigned char> ciphertext_vec = encrypt_message_given_key(message, device_message.length, message_key);
+    size_t message_len = strlen(reinterpret_cast<const char*>(message));
+    std::vector<unsigned char> ciphertext_vec = encrypt_message_given_key(message, message_len, message_key);
     device_message.ciphertext = new unsigned char[ciphertext_vec.size()];
     memcpy(device_message.ciphertext, ciphertext_vec.data(), ciphertext_vec.size());
     device_message.length = ciphertext_vec.size();
 
     delete[] message_key;
+
+    // Convert DeviceMessage to Message for post_ratchet_message
+    post_ratchet_message(&device_message);
     return device_message;
 }
 

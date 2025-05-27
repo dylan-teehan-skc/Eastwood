@@ -23,32 +23,32 @@ void IdentityCommunicationSession::updateSessionsFromKeyBundles(std::vector<keyB
 void IdentityCommunicationSession::createSessionFromKeyBundle(keyBundle key_bundle) {
     //1. compute device_session_id
     size_t identity_session_key_len = sizeof(myBundle.device_key_public) + sizeof(key_bundle.device_key_public);
-    unsigned char* device_session_id_new = concat_ordered(*myBundle.device_key_public, crypto_box_PUBLICKEYBYTES, *key_bundle.device_key_public, crypto_box_PUBLICKEYBYTES, identity_session_key_len);
+    unsigned char* device_session_id_new = concat_ordered(myBundle.device_key_public, crypto_box_PUBLICKEYBYTES, key_bundle.device_key_public, crypto_box_PUBLICKEYBYTES, identity_session_key_len);
 
     //2. verify if device_session_id doesnt exist already
     if (!device_sessions[device_session_id_new]) {
         //3. create new device session
-        if (key_bundle.isSending) {
+        if (myBundle.isSending) {  // If I am sending, create a sending session
             device_sessions[device_session_id_new] = new DeviceSendingCommunicationSession(
-            *key_bundle.device_key_public,
-            *key_bundle.device_key_private,
-            *key_bundle.ephemeral_key_public,
-            *key_bundle.ephemeral_key_private,
-            *myBundle.device_key_public,
-            *myBundle.signed_prekey_public,
-            *myBundle.onetime_prekey_public,
-            *myBundle.signed_prekey_signature,
-            *myBundle.ed25519_device_key_public
+                myBundle.device_key_public,
+                myBundle.device_key_private,
+                myBundle.ephemeral_key_public,
+                myBundle.ephemeral_key_private,
+                key_bundle.device_key_public,
+                key_bundle.signed_prekey_public,
+                key_bundle.onetime_prekey_public,
+                key_bundle.signed_prekey_signature,
+                key_bundle.ed25519_device_key_public
             );
-        } else {
+        } else {  // If I am receiving, create a receiving session
             device_sessions[device_session_id_new] = new DeviceReceivingCommunicationSession(
-            *key_bundle.device_key_public,
-            *key_bundle.ephemeral_key_public,
-            *myBundle.device_key_public,
-            *myBundle.device_key_private,
-            *myBundle.signed_prekey_public,
-            *myBundle.signed_prekey_private,
-            *myBundle.onetime_prekey_private
+                key_bundle.device_key_public,
+                key_bundle.ephemeral_key_public,
+                myBundle.device_key_public,
+                myBundle.device_key_private,
+                myBundle.signed_prekey_public,
+                myBundle.signed_prekey_private,
+                myBundle.onetime_prekey_private
             );
         }
     }
@@ -66,3 +66,18 @@ IdentityCommunicationSession::~IdentityCommunicationSession() {
         delete[] identity_session_id;
     }
 }
+
+void IdentityCommunicationSession::message_send(unsigned char* message) {
+    for (auto&[fst, snd] : device_sessions) {
+        snd->message_send(message);
+    }
+}
+
+void IdentityCommunicationSession::message_receive(DeviceMessage message) {
+    size_t identity_session_key_len = sizeof(myBundle.device_key_public) + sizeof(message.header->device_id);
+    unsigned char* device_session_id_new = concat_ordered(myBundle.device_key_public, crypto_box_PUBLICKEYBYTES, message.header->device_id, crypto_box_PUBLICKEYBYTES, identity_session_key_len);
+
+    device_sessions[device_session_id_new]->message_receive(message);
+}
+
+#include "IdentityCommunicationSession.h"

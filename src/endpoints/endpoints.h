@@ -4,6 +4,7 @@
 #include <sodium.h>
 
 #include "src/algorithms/constants.h"
+#include "src/key_exchange/DoubleRatchet.h"
 #include "src/sessions/SessionManager.h"
 
 void post_register_user(
@@ -19,6 +20,12 @@ void post_register_device(
     unsigned char pk_device[crypto_sign_PUBLICKEYBYTES],
     unsigned char pk_signature[crypto_sign_BYTES]
 );
+
+void post_ratchet_message(
+    const DeviceMessage* msg
+);
+
+Message* get_messages();
 
 keyBundleRequest get_keybundles(
     unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES]

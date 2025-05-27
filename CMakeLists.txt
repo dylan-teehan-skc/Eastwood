@@ -13,6 +13,22 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets UiTools)
 find_package(OpenSSL REQUIRED)
 
+# Add Google Test
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+)
+FetchContent_MakeAvailable(googletest)
+
+# Add nlohmann_json
+FetchContent_Declare(
+    json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+    DOWNLOAD_EXTRACT_TIMESTAMP true
+)
+FetchContent_MakeAvailable(json)
+
 # Find pkg-config and SQLCipher
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SQLCIPHER REQUIRED sqlcipher)
@@ -128,9 +144,9 @@ target_link_libraries(Eastwood PRIVATE
 
 # Create test executable
 add_executable(EastwoodTests
-        test/identity_communication_session_test.cpp
-        ${CRYPTO_SOURCES}
-        src/database/database.cpp
+    test/identity_session_message_test.cpp
+    ${CRYPTO_SOURCES}
+    src/database/database.cpp
 )
 
 # Configure test target
@@ -138,10 +154,14 @@ target_include_directories(EastwoodTests PRIVATE
     ${SODIUM_INCLUDE_DIR}
     ${SQLCIPHER_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/key_exchange
     ${CMAKE_CURRENT_SOURCE_DIR}/external/cereal/include
+    ${CMAKE_CURRENT_BINARY_DIR}/_deps/googletest-src/googletest/include
 )
 
-target_link_libraries(EastwoodTests PRIVATE
+target_link_libraries(EastwoodTests PRIVATE 
+    GTest::gtest_main
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets

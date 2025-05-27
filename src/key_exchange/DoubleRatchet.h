@@ -20,6 +20,7 @@ struct MessageHeader {
     unsigned char dh_public[crypto_kx_PUBLICKEYBYTES]; // Sender's current ratchet public key
     int prev_chain_length;                             // Length of previous sending chain
     int message_index;                                 // Message number in the chain
+    unsigned char device_id[crypto_box_PUBLICKEYBYTES]; // Fixed-size array for device ID
 };
 
 struct Message {
@@ -136,9 +137,9 @@ public:
                   const unsigned char* local_private_ephemeral);
     
     ~DoubleRatchet();
-
+    
     // Creates a message key and header for sending
-    DeviceMessage message_send(unsigned char* message);
+    DeviceMessage message_send(unsigned char* message, const unsigned char* device_id);
 
     // Processes a received message with header and returns the decrypted plaintext
     std::vector<unsigned char> message_receive(const DeviceMessage& encrypted_message);
@@ -174,6 +175,7 @@ private:
     
     // Maximum number of skipped message keys to keep in memory
     static const int MAX_SKIPPED_MESSAGE_KEYS = 100;
+
 };
 
 #endif //DOUBLERATCHET_H
