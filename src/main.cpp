@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    json response = get_auth("/posts/1");
+    json response = get("");
     std::cout << response.dump(4) << std::endl;  // Pretty print with 4 spaces
 
 
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     //     {"hello", "world"}  // Key-value pair in JSON object
     // };
     
-    // std::string res3 = post_auth(data);
+    // std::string res3 = post(data);
     // std::cout << res3 << std::endl;
 
     // std::string res4 = post_unauth();

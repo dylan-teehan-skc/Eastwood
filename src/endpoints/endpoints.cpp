@@ -20,7 +20,7 @@ void post_register_user(
         {"nonce_signature", bin2hex(nonce_signature, crypto_sign_BYTES)}
     };
 
-    post_auth(body, "/registerUser");
+    post(body, "/registerUser");
 };
 
 void post_register_device(
@@ -33,7 +33,7 @@ void post_register_device(
         {"device_public", bin2hex(pk_device, crypto_sign_PUBLICKEYBYTES)},
         {"signature", bin2hex(pk_signature, crypto_sign_BYTES)}
     };
-    post_auth(body, "/registerDevice");
+    post(body, "/registerDevice");
 };
 
 Message* get_messages() {
@@ -73,7 +73,7 @@ void post_ratchet_message(const DeviceMessage* msg) {
 
 keyBundleRequest get_keybundles(unsigned char pk_identity[32]) {
     std::string hex_pk_identity = bin2hex(pk_identity, 32);
-    std::string response = get_auth("/keybundle/"+hex_pk_identity);
+    std::string response = get("/keybundle/"+hex_pk_identity);
 
     //TODO:: parse response
 };
