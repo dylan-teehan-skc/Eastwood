@@ -6,6 +6,7 @@
 
 #include "../../algorithms/constants.h"
 #include "src/endpoints/endpoints.h"
+#include "src/sql/queries.h"
 
 
 int register_user(const std::string &username, const std::string &master_password) {
@@ -35,6 +36,7 @@ int register_user(const std::string &username, const std::string &master_passwor
 
     unsigned char encrypted_kek[KEK_LEN + ENC_OVERHEAD];
     encrypt_kek(encrypted_kek, kek, nonce_kek, master_key);
+
     // TODO: db.store_key("KEK", encrypted_kek, nonce_kek);
     // TODO: send_request("POST", "/add_kek", kek, nonce_kek);
 
@@ -55,6 +57,8 @@ int register_user(const std::string &username, const std::string &master_passwor
 
     // TODO: db.store_key("KEK", encrypted_kek, nonce_kek);
     // TODO: db.store_public_key("Identity_pk", pk_identity);
+    save_keypair("identity", pk_identity, encrypted_sk, nonce_sk);
+
     post_register_user(username, pk_identity, registration_nonce, nonce_signature);
     return 0;
 }
