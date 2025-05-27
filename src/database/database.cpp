@@ -16,7 +16,7 @@ Database::~Database() {
     closeDatabase();
 }
 
-bool Database::initialize(const QString &masterKey) {
+bool Database::initialize(const QString &masterKey, const bool encrypted) {
     if (initialized) {
         return true;
     }
@@ -25,7 +25,7 @@ bool Database::initialize(const QString &masterKey) {
     if (!QDir().mkpath(dataPath)) {
         throw std::runtime_error("Failed to access datapath");
     };
-    const QString dbPath = dataPath + "/encrypted.db";
+    const QString dbPath = dataPath + (encrypted ? "/encrypted.db" : "/db.db");
     std::cerr << "DB saved at " << dbPath.toStdString() << std::endl;
 
     // Open the database
@@ -36,12 +36,14 @@ bool Database::initialize(const QString &masterKey) {
     }
 
     // Set encryption key
-    rc = sqlite3_key(db, masterKey.toUtf8().constData(), masterKey.length());
-    if (rc != SQLITE_OK) {
-        qDebug() << "Can't set encryption key:" << sqlite3_errmsg(db);
-        sqlite3_close(db);
-        db = nullptr;
-        return false;
+    if (encrypted) {
+        rc = sqlite3_key(db, masterKey.toUtf8().constData(), masterKey.length());
+        if (rc != SQLITE_OK) {
+            qDebug() << "Can't set encryption key:" << sqlite3_errmsg(db);
+            sqlite3_close(db);
+            db = nullptr;
+            return false;
+        }
     }
 
     // Verify the database is accessible by running a test query

@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
     // NOTE: Debugging only. Refreshes the database on every run
     QFile::remove("/Users/fred/Library/Application Support/encrypted.db");
     auto &db = Database::get();
-    if (db.initialize("master key")) {
+    if (db.initialize("master key", false)) {
         std::cout << "Database initialized successfully." << std::endl;
     } else {
         std::cout << "Failed to initialize database." << std::endl;

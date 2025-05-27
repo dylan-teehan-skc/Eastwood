@@ -12,7 +12,7 @@ public:
     static Database &get();
 
     // Initialize the database with a master key
-    bool initialize(const QString &masterKey);
+    bool initialize(const QString &masterKey, bool encrypted);
     bool isInitialized() const { return db != nullptr; }
     sqlite3 *getDatabase() const { return db; }
     void closeDatabase();
