@@ -2,43 +2,21 @@
 #define SQLITE_HAS_CODEC 1
 #include <QFile>
 #include <QApplication>
-#include "ui/windows/login/login.h"
-#include "client_api_interactions/MakeAuthReq.h"
-#include "client_api_interactions/MakeUnauthReq.h"
+
+#include "auth/register_user/register_user.h"
 #include "database/database.h"
+#include "database/schema.h"
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
-
-    // NOTE: Debugging only. Refreshes the database on every run
-    QFile::remove("/Users/fred/Library/Application Support/encrypted.db");
+    constexpr bool encrypted = false;
     auto &db = Database::get();
-    if (db.initialize("master key", false)) {
+    if (db.initialize("master key", encrypted)) {
         std::cout << "Database initialized successfully." << std::endl;
     } else {
         std::cout << "Failed to initialize database." << std::endl;
         return 1;
     }
 
-
-    json response = get("");
-    std::cout << response.dump(4) << std::endl;  // Pretty print with 4 spaces
-
-
-    // std::string res2 = get_unauth("/posts/1");
-    // std::cout << res2 << std::endl;
-
-    // json data = {
-    //     {"hello", "world"}  // Key-value pair in JSON object
-    // };
-
-    // std::string res3 = post(data);
-    // std::cout << res3 << std::endl;
-
-    // std::string res4 = post_unauth();
-    // std::cout << res4 << std::endl;
-
-    // Login login;
-    // login.show();
-    // return app.exec();
+    init_schema();
 }

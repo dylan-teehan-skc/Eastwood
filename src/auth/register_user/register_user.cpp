@@ -37,7 +37,7 @@ int register_user(const std::string &username, const std::string &master_passwor
     unsigned char encrypted_kek[KEK_LEN + ENC_OVERHEAD];
     encrypt_kek(encrypted_kek, kek, nonce_kek, master_key);
 
-    // TODO: db.store_key("KEK", encrypted_kek, nonce_kek);
+    save_encrypted_key("kek", encrypted_kek, nonce_kek);
     // TODO: send_request("POST", "/add_kek", kek, nonce_kek);
 
     unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES];
@@ -45,6 +45,7 @@ int register_user(const std::string &username, const std::string &master_passwor
     crypto_sign_keypair(pk_identity, sk_identity);
 
     unsigned char nonce_sk[NONCE_LEN];
+    randombytes_buf(nonce_sk, NONCE_LEN);
 
     unsigned char encrypted_sk[crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD];
     encrypt_secret_key(encrypted_sk, sk_identity, nonce_sk, master_key);
@@ -55,8 +56,6 @@ int register_user(const std::string &username, const std::string &master_passwor
     unsigned char nonce_signature[crypto_sign_BYTES];
     crypto_sign_detached(nonce_signature, nullptr, registration_nonce, NONCE_LEN, sk_identity);
 
-    // TODO: db.store_key("KEK", encrypted_kek, nonce_kek);
-    // TODO: db.store_public_key("Identity_pk", pk_identity);
     save_keypair("identity", pk_identity, encrypted_sk, nonce_sk);
 
     post_register_user(username, pk_identity, registration_nonce, nonce_signature);

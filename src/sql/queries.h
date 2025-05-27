@@ -47,5 +47,21 @@ inline void save_keypair(
     db.execute(stmt);
 }
 
+inline void save_encrypted_key(
+    const std::string &label,
+    unsigned char encrypted_key[crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD],
+    unsigned char nonce_sk[NONCE_LEN]
+) {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+    db.prepare_or_throw(
+        "INSERT INTO keys (label, encrypted_key, nonce) VALUES (?, ?, ?);", &stmt
+    );
+    sqlite3_bind_text(stmt, 1, label.c_str(), static_cast<int>(label.length()), SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 2, encrypted_key, crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 3, nonce_sk, NONCE_LEN, SQLITE_TRANSIENT);
+    db.execute(stmt);
+}
+
 
 #endif //QUERIES_H
