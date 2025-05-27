@@ -10,6 +10,8 @@
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     constexpr bool encrypted = false;
+
+
     auto &db = Database::get();
     if (db.initialize("master key", encrypted)) {
         std::cout << "Database initialized successfully." << std::endl;
@@ -17,6 +19,9 @@ int main(int argc, char *argv[]) {
         std::cout << "Failed to initialize database." << std::endl;
         return 1;
     }
+
+    // Only for schema debugging:
+    drop_all_tables();
 
     init_schema();
 }

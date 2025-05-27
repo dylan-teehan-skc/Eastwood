@@ -50,4 +50,31 @@ inline void init_schema() {
     }
 }
 
+inline void drop_all_tables() {
+    std::cerr << "DROPPING ALL TABLES" << std::endl;
+    auto &db = Database::get();
+    sqlite3 *sqlite = db.getDatabase();
+    const char *sql = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';";
+    sqlite3_stmt *stmt = nullptr;
+    std::set<std::string> tables;
+    if (sqlite3_prepare_v2(sqlite, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            const char *name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+            if (name) tables.insert(name);
+        }
+        sqlite3_finalize(stmt);
+    } else {
+        std::cerr << "Failed to query tables: " << sqlite3_errmsg(sqlite) << std::endl;
+        return;
+    }
+    for (const auto &table : tables) {
+        std::string drop_sql = "DROP TABLE IF EXISTS '" + table + "';";
+        char *errmsg = nullptr;
+        if (sqlite3_exec(sqlite, drop_sql.c_str(), nullptr, nullptr, &errmsg) != SQLITE_OK) {
+            std::cerr << "Failed to drop table " << table << ": " << errmsg << std::endl;
+            sqlite3_free(errmsg);
+        }
+    }
+}
+
 #endif //SCHEMA_H
