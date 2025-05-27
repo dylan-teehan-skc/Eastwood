@@ -6,7 +6,7 @@
 
 using json = nlohmann::json;
 
-std::string post_unauth(const json& data, const std::string& endpoint = "/");
-std::string get_unauth(const std::string& endpoint = "/");
+json post_unauth(const json& data, const std::string& endpoint = "/");
+json get_unauth(const std::string& endpoint = "/");
 
 #endif // MAKE_UNAUTH_REQ_H

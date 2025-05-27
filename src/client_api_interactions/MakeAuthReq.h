@@ -6,7 +6,7 @@
 
 using json = nlohmann::json;
 
-std::string post_auth(const json& data, const std::string& endpoint = "/");
-std::string get_auth(const std::string& endpoint = "/");
+json post_auth(const json& data, const std::string& endpoint = "/");
+json get_auth(const std::string& endpoint = "/");
 
 #endif // MAKE_AUTH_REQ_H
