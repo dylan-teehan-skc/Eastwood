@@ -75,6 +75,7 @@ set(CRYPTO_SOURCES
         src/libraries/HTTPSClient.cpp
         src/endpoints/endpoints.cpp
         src/auth/register_user/register_user.cpp
+        src/algorithms/algorithms.cpp
 )
 
 set(CRYPTO_HEADERS
@@ -82,7 +83,6 @@ set(CRYPTO_HEADERS
         src/key_exchange/x3dh.h
         src/sessions/DeviceCommunicationSession.h
         src/key_exchange/utils.h
-        src/algorithms/algorithms.cpp
         src/algorithms/algorithms.h
         src/key_exchange/XChaCha20-Poly1305.h
         src/utils/ConversionUtils.h
@@ -130,6 +130,7 @@ target_link_libraries(Eastwood PRIVATE
 add_executable(EastwoodTests
         test/identity_communication_session_test.cpp
         ${CRYPTO_SOURCES}
+        src/database/database.cpp
 )
 
 # Configure test target
@@ -141,6 +142,10 @@ target_include_directories(EastwoodTests PRIVATE
 )
 
 target_link_libraries(EastwoodTests PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::UiTools
     ${SODIUM_LIBRARY}
     OpenSSL::SSL
     OpenSSL::Crypto
