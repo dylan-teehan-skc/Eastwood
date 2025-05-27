@@ -7,6 +7,7 @@
 #include "../../algorithms/constants.h"
 #include "src/endpoints/endpoints.h"
 #include "src/sql/queries.h"
+#include "src/utils/ConversionUtils.h"
 
 
 int register_user(const std::string &username, const std::string &master_password) {
@@ -42,8 +43,9 @@ int register_user(const std::string &username, const std::string &master_passwor
 
     unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES];
     unsigned char sk_identity[crypto_sign_SECRETKEYBYTES];
-    crypto_sign_keypair(pk_identity, sk_identity);
 
+    crypto_sign_keypair(pk_identity, sk_identity);
+    std::cout << "secret key: " << bin_to_hex(sk_identity, sizeof(sk_identity)) << std::endl;
     unsigned char nonce_sk[NONCE_LEN];
     randombytes_buf(nonce_sk, NONCE_LEN);
 

@@ -6,6 +6,7 @@
 #include "auth/register_user/register_user.h"
 #include "database/database.h"
 #include "database/schema.h"
+#include "ui/windows/login/login.h"
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -22,6 +23,11 @@ int main(int argc, char *argv[]) {
 
     // Only for schema debugging:
     drop_all_tables();
+    Login login;
+    login.show();
+
 
     init_schema();
+    return app.exec();
 }
+

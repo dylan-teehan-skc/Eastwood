@@ -1,6 +1,7 @@
 #include "./register.h"
 #include "ui_register.h"
 #include "../../utils/messagebox.h"
+#include "src/auth/register_user/register_user.h"
 
 
 Register::Register(QWidget *parent)
@@ -69,7 +70,7 @@ void Register::onRegisterButtonClicked()
         StyledMessageBox::warning(this, "Error", "Passphrases do not match");
         return;
     }
-
+    register_user(username.toStdString(), passphrase.toStdString());
     StyledMessageBox::info(this, "Success", "Registration functionality here");
 }
 
