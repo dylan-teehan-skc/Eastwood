@@ -36,3 +36,10 @@ void post_register_device(
 
     post_auth(body, "/registerDevice");
 };
+
+keyBundleRequest get_keybundles(unsigned char pk_identity[32]) {
+    std::string hex_pk_identity = bin2hex(pk_identity, 32);
+    std::string response = get_auth("/keybundle/"+hex_pk_identity);
+
+    //TODO:: parse response
+};

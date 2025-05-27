@@ -2,7 +2,7 @@
 // Created by Josh Sloggett on 22/05/2025.
 //
 #include "IdentityCommunicationSession.h"
-#include "utils.h"
+#include "../key_exchange/utils.h"
 
 IdentityCommunicationSession::IdentityCommunicationSession(keyBundle myBundle, std::vector<keyBundle> key_bundles, unsigned char* public_identity_key_1, unsigned char* public_identity_key_2)
     : myBundle(myBundle) {
@@ -66,5 +66,3 @@ IdentityCommunicationSession::~IdentityCommunicationSession() {
         delete[] identity_session_id;
     }
 }
-
-#include "IdentityCommunicationSession.h"

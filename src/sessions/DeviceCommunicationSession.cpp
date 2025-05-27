@@ -3,7 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include "utils.h"
+#include "../key_exchange/utils.h"
 
 static void print_key(const char* name, const unsigned char* key, size_t len) {
     std::ostringstream oss;

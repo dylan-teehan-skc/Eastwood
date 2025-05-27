@@ -35,13 +35,13 @@ public:
     // ensure to make sure the device session does not already exist
     // device session id of two device ids in alphabetical order hashed
     ~IdentityCommunicationSession();
+    void updateSessionsFromKeyBundles(std::vector<keyBundle>);
 private:
     keyBundle myBundle;
     unsigned char* identity_session_id;
     std::map<unsigned char*, DeviceCommunicationSession*> device_sessions;
 
     void createSessionFromKeyBundle(keyBundle);
-    void updateSessionsFromKeyBundles(std::vector<keyBundle>);
 };
 
 
