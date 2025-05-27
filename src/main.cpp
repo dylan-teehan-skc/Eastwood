@@ -1,15 +1,24 @@
+#include <iostream>
+#define SQLITE_HAS_CODEC 1
+#include <QFile>
 #include <QApplication>
 #include "ui/windows/login/login.h"
-#include "./libraries/HTTPSClient.h"
-#include <iostream>
+
+#include "database/database.h"
 
 int main(int argc, char *argv[]) {
-    webwood::HTTPSClient httpclient;
-    // std::string headers = "User-Agent: NiallClient/1.0\nAuthorization: Bearer abc123";
-    // std::string body = "bod: bod";
-    // std::string res = httpclient.post("webhook.site", "/86b5bc32-daa9-4f09-88eb-c658b71ae426", headers, body );
-    // std::cout << res << std::endl;
     QApplication app(argc, argv);
+
+    // NOTE: Debugging only. Refreshes the database on every run
+    QFile::remove("/Users/fred/Library/Application Support/encrypted.db");
+    auto &db = Database::get();
+    if (db.initialize("master key")) {
+        std::cout << "Database initialized successfully." << std::endl;
+    } else {
+        std::cout << "Failed to initialize database." << std::endl;
+        return 1;
+    }
+
     Login login;
     login.show();
     return app.exec();
