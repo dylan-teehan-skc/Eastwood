@@ -4,7 +4,9 @@
 
 #ifndef SESSIONMANAGER_H
 #define SESSIONMANAGER_H
+
 #include "IdentityCommunicationSession.h"
+#include "src/key_exchange/DoubleRatchet.h"
 
 struct keyBundleRequest {
     unsigned char* my_identity_public;
@@ -12,17 +14,16 @@ struct keyBundleRequest {
     std::vector<keyBundle> key_bundles;
 };
 
-
 class SessionManager {
     public:
     SessionManager();
     ~SessionManager();
 
     void import_key_bundles(keyBundleRequest request);
+    void routeToIdentity(DeviceMessage message, unsigned char* other_identity);
+
 private:
     std::map<unsigned char*, IdentityCommunicationSession*> identity_sessions;
 };
-
-
 
 #endif //SESSIONMANAGER_H

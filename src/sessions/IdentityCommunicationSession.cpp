@@ -3,6 +3,7 @@
 //
 #include "IdentityCommunicationSession.h"
 #include "../key_exchange/utils.h"
+#include "src/endpoints/endpoints.h"
 
 IdentityCommunicationSession::IdentityCommunicationSession(keyBundle myBundle, std::vector<keyBundle> key_bundles, unsigned char* public_identity_key_1, unsigned char* public_identity_key_2)
     : myBundle(myBundle) {
@@ -29,6 +30,15 @@ void IdentityCommunicationSession::createSessionFromKeyBundle(keyBundle key_bund
     if (!device_sessions[device_session_id_new]) {
         //3. create new device session
         if (myBundle.isSending) {  // If I am sending, create a sending session
+            // Post handshake information to server
+            post_handshake_device(
+                key_bundle.device_key_public,  // recipient's device key
+                key_bundle.signed_prekey_public,  // recipient's signed prekey
+                key_bundle.onetime_prekey_public,  // recipient's one-time prekey
+                myBundle.device_key_public,  // my device key
+                myBundle.ephemeral_key_public  // my ephemeral key
+            );
+
             device_sessions[device_session_id_new] = new DeviceSendingCommunicationSession(
                 myBundle.device_key_public,
                 myBundle.device_key_private,

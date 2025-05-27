@@ -8,7 +8,6 @@
 #include "../utils/JsonParser.h"
 
 using json = nlohmann::json;
-
 json post(const json& data, const std::string& endpoint = "/") {
 
     unsigned char public_key[crypto_box_PUBLICKEYBYTES];

@@ -83,6 +83,7 @@ set(CRYPTO_SOURCES
         src/key_exchange/x3dh.cpp
         src/sessions/DeviceCommunicationSession.cpp
         src/sessions/IdentityCommunicationSession.cpp
+        src/sessions/SessionManager.cpp
         src/key_exchange/XChaCha20-Poly1305.cpp
         src/utils/ConversionUtils.cpp
         src/utils/JsonParser.cpp
@@ -112,7 +113,6 @@ set(CRYPTO_HEADERS
         src/endpoints/endpoints.h
         src/auth/register_device/register_device.h
         src/auth/register_user/register_user.h
-        src/sessions/SessionManager.cpp
         src/sessions/SessionManager.h
 )
 
