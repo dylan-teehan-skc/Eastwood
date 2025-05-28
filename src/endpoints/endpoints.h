@@ -6,7 +6,6 @@
 #include "src/algorithms/constants.h"
 #include "src/keys/secure_memory_buffer.h"
 #include "src/key_exchange/DoubleRatchet.h"
-#include "src/sessions/SessionManager.h"
 
 void post_register_user(
     const std::string &username,
@@ -45,11 +44,10 @@ void post_handshake_device(
     const unsigned char *my_ephemeral_key_public
 );
 
-void get_messages(SessionManager manager);
+void get_messages();
 
 void get_keybundles(
-    unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES],
-    SessionManager &manager
+    unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES]
 );
 
 #endif //ENDPOINTS_H

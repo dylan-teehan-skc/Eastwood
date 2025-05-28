@@ -9,7 +9,7 @@
 static std::string bin2hex(const unsigned char* bin, size_t len) {
     std::ostringstream oss;
     for (size_t i = 0; i < len; ++i)
-        oss << std::hex << std::setw(2) << std::setfill('0') << (int)bin[i];
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(bin[i]);
     return oss.str();
 }
 
@@ -19,17 +19,16 @@ unsigned char* x3dh_initiator(
     const unsigned char* recipient_identity_key_public,
     const unsigned char* recipient_signed_prekey_public,
     const unsigned char* recipient_onetime_prekey_public,
-    const unsigned char* recipient_signed_prekey_signature,
-    const unsigned char* recipient_ed25519_identity_key_public) {
+    const unsigned char* recipient_signed_prekey_signature) {
     
     std::cout << "\n===== INITIATOR X3DH =====" << std::endl;
     
-    if (recipient_signed_prekey_signature && recipient_ed25519_identity_key_public) {
+    if (recipient_signed_prekey_signature && recipient_identity_key_public) {
         if (crypto_sign_verify_detached(
                 recipient_signed_prekey_signature, 
                 recipient_signed_prekey_public, 
                 crypto_box_PUBLICKEYBYTES, 
-                recipient_ed25519_identity_key_public) != 0) {
+                recipient_identity_key_public) != 0) {
             throw std::runtime_error("Signature verification failed");
         }
         std::cout << "Signature verification successful" << std::endl;
@@ -41,16 +40,25 @@ unsigned char* x3dh_initiator(
     
     unsigned char dh1[KEY_LEN], dh2[KEY_LEN], dh3[KEY_LEN], dh4[KEY_LEN];
     
-    if (crypto_scalarmult(dh1, my_identity_key_private, recipient_signed_prekey_public) != 0)
+    // DH1: my_identity_private * their_signed_prekey_public
+    unsigned char my_id_x25519_sk[KEY_LEN];
+    if (crypto_sign_ed25519_sk_to_curve25519(my_id_x25519_sk, my_identity_key_private) != 0)
+        throw std::runtime_error("Failed to convert my identity private key to X25519");
+    if (crypto_scalarmult(dh1, my_id_x25519_sk, recipient_signed_prekey_public) != 0)
         throw std::runtime_error("DH1 failed");
     
-    std::cout << "DH2 (Initiator): Using my ephemeral private key with recipient's identity public key\n";
-    if (crypto_scalarmult(dh2, my_ephemeral_key_private, recipient_identity_key_public) != 0)
+    // DH2: my_ephemeral_private * their_identity_public
+    unsigned char their_id_x25519_pk[KEY_LEN];
+    if (crypto_sign_ed25519_pk_to_curve25519(their_id_x25519_pk, recipient_identity_key_public) != 0)
+        throw std::runtime_error("Failed to convert recipient identity public key to X25519");
+    if (crypto_scalarmult(dh2, my_ephemeral_key_private, their_id_x25519_pk) != 0)
         throw std::runtime_error("DH2 failed");
     
+    // DH3: my_ephemeral_private * their_signed_prekey_public
     if (crypto_scalarmult(dh3, my_ephemeral_key_private, recipient_signed_prekey_public) != 0)
         throw std::runtime_error("DH3 failed");
     
+    // DH4: my_ephemeral_private * their_onetime_prekey_public
     if (recipient_onetime_prekey_public && my_ephemeral_key_private) {
         if (crypto_scalarmult(dh4, my_ephemeral_key_private, recipient_onetime_prekey_public) != 0)
             throw std::runtime_error("DH4 failed");
@@ -91,16 +99,25 @@ unsigned char* x3dh_responder(
     
     unsigned char dh1[KEY_LEN], dh2[KEY_LEN], dh3[KEY_LEN], dh4[KEY_LEN];
     
-    if (crypto_scalarmult(dh1, my_signed_prekey_private, initiator_identity_key_public) != 0)
+    // DH1: my_signed_prekey_private * their_identity_public
+    unsigned char their_id_x25519_pk[KEY_LEN];
+    if (crypto_sign_ed25519_pk_to_curve25519(their_id_x25519_pk, initiator_identity_key_public) != 0)
+        throw std::runtime_error("Failed to convert initiator identity public key to X25519");
+    if (crypto_scalarmult(dh1, my_signed_prekey_private, their_id_x25519_pk) != 0)
         throw std::runtime_error("DH1 failed");
     
-    std::cout << "DH2 (Responder): Using my identity private key with initiator's ephemeral public key\n";
-    if (crypto_scalarmult(dh2, my_identity_key_private, initiator_ephemeral_key_public) != 0)
+    // DH2: my_identity_private * their_ephemeral_public
+    unsigned char my_id_x25519_sk[KEY_LEN];
+    if (crypto_sign_ed25519_sk_to_curve25519(my_id_x25519_sk, my_identity_key_private) != 0)
+        throw std::runtime_error("Failed to convert my identity private key to X25519");
+    if (crypto_scalarmult(dh2, my_id_x25519_sk, initiator_ephemeral_key_public) != 0)
         throw std::runtime_error("DH2 failed");
     
+    // DH3: my_signed_prekey_private * their_ephemeral_public
     if (crypto_scalarmult(dh3, my_signed_prekey_private, initiator_ephemeral_key_public) != 0)
         throw std::runtime_error("DH3 failed");
     
+    // DH4: my_onetime_prekey_private * their_ephemeral_public
     if (my_onetime_prekey_private && initiator_ephemeral_key_public) {
         if (crypto_scalarmult(dh4, my_onetime_prekey_private, initiator_ephemeral_key_public) != 0)
             throw std::runtime_error("DH4 failed");

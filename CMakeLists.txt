@@ -101,9 +101,6 @@ set(DATABASE_SOURCES
 set(CRYPTO_SOURCES
         src/key_exchange/DoubleRatchet.cpp
         src/key_exchange/x3dh.cpp
-        src/sessions/DeviceCommunicationSession.cpp
-        src/sessions/IdentityCommunicationSession.cpp
-        src/sessions/SessionManager.cpp
         src/key_exchange/XChaCha20-Poly1305.cpp
         src/utils/ConversionUtils.cpp
         src/utils/JsonParser.cpp
@@ -122,6 +119,7 @@ set(AUTH_SOURCES
         src/auth/register_user/register_user.cpp
         src/auth/register_device/register_device.cpp
         src/auth/login/login.cpp
+        src/sessions/KeyBundle.h
 )
 
 
@@ -155,9 +153,11 @@ target_link_libraries(Eastwood PRIVATE
 
 # Create test executable
 add_executable(EastwoodTests
-        test/identity_session_message_test.cpp
+        test/identity_communication_session_test.cpp
         ${CRYPTO_SOURCES}
         src/database/database.cpp
+        src/sessions/KeyBundle.h
+        src/keys/session_token_manager.h
 )
 
 # Configure test target
@@ -167,6 +167,8 @@ target_include_directories(EastwoodTests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/src/key_exchange
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/sessions
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/keys
         ${CMAKE_CURRENT_SOURCE_DIR}/external/cereal/include
         ${CMAKE_CURRENT_BINARY_DIR}/_deps/googletest-src/googletest/include
 )
