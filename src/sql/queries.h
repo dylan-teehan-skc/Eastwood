@@ -42,9 +42,9 @@ inline std::unique_ptr<SecureMemoryBuffer> get_decrypted_sk(const std::string &l
 
 inline void save_keypair(
     const std::string &label,
-    unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES],
+    unsigned char public_key[crypto_sign_PUBLICKEYBYTES],
     const std::unique_ptr<SecureMemoryBuffer> &encrypted_sk,
-    unsigned char nonce_sk[CHA_CHA_NONCE_LEN]
+    unsigned char nonce[CHA_CHA_NONCE_LEN]
 ) {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
@@ -52,9 +52,9 @@ inline void save_keypair(
         "INSERT INTO keypairs (label, public_key, encrypted_private_key, nonce) VALUES (?, ?, ?, ?);", &stmt
     );
     sqlite3_bind_text(stmt, 1, label.c_str(), static_cast<int>(label.length()), SQLITE_TRANSIENT);
-    sqlite3_bind_blob(stmt, 2, pk_identity, crypto_sign_PUBLICKEYBYTES, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 2, public_key, crypto_sign_PUBLICKEYBYTES, SQLITE_TRANSIENT);
     sqlite3_bind_blob(stmt, 3, encrypted_sk->data(), encrypted_sk->size(), SQLITE_TRANSIENT);
-    sqlite3_bind_blob(stmt, 4, nonce_sk, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 4, nonce, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
     db.execute(stmt);
 }
 

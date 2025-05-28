@@ -114,12 +114,14 @@ set(CRYPTO_SOURCES
         src/endpoints/endpoints.cpp
         src/keys/kek_manager.cpp
         src/keys/secure_memory_buffer.cpp
+        src/keys/session_token_manager.cpp
         src/algorithms/algorithms.cpp
 )
 
 set(AUTH_SOURCES
         src/auth/register_user/register_user.cpp
         src/auth/register_device/register_device.cpp
+        src/auth/login/login.cpp
 )
 
 

@@ -16,14 +16,6 @@ void post_register_user(
     const unsigned char registration_nonce[CHA_CHA_NONCE_LEN],
     const unsigned char nonce_signature[crypto_sign_BYTES]
 ) {
-    qDebug() << "Checking user registration:";
-    if (crypto_sign_verify_detached(nonce_signature, registration_nonce, CHA_CHA_NONCE_LEN, pk_identity) == 0) {
-        qDebug() << "C'est bon!";
-    } else {
-        qDebug() << "Signature is BAD";
-    };
-
-    
     const json body = {
         {"username", username},
         {"identity_public", bin2hex(pk_identity, crypto_sign_PUBLICKEYBYTES)},
@@ -40,12 +32,6 @@ void post_register_device(
     const unsigned char pk_device[crypto_sign_PUBLICKEYBYTES],
     const unsigned char pk_signature[crypto_sign_BYTES]
 ) {
-    qDebug() << "Checking device registration:";
-    if (crypto_sign_verify_detached(pk_signature, pk_device, crypto_sign_PUBLICKEYBYTES, pk_id) == 0) {
-        qDebug() << "C'est bon!";
-    } else {
-        qDebug() << "Signature is BAD";
-    };
     const json body = {
         {"identity_public", bin2hex(pk_id, crypto_sign_PUBLICKEYBYTES)},
         {"device_public", bin2hex(pk_device, crypto_sign_PUBLICKEYBYTES)},
@@ -53,6 +39,45 @@ void post_register_device(
     };
     post_unauth(body, "/registerDevice");
 };
+
+std::vector<unsigned char> post_request_login(
+    std::string username,
+    const unsigned char pk_device[crypto_sign_PUBLICKEYBYTES]
+) {
+    qDebug() << "Requesting login nonce from server";
+    const json body = {
+        {"username", username},
+        {"device_public", bin2hex(pk_device, crypto_sign_PUBLICKEYBYTES)}
+    };
+    const json response = post_unauth(body, "/requestLogin");
+    QString response_text(response.dump().data());
+    const std::string nonce_string = response["data"]["nonce"];
+
+    // Allocate vector of correct size
+    std::vector<unsigned char> nonce_vec(nonce_string.length() / 2);
+
+    // Convert hex to bin
+    if (!hex_to_bin(nonce_string, nonce_vec.data(), nonce_vec.size())) {
+        throw std::runtime_error("Failed to decode nonce when logging in");
+    }
+
+    return nonce_vec;
+}
+
+std::string post_authenticate(
+    std::string username,
+    const unsigned char pk_device[crypto_sign_PUBLICKEYBYTES],
+    unsigned char signature[crypto_sign_BYTES]
+) {
+    qDebug() << "Authenticating user";
+    const json body = {
+        {"username", username},
+        {"device_public", bin2hex(pk_device, crypto_sign_PUBLICKEYBYTES)},
+        {"nonce_signature", bin2hex(signature, crypto_sign_BYTES)}
+    };
+    const json response = post_unauth(body, "/authenticate");
+    return response["data"]["token"];
+}
 
 void get_messages(SessionManager manager) {
     auto device_key = get_public_key("device");
@@ -79,7 +104,7 @@ void get_messages(SessionManager manager) {
 
     // Get the other identity key from the response
     std::vector<uint8_t> other_identity = hex_string_to_binary(response["other_identity"]);
-    unsigned char *other_pk = new unsigned char[other_identity.size()];
+    auto other_pk = new unsigned char[other_identity.size()];
     std::copy(other_identity.begin(), other_identity.end(), other_pk);
 
     // Route the message to the identity session
@@ -169,4 +194,3 @@ void post_handshake_device(
     };
     post(body, "/handshake");
 }
-

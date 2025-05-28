@@ -11,7 +11,7 @@
 #include "src/utils/ConversionUtils.h"
 
 
-int register_user(const std::string &username, const std::unique_ptr<const std::string> &master_password) {
+int     register_user(const std::string &username, const std::unique_ptr<const std::string> &master_password) {
     qDebug() << "Registering user";
     if (sodium_init() < 0) {
         fprintf(stderr, "Libsodium initialization failed\n");
