@@ -86,13 +86,13 @@
        <property name="styleSheet">
         <string notr="true">QListWidget {
   background-color: white;
-  border: 1px solid #dfe6e9;
+  border: 1px solid #f5f6fa;
   border-radius: 12px;
   padding: 5px;
 }
 QListWidget::item {
   background-color: white;
-  border-bottom: 1px solid #f1f2f6;
+  border-bottom: 1px solid #f5f6fa;
 }
 QListWidget::item:last-child {
   border-bottom: none;

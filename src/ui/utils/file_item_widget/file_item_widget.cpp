@@ -32,7 +32,7 @@ void FileItemWidget::setupUI()
     auto* fileIconContainer = new QWidget(this);
     fileIconContainer->setFixedSize(42, 42);
     fileIconContainer->setStyleSheet(R"(
-        background-color: #f0eeff;
+        background-color: #f5f6fa;
         border-radius: 8px;
     )");
     
@@ -111,27 +111,30 @@ void FileItemWidget::setupUI()
         buttonLayout->addWidget(revokeButton);
     }
 
-    deleteButton = new QPushButton("Delete", this);
-    deleteButton->setFixedSize(75, 30);
-    deleteButton->setCursor(Qt::PointingHandCursor);
-    deleteButton->setStyleSheet(R"(
-        QPushButton {
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        QPushButton:hover {
-            background-color: #c0392b;
-        }
-        QPushButton:pressed {
-            background-color: #a93226;
-        }
-    )");
+    // Only create and show delete button in Sent mode
+    if (mode == Mode::Sent) {
+        deleteButton = new QPushButton("Delete", this);
+        deleteButton->setFixedSize(75, 30);
+        deleteButton->setCursor(Qt::PointingHandCursor);
+        deleteButton->setStyleSheet(R"(
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+            QPushButton:pressed {
+                background-color: #a93226;
+            }
+        )");
+        buttonLayout->addWidget(deleteButton);
+    }
 
-    buttonLayout->addWidget(deleteButton);
     buttonLayout->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
     mainLayout->addWidget(fileIconContainer);
@@ -151,10 +154,10 @@ void FileItemWidget::setupConnections()
         connect(revokeButton, &QPushButton::clicked, [this]() {
             emit revokeAccessClicked(this);
         });
+        connect(deleteButton, &QPushButton::clicked, [this]() {
+            emit deleteFileClicked(this);
+        });
     }
-    connect(deleteButton, &QPushButton::clicked, [this]() {
-        emit deleteFileClicked(this);
-    });
 }
 
 QString FileItemWidget::getFileTypeAbbreviation(const QString& fileName)

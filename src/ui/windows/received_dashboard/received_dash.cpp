@@ -58,7 +58,6 @@ void Received::addFileItem(const QString& fileName,
     auto* widget = new FileItemWidget(fileName, fileSize, timestamp, owner, 
                                     FileItemWidget::Mode::Received, this);
 
-    connect(widget, &FileItemWidget::deleteFileClicked, this, &Received::onDeleteFileClicked);
     connect(widget, &FileItemWidget::fileClicked, this, &Received::onFileItemClicked);
     connect(widget, &FileItemWidget::downloadFileClicked, this, &Received::onDownloadFileClicked);
 
@@ -95,17 +94,6 @@ void Received::onSendButtonClicked()
 void Received::onFileItemClicked(FileItemWidget* widget)
 {
     showFileMetadata(widget);
-}
-
-void Received::onDeleteFileClicked(FileItemWidget* widget)
-{
-    if (StyledMessageBox::question(this, "Delete File",
-                                 QString("Are you sure you want to delete file: %1?")
-                                 .arg(widget->getFileName()))) {
-        // TODO: Implement file deletion
-        StyledMessageBox::info(this, "File Deleted",
-                             QString("File deleted: %1").arg(widget->getFileName()));
-    }
 }
 
 void Received::onSentButtonClicked()

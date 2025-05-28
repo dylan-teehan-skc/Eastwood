@@ -20,7 +20,6 @@ public:
 private slots:
     void onSendButtonClicked();
     void onFileItemClicked(FileItemWidget* widget);
-    void onDeleteFileClicked(FileItemWidget* widget);
     void onDownloadFileClicked(FileItemWidget* widget);
     void onSentButtonClicked();
     void onSettingsButtonClicked();
