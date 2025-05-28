@@ -84,6 +84,7 @@ void Database::execute(sqlite3_stmt *stmt) const {
     if (sqlite3_stmt_readonly(stmt)) {
         throw std::runtime_error("Attempted to execute a read-only (SELECT) statement with execute()");
     }
+    qDebug() << "Executing SQL: " << sqlite3_expanded_sql(stmt);
     int rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
         std::string err = sqlite3_errmsg(sqlite3_db_handle(stmt));

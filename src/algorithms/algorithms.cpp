@@ -1,77 +1,129 @@
 #include "algorithms.h"
 
-int derive_master_key(
-    unsigned char master_key[MASTER_KEY_LEN],
-    const char *master_password,
-    const size_t password_len,
+#include "src/keys/kek_manager.h"
+#include "src/utils/ConversionUtils.h"
+
+std::unique_ptr<SecureMemoryBuffer> derive_master_key(
+    const std::unique_ptr<const std::string> &master_password,
     unsigned char salt[crypto_pwhash_SALTBYTES]
 ) {
-    return crypto_pwhash(
-        master_key, MASTER_KEY_LEN,
-        master_password, password_len,
-        salt,
-        crypto_pwhash_argon2id_OPSLIMIT_MODERATE,
-        crypto_pwhash_argon2id_MEMLIMIT_MODERATE,
-        crypto_pwhash_ALG_ARGON2ID13
-    );
+    auto master_key = SecureMemoryBuffer::create(MASTER_KEY_LEN);
+    if (crypto_pwhash(
+            master_key->data(), master_key->size(),
+            master_password->c_str(), master_password->length(),
+            salt,
+            crypto_pwhash_argon2id_OPSLIMIT_MODERATE,
+            crypto_pwhash_argon2id_MEMLIMIT_MODERATE,
+            crypto_pwhash_ALG_ARGON2ID13
+        ) != 0) {
+        throw std::runtime_error("Failed to encrypt master key");
+    };
+    return master_key;
 }
 
-void encrypt_kek(
-    unsigned char encrypted_kek[KEK_LEN + ENC_OVERHEAD],
-    unsigned char kek[KEK_LEN],
-    unsigned char nonce[NONCE_LEN],
-    unsigned char master_key[MASTER_KEY_LEN]
+std::unique_ptr<SecureMemoryBuffer> encrypt_kek(
+    const std::unique_ptr<SecureMemoryBuffer> &kek,
+    unsigned char nonce[CHA_CHA_NONCE_LEN],
+    const std::unique_ptr<SecureMemoryBuffer> &master_key
 ) {
-    crypto_aead_xchacha20poly1305_ietf_encrypt(
-        encrypted_kek, nullptr,
-        kek, KEK_LEN,
-        nullptr, 0, // No associated data
-        nullptr, // Always null for this algorithm
-        nonce, master_key
-    );
+    if (kek->size() != SYM_KEY_LEN) {
+        throw std::runtime_error("Incorrect KEK size found during encryption");
+    }
+    auto encrypted_kek = SecureMemoryBuffer::create(ENC_SYM_KEY_LEN);
+    if (crypto_aead_xchacha20poly1305_ietf_encrypt(
+            encrypted_kek->data(), nullptr,
+            kek->data(), kek->size(),
+            nullptr, 0, // No associated data
+            nullptr, // Always null for this algorithm
+            nonce, master_key->data()
+        ) != 0) {
+        throw std::runtime_error("Failed to encrypt kek");
+    };
+    return encrypted_kek;
 }
 
-void encrypt_secret_key(
-    unsigned char encrypted_sk[crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD],
-    unsigned char sk[crypto_sign_SECRETKEYBYTES],
-    unsigned char nonce[NONCE_LEN],
-    unsigned char master_key[MASTER_KEY_LEN]
+std::unique_ptr<SecureMemoryBuffer> decrypt_kek(
+    unsigned char encrypted_kek[ENC_SYM_KEY_LEN],
+    unsigned char nonce[CHA_CHA_NONCE_LEN],
+    const std::unique_ptr<SecureMemoryBuffer> &master_key
 ) {
-    crypto_aead_xchacha20poly1305_ietf_encrypt(
-        encrypted_sk, nullptr,
-        sk, crypto_sign_SECRETKEYBYTES,
-        nullptr, 0, // No associated data
-        nullptr, // Always null for this algorithm
-        nonce, master_key
-    );
+    auto kek = SecureMemoryBuffer::create(SYM_KEY_LEN);
+    if (crypto_aead_xchacha20poly1305_ietf_decrypt(
+            kek->data(), nullptr,
+            nullptr, // Secret nonce is always null for this algorithm
+            encrypted_kek, ENC_SYM_KEY_LEN,
+            nullptr, 0, // No associated data
+            nonce, master_key->data()
+        ) != 0) {
+        throw std::runtime_error("Failed to decrypt kek");
+    };
+    return kek;
 }
 
-int decrypt_kek(
-    unsigned char decrypted_kek[KEK_LEN],
-    unsigned char encrypted_kek[KEK_LEN + ENC_OVERHEAD],
-    unsigned char nonce[NONCE_LEN],
-    unsigned char master_key[MASTER_KEY_LEN]
+std::unique_ptr<SecureMemoryBuffer> decrypt_key(
+    const unsigned char encrypted_key[ENC_SYM_KEY_LEN],
+    const unsigned char nonce[CHA_CHA_NONCE_LEN]
 ) {
-    return crypto_aead_xchacha20poly1305_ietf_decrypt(
-        decrypted_kek, nullptr,
-        nullptr, // Secret nonce is always null for this algorithm
-        encrypted_kek, KEK_LEN + ENC_OVERHEAD,
-        nullptr, 0, // No associated data
-        nonce, master_key
-    );
+    const auto kek = KekManager::instance().getKEK();
+    auto key = SecureMemoryBuffer::create(SYM_KEY_LEN);
+    if (crypto_aead_xchacha20poly1305_ietf_decrypt(
+            key->data(), nullptr,
+            nullptr, // Secret nonce is always null for this algorithm
+            encrypted_key, ENC_SYM_KEY_LEN,
+            nullptr, 0, // No associated data
+            nonce, kek->data()
+        ) != 0) {
+        throw std::runtime_error("Failed to decrypt kek");
+    };
+    return key;
 }
 
-int decrypt_secret_key(
-    unsigned char decrypted_sk[crypto_sign_SECRETKEYBYTES],
-    const unsigned char encrypted_sk[crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD],
-    const unsigned char nonce[NONCE_LEN],
-    const unsigned char *key
+std::unique_ptr<SecureMemoryBuffer> decrypt_key(
+    const QByteArray &encrypted_key,
+    const QByteArray &nonce
 ) {
-    return crypto_aead_xchacha20poly1305_ietf_decrypt(
-        decrypted_sk, nullptr,
-        nullptr, // Secret nonce is always null for this algorithm
-        encrypted_sk, crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD,
-        nullptr, 0, // No associated data
-        nonce, key
-    );
+    return decrypt_key(q_byte_array_to_chars(encrypted_key), q_byte_array_to_chars(nonce));
+}
+
+std::unique_ptr<SecureMemoryBuffer> encrypt_secret_key(
+    const std::unique_ptr<SecureMemoryBuffer> &sk,
+    unsigned char nonce[CHA_CHA_NONCE_LEN]
+) {
+    auto buf = SecureMemoryBuffer::create(ENC_SECRET_KEY_LEN);
+    const auto kek = KekManager::instance().getKEK();
+    if (crypto_aead_xchacha20poly1305_ietf_encrypt(
+            buf->data(), nullptr,
+            sk->data(), crypto_sign_SECRETKEYBYTES,
+            nullptr, 0, // No associated data
+            nullptr, // Always null for this algorithm
+            nonce, kek->data()
+        ) != 0) {
+        throw std::runtime_error("Failed to encrypt secret key");
+    }
+    return buf;
+}
+
+std::unique_ptr<SecureMemoryBuffer> decrypt_secret_key(
+    const unsigned char encrypted_sk[ENC_SECRET_KEY_LEN],
+    const unsigned char nonce[CHA_CHA_NONCE_LEN]
+) {
+    auto buf = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
+    const auto kek = KekManager::instance().getKEK();
+    if (crypto_aead_xchacha20poly1305_ietf_decrypt(
+            buf->data(), nullptr,
+            nullptr, // Secret nonce is always null for this algorithm
+            encrypted_sk, ENC_SECRET_KEY_LEN,
+            nullptr, 0, // No associated data
+            nonce, kek->data()
+        ) != 0) {
+        throw std::runtime_error("Failed to decrypt secret key");
+    }
+    return buf;
+}
+
+std::unique_ptr<SecureMemoryBuffer> decrypt_secret_key(
+    const QByteArray &encrypted_sk,
+    const QByteArray &nonce
+) {
+    return decrypt_secret_key(q_byte_array_to_chars(encrypted_sk), q_byte_array_to_chars(nonce));
 }

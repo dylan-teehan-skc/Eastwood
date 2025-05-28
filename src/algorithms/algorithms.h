@@ -6,40 +6,51 @@
 #define ALGORITHMS_H
 #include "constants.h"
 #include <sodium.h>
+#include "src/keys/secure_memory_buffer.h"
+#include <memory>
+#include <QByteArray>
 
-int derive_master_key(
-    unsigned char master_key[MASTER_KEY_LEN],
-    const char *master_password,
-    size_t password_len,
+std::unique_ptr<SecureMemoryBuffer> derive_master_key(
+    const std::unique_ptr<const std::string> &master_password,
     unsigned char salt[crypto_pwhash_SALTBYTES]
 );
 
-void encrypt_kek(
-    unsigned char encrypted_kek[KEK_LEN + ENC_OVERHEAD],
-    unsigned char kek[KEK_LEN],
-    unsigned char nonce[NONCE_LEN],
-    unsigned char master_key[MASTER_KEY_LEN]
+std::unique_ptr<SecureMemoryBuffer> encrypt_kek(
+    const std::unique_ptr<SecureMemoryBuffer> &kek,
+    unsigned char nonce[CHA_CHA_NONCE_LEN],
+    const std::unique_ptr<SecureMemoryBuffer> &master_key
 );
 
-void encrypt_secret_key(
-    unsigned char encrypted_sk[crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD],
-    unsigned char sk[crypto_sign_SECRETKEYBYTES],
-    unsigned char nonce[NONCE_LEN],
-    unsigned char master_key[MASTER_KEY_LEN]
+std::unique_ptr<SecureMemoryBuffer> decrypt_kek(
+    unsigned char encrypted_kek[ENC_SYM_KEY_LEN],
+    unsigned char nonce[CHA_CHA_NONCE_LEN],
+    const std::unique_ptr<SecureMemoryBuffer> &master_key
 );
 
-int decrypt_kek(
-    unsigned char decrypted_kek[KEK_LEN],
-    unsigned char encrypted_kek[KEK_LEN + ENC_OVERHEAD],
-    unsigned char nonce[NONCE_LEN],
-    unsigned char master_key[MASTER_KEY_LEN]
+std::unique_ptr<SecureMemoryBuffer> decrypt_key(
+    const unsigned char encrypted_key[ENC_SYM_KEY_LEN],
+    const unsigned char nonce[CHA_CHA_NONCE_LEN]
 );
 
-int decrypt_secret_key(
-    unsigned char decrypted_sk[crypto_sign_SECRETKEYBYTES],
+std::unique_ptr<SecureMemoryBuffer> decrypt_key(
+    const QByteArray &encrypted_key,
+    const QByteArray &nonce
+);
+
+
+std::unique_ptr<SecureMemoryBuffer> encrypt_secret_key(
+    const std::unique_ptr<SecureMemoryBuffer> &sk,
+    unsigned char nonce[CHA_CHA_NONCE_LEN]
+);
+
+std::unique_ptr<SecureMemoryBuffer> decrypt_secret_key(
     const unsigned char encrypted_sk[crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD],
-    const unsigned char nonce[NONCE_LEN],
-    const unsigned char key[MASTER_KEY_LEN]
+    const unsigned char nonce[CHA_CHA_NONCE_LEN]
+);
+
+std::unique_ptr<SecureMemoryBuffer> decrypt_secret_key(
+    const QByteArray &encrypted_sk,
+    const QByteArray &nonce
 );
 
 #endif //ALGORITHMS_H

@@ -9,16 +9,16 @@
 
 void post_register_user(
     const std::string &username,
-    unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES],
-    unsigned char registration_nonce[NONCE_LEN],
-    unsigned char nonce_signature[crypto_sign_BYTES]
+    const unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES],
+    const unsigned char registration_nonce[CHA_CHA_NONCE_LEN],
+    const unsigned char nonce_signature[crypto_sign_BYTES]
 );
 
 
 void post_register_device(
-    unsigned char pk_id[crypto_sign_PUBLICKEYBYTES],
-    unsigned char pk_device[crypto_sign_PUBLICKEYBYTES],
-    unsigned char pk_signature[crypto_sign_BYTES]
+    const unsigned char pk_id[crypto_sign_PUBLICKEYBYTES],
+    const unsigned char pk_device[crypto_sign_PUBLICKEYBYTES],
+    const unsigned char pk_signature[crypto_sign_BYTES]
 );
 
 void post_ratchet_message(

@@ -1,7 +1,20 @@
 #include "kek_manager.h"
+#include <stdexcept>
 
-#include <memory>
+KekManager& KekManager::instance() {
+    static KekManager instance;
+    return instance;
+}
 
-// Initialize static members
-std::unique_ptr<KEKWrapper> KEKManager::kek_wrapper = nullptr;
-bool KEKManager::is_initialized = false; 
+void KekManager::setKEK(std::unique_ptr<SecureMemoryBuffer> kek) {
+    kek_ = std::move(kek);
+}
+
+SecureMemoryBuffer* KekManager::getKEK() const {
+    if (!kek_) throw std::runtime_error("KEK not loaded");
+    return kek_.get();
+}
+
+bool KekManager::isLoaded() const {
+    return kek_ != nullptr;
+} 

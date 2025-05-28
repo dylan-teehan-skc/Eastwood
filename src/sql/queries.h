@@ -6,16 +6,21 @@
 #define QUERIES_H
 
 #include <tuple>
-#include <sodium.h>
 #include "src/algorithms/constants.h"
 
 #include "src/database/database.h"
+#include "src/keys/secure_memory_buffer.h"
+#include "src/keys/kek_manager.h"
+#include "src/algorithms/algorithms.h"
+#include <memory>
+
+#include "src/utils/ConversionUtils.h"
 
 
-inline std::tuple<QByteArray, QByteArray> get_keypair(const std::string &label) {
+inline std::tuple<QByteArray, QByteArray, QByteArray> get_keypair(const std::string &label) {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
-    db.prepare_or_throw("SELECT public_key, encrypted_private_key FROM keypairs WHERE label = ?", &stmt);
+    db.prepare_or_throw("SELECT public_key, encrypted_private_key, nonce FROM keypairs WHERE label = ?", &stmt);
     sqlite3_bind_text(stmt, 1, label.c_str(), static_cast<int>(label.length()), SQLITE_TRANSIENT);
     // Label is marked as unique - will always return at most one row
     auto rows = db.query(stmt);
@@ -26,14 +31,20 @@ inline std::tuple<QByteArray, QByteArray> get_keypair(const std::string &label) 
 
     QByteArray publicKey = row["public_key"].toByteArray();
     QByteArray encryptedPrivateKey = row["encrypted_private_key"].toByteArray();
-    return std::make_tuple(publicKey, encryptedPrivateKey);
+    QByteArray nonce = row["nonce"].toByteArray();
+    return std::make_tuple(publicKey, encryptedPrivateKey, nonce);
 }
+
+inline std::unique_ptr<SecureMemoryBuffer> get_decrypted_sk(const std::string &label) {
+    const auto [_, encrypted_sk, nonce] = get_keypair(label);
+    return decrypt_secret_key(q_byte_array_to_chars(encrypted_sk), q_byte_array_to_chars(nonce));
+};
 
 inline void save_keypair(
     const std::string &label,
     unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES],
-    unsigned char encrypted_sk[crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD],
-    unsigned char nonce_sk[NONCE_LEN]
+    const std::unique_ptr<SecureMemoryBuffer> &encrypted_sk,
+    unsigned char nonce_sk[CHA_CHA_NONCE_LEN]
 ) {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
@@ -42,15 +53,40 @@ inline void save_keypair(
     );
     sqlite3_bind_text(stmt, 1, label.c_str(), static_cast<int>(label.length()), SQLITE_TRANSIENT);
     sqlite3_bind_blob(stmt, 2, pk_identity, crypto_sign_PUBLICKEYBYTES, SQLITE_TRANSIENT);
-    sqlite3_bind_blob(stmt, 3, encrypted_sk, crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD, SQLITE_TRANSIENT);
-    sqlite3_bind_blob(stmt, 4, nonce_sk, NONCE_LEN, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 3, encrypted_sk->data(), encrypted_sk->size(), SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 4, nonce_sk, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
     db.execute(stmt);
 }
 
+inline std::tuple<QByteArray, QByteArray> get_encrypted_key(
+    const std::string &label
+) {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+    db.prepare_or_throw("SELECT encrypted_key, nonce FROM keys WHERE label = ?", &stmt);
+    sqlite3_bind_text(stmt, 1, label.c_str(), static_cast<int>(label.length()), SQLITE_TRANSIENT);
+    auto rows = db.query(stmt);
+    if (rows.empty()) {
+        throw std::runtime_error("No keys found for label " + label);
+    }
+    // Label is marked as unique - will always return at most one row
+    const auto &row = rows[0];
+
+    QByteArray encryptedKey = row["encrypted_key"].toByteArray();
+    QByteArray nonce = row["nonce"].toByteArray();
+
+    return std::make_tuple(encryptedKey, nonce);
+}
+
+inline std::unique_ptr<SecureMemoryBuffer> get_decrypted_key(const std::string &label) {
+    const auto [encrypted_key, nonce] = get_encrypted_key(label);
+    return decrypt_key(q_byte_array_to_chars(encrypted_key), q_byte_array_to_chars(nonce));
+};
+
 inline void save_encrypted_key(
     const std::string &label,
-    unsigned char encrypted_key[crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD],
-    unsigned char nonce_sk[NONCE_LEN]
+    const std::unique_ptr<SecureMemoryBuffer> &encrypted_key,
+    const unsigned char nonce_sk[CHA_CHA_NONCE_LEN]
 ) {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
@@ -58,10 +94,14 @@ inline void save_encrypted_key(
         "INSERT INTO keys (label, encrypted_key, nonce) VALUES (?, ?, ?);", &stmt
     );
     sqlite3_bind_text(stmt, 1, label.c_str(), static_cast<int>(label.length()), SQLITE_TRANSIENT);
-    sqlite3_bind_blob(stmt, 2, encrypted_key, crypto_sign_SECRETKEYBYTES + ENC_OVERHEAD, SQLITE_TRANSIENT);
-    sqlite3_bind_blob(stmt, 3, nonce_sk, NONCE_LEN, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 2, encrypted_key->data(), encrypted_key->size(), SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 3, nonce_sk, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
     db.execute(stmt);
 }
 
+inline QByteArray get_public_key(const std::string &label) {
+    auto [publicKey, _, __] = get_keypair(label);
+    return publicKey;
+}
 
 #endif //QUERIES_H

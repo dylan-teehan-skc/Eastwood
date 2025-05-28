@@ -10,6 +10,9 @@
 using json = nlohmann::json;
 json post(const json& data, const std::string& endpoint = "/") {
 
+    // TODO
+    return 0;
+
     unsigned char public_key[crypto_box_PUBLICKEYBYTES];
     unsigned char private_key[crypto_box_SECRETKEYBYTES];
     unsigned char session_token[crypto_aead_xchacha20poly1305_ietf_KEYBYTES];
@@ -48,11 +51,11 @@ json post(const json& data, const std::string& endpoint = "/") {
     }
 
     // Generate nonce
-    unsigned char nonce[NONCE_LEN];
+    unsigned char nonce[CHA_CHA_NONCE_LEN];
     randombytes_buf(nonce, sizeof nonce);
 
 
-    char b64_nonce[NONCE_LEN * 2];
+    char b64_nonce[CHA_CHA_NONCE_LEN * 2];
     sodium_bin2base64(b64_nonce, sizeof(b64_nonce),
                     nonce, sizeof(nonce),
                     sodium_base64_VARIANT_URLSAFE_NO_PADDING);
@@ -75,6 +78,7 @@ json post(const json& data, const std::string& endpoint = "/") {
     char hex_signature[crypto_sign_BYTES * 2];
     char hex_session_token[crypto_aead_xchacha20poly1305_ietf_KEYBYTES * 2];
 
+    // TODO - This SIGABRTS?
     sodium_bin2hex(hex_public_key, sizeof(hex_public_key),
                     public_key, crypto_sign_PUBLICKEYBYTES);
 
@@ -153,7 +157,7 @@ json get(const std::string& endpoint = "/") {
     }
 
     // Generate nonce
-    unsigned char nonce[NONCE_LEN];
+    unsigned char nonce[CHA_CHA_NONCE_LEN];
     randombytes_buf(nonce, sizeof nonce);
 
     // Create nonce signed with private key

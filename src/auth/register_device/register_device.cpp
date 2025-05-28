@@ -3,34 +3,37 @@
 
 #include <string>
 
+#include "src/sql/queries.h"
 #include "src/algorithms/algorithms.h"
 #include "src/algorithms/constants.h"
 #include "src/endpoints/endpoints.h"
-#include "src/keys/kek_manager.h"
+#include "src/utils/ConversionUtils.h"
 
-void load_private_key(unsigned char key_out[crypto_sign_SECRETKEYBYTES], const char *keyName) {
-    const unsigned char *kek = KEKManager::get_kek();
-    const unsigned char *encrypted_sk, *nonce; // = db.get_private_key(keyName);
-    decrypt_secret_key(key_out, encrypted_sk, nonce, kek);
-};
-
-int register_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES]) {
+void register_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES]) {
+    qDebug() << "Registering device";
     if (sodium_init() < 0) {
-        fprintf(stderr, "Libsodium initialization failed\n");
-        return 1;
+        throw std::runtime_error("Libsodium initialization failed");
     }
 
-    unsigned char sk_identity[crypto_sign_SECRETKEYBYTES];
-    load_private_key(sk_identity, "Identity");
+    auto [pk_identity, encrypted_sk_identity, nonce_sk] = get_keypair("identity");
+    const auto sk_identity = decrypt_secret_key(encrypted_sk_identity, nonce_sk);
 
-    unsigned char nonce[NONCE_LEN];
+    unsigned char nonce[CHA_CHA_NONCE_LEN];
     randombytes_buf(nonce, sizeof(nonce));
 
     unsigned char pk_signature[crypto_sign_BYTES];
-    crypto_sign_detached(pk_new_device, nullptr, nonce, NONCE_LEN, sk_identity);
+    crypto_sign_detached(pk_signature, nullptr, pk_new_device, crypto_sign_PUBLICKEYBYTES, sk_identity->data());
 
-    unsigned char pk_id[crypto_sign_PUBLICKEYBYTES];
+    post_register_device(q_byte_array_to_chars(pk_identity), pk_new_device, pk_signature);
+}
 
-    post_register_device(pk_id, pk_new_device, pk_signature);
-    return 0;
+void register_first_device() {
+    qDebug() << "Registering first device";
+    unsigned char pk_device[crypto_sign_PUBLICKEYBYTES];
+    const auto sk_device = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
+    crypto_sign_keypair(pk_device, sk_device->data());
+
+    unsigned char nonce[CHA_CHA_NONCE_LEN];
+    randombytes_buf(nonce, CHA_CHA_NONCE_LEN);
+    register_device(pk_device);
 }
