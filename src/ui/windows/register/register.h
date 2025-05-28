@@ -21,11 +21,13 @@ public:
 private slots:
     void onRegisterButtonClicked();
     void onLoginButtonClicked();
+    void onTogglePassphraseClicked();
 
 private:
     Ui::Register *ui;
     void setupConnections();
-    QWidget* m_loginWindow = nullptr; // Store the login window
+    QWidget* m_loginWindow = nullptr;
+    bool m_passphraseVisible = false;
 };
 
 #endif // REGISTER_H 

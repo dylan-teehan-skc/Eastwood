@@ -17,10 +17,12 @@ public:
 private slots:
     void onLoginButtonClicked();
     void onRegisterButtonClicked();
+    void onTogglePassphraseClicked();
 
 private:
     Ui::Login *ui;
     void setupConnections();
+    bool m_passphraseVisible = false;
 };
 
 #endif //LOGIN_H

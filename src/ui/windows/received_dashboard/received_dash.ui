@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Received</class>
+ <widget class="QWidget" name="Received">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1000</width>
+    <height>700</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Nightwood - Received Files</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: white;</string>
+  </property>
+  <layout class="QHBoxLayout" name="mainLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="NavBar" name="navBar" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>220</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>220</width>
+       <height>16777215</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="contentLayout">
+     <property name="spacing">
+      <number>25</number>
+     </property>
+     <property name="leftMargin">
+      <number>35</number>
+     </property>
+     <property name="topMargin">
+      <number>35</number>
+     </property>
+     <property name="rightMargin">
+      <number>35</number>
+     </property>
+     <property name="bottomMargin">
+      <number>35</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="pageTitle">
+       <property name="styleSheet">
+        <string notr="true">font-size: 24px; font-weight: bold; color: #2d3436;</string>
+       </property>
+       <property name="text">
+        <string>Received Files</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QListWidget" name="fileList">
+       <property name="styleSheet">
+        <string notr="true">QListWidget {
+  background-color: white;
+  border: 1px solid #dfe6e9;
+  border-radius: 12px;
+  padding: 5px;
+}
+QListWidget::item {
+  background-color: white;
+  border-bottom: 1px solid #f1f2f6;
+}
+QListWidget::item:last-child {
+  border-bottom: none;
+}
+QListWidget::item:hover {
+  background-color: #f8f9fa;
+}
+QScrollBar:vertical {
+  border: none;
+  background: #f5f6fa;
+  width: 8px;
+  margin: 0;
+}
+QScrollBar::handle:vertical {
+  background: #dfe6e9;
+  border-radius: 4px;
+  min-height: 30px;
+}
+QScrollBar::handle:vertical:hover {
+  background: #b2bec3;
+}
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+  height: 0px;
+}
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+  background: none;
+}</string>
+       </property>
+       <property name="verticalScrollMode">
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
+       </property>
+       <property name="horizontalScrollMode">
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="bottomLayout">
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="sendButton">
+         <property name="minimumSize">
+          <size>
+           <width>130</width>
+           <height>44</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  background-color: #6c5ce7;
+  border-radius: 10px;
+  padding: 0 20px;
+}
+QPushButton:hover {
+  background-color: #5049c9;
+}
+QPushButton:pressed {
+  background-color: #4040b0;
+}</string>
+         </property>
+         <property name="text">
+          <string>Send File</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>NavBar</class>
+   <extends>QWidget</extends>
+   <header>src/ui/utils/navbar/navbar.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

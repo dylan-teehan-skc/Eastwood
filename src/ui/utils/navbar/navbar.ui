@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NavBar</class>
+ <widget class="QWidget" name="NavBar">
+  <property name="minimumSize">
+   <size>
+    <width>200</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>200</width>
+    <height>16777215</height>
+   </size>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget#NavBar {
+  background-color: white;
+  border-right: 1px solid #e9ecef;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="navBarLayout">
+   <property name="spacing">
+    <number>17</number>
+   </property>
+   <property name="leftMargin">
+    <number>20</number>
+   </property>
+   <property name="topMargin">
+    <number>28</number>
+   </property>
+   <property name="rightMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>28</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="logoLayout">
+     <property name="spacing">
+      <number>12</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="logoLabel">
+       <property name="minimumSize">
+        <size>
+         <width>30</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: #6c5ce7;
+border-radius: 6px;</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="logoTextLabel">
+       <property name="styleSheet">
+        <string notr="true">font-size: 18px; font-weight: 600; color: #2d3436; letter-spacing: 0.3px;</string>
+       </property>
+       <property name="text">
+        <string>Nightwood</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QPushButton" name="receivedButton">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  background-color: #6c5ce7;
+  border-radius: 6px;
+  text-align: left;
+  padding-left: 14px;
+}
+QPushButton:hover {
+  background-color: #5049c9;
+}
+QPushButton:pressed {
+  background-color: #4040b0;
+}</string>
+     </property>
+     <property name="text">
+      <string>Received Files</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="sentButton">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+  font-size: 13px;
+  color: #2d3436;
+  background-color: transparent;
+  border-radius: 6px;
+  text-align: left;
+  padding-left: 14px;
+}
+QPushButton:hover {
+  background-color: #f8f9fa;
+}
+QPushButton:pressed {
+  background-color: #e9ecef;
+}</string>
+     </property>
+     <property name="text">
+      <string>Sent Files</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="sendFileButton">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+  font-size: 13px;
+  color: #2d3436;
+  background-color: transparent;
+  border-radius: 6px;
+  text-align: left;
+  padding-left: 14px;
+}
+QPushButton:hover {
+  background-color: #f8f9fa;
+}
+QPushButton:pressed {
+  background-color: #e9ecef;
+}</string>
+     </property>
+     <property name="text">
+      <string>Send File</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QPushButton" name="settingsButton">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+  font-size: 13px;
+  color: #2d3436;
+  background-color: transparent;
+  border-radius: 6px;
+  text-align: left;
+  padding-left: 14px;
+}
+QPushButton:hover {
+  background-color: #f8f9fa;
+}
+QPushButton:pressed {
+  background-color: #e9ecef;
+}</string>
+     </property>
+     <property name="text">
+      <string>Settings</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="logoutButton">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+  font-size: 13px;
+  color: #e74c3c;
+  background-color: transparent;
+  border-radius: 6px;
+  text-align: left;
+  padding-left: 14px;
+  border: 1px solid #e74c3c;
+}
+QPushButton:hover {
+  background-color: #fff5f5;
+  border-color: #c0392b;
+}
+QPushButton:pressed {
+  background-color: #ffe3e3;
+  border-color: #a93226;
+}</string>
+     </property>
+     <property name="text">
+      <string>Logout</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

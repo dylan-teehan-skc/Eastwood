@@ -25,11 +25,12 @@ jobs:
         sudo apt-get install -y clang-tidy cmake build-essential qt6-base-dev libssl-dev \
           qt6-tools-dev qt6-tools-dev-tools libxkbcommon-dev libsodium-dev libvulkan-dev libsqlcipher-dev
 
-    - name: Configure project with CMake
+    - name: Configure and build project with CMake
       run: |
         mkdir -p build
         cd build
         cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        make -j$(nproc)
 
     - name: Get list of changed C++ files
       id: changed-files

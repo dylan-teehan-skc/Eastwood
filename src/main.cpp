@@ -1,16 +1,16 @@
+#include "ui/windows/login/login.h"
+#include "ui/windows/received_dashboard/received_dash.h"
+#include "ui/windows/sent_dashboard/sent_dash.h"
+#include "./libraries/HTTPSClient.h"
+#include "ui/utils/window_manager/window_manager.h"
 #include <iostream>
 #define SQLITE_HAS_CODEC 1
 #include <QFile>
 #include <QApplication>
-#include "ui/windows/login/login.h"
-
-#include "auth/register_device/register_device.h"
-#include "auth/register_user/register_user.h"
 #include "database/database.h"
 #include "database/schema.h"
 #include "endpoints/endpoints.h"
 #include "sql/queries.h"
-#include "utils/ConversionUtils.h"
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -32,18 +32,6 @@ int main(int argc, char *argv[]) {
 
     init_schema();
 
-
-    QByteArray encrypted_kek, nonce;
-    try {
-        get_encrypted_key("kek");
-        qDebug() << "Existing KEK found. Skipping user registration";
-        // login_user(master_password);
-    } catch (const std::exception) {
-        qDebug() << "KEK not found. Registering new user...";
-        register_user("fred", std::move(master_password));
-        register_first_device();
-    }
-
     // TODO - This will go in login_user
     // auto kek = decrypt_kek(
     //     reinterpret_cast<unsigned char *>(encrypted_kek.data()),
@@ -52,7 +40,6 @@ int main(int argc, char *argv[]) {
     // );
     // KekManager::instance().setKEK(std::move(kek));
 
-    Login login;
-    login.show();
+    WindowManager::instance().showLogin();
     return app.exec();
 }

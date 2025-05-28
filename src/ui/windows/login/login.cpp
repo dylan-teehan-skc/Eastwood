@@ -1,8 +1,7 @@
 #include "./login.h"
 #include "ui_login.h"
-#include "../register/register.h"
 #include "../../utils/messagebox.h"
-
+#include "../../utils/window_manager/window_manager.h"
 
 Login::Login(QWidget *parent)
     : QWidget(parent)
@@ -21,6 +20,7 @@ void Login::setupConnections()
 {
     connect(ui->loginButton, &QPushButton::clicked, this, &Login::onLoginButtonClicked);
     connect(ui->registerButton, &QPushButton::clicked, this, &Login::onRegisterButtonClicked);
+    connect(ui->togglePassphraseButton, &QPushButton::clicked, this, &Login::onTogglePassphraseClicked);
 }
 
 void Login::onLoginButtonClicked()
@@ -57,11 +57,13 @@ void Login::onLoginButtonClicked()
 
 void Login::onRegisterButtonClicked()
 {
-    Register* registerWindow = new Register();
-    // Pass the login window reference to the register window
-    registerWindow->setLoginWindow(this);
-    registerWindow->show();
-    this->hide();
-    // Make sure the register window gets deleted when closed
-    registerWindow->setAttribute(Qt::WA_DeleteOnClose);
+    WindowManager::instance().showRegister();
+    hide();
+}
+
+void Login::onTogglePassphraseClicked()
+{
+    m_passphraseVisible = !m_passphraseVisible;
+    ui->passphraseEdit->setEchoMode(m_passphraseVisible ? QLineEdit::Normal : QLineEdit::Password);
+    ui->togglePassphraseButton->setText(m_passphraseVisible ? "Hide" : "Show");
 } 

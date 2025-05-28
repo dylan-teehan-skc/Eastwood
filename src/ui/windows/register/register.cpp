@@ -1,6 +1,7 @@
 #include "./register.h"
 #include "ui_register.h"
 #include "../../utils/messagebox.h"
+#include "../../utils/window_manager/window_manager.h"
 #include "src/auth/register_user/register_user.h"
 
 
@@ -19,8 +20,8 @@ Register::~Register()
 
 void Register::setupConnections()
 {
-    connect(ui->registerButton, &QPushButton::clicked, this, &Register::onRegisterButtonClicked);
     connect(ui->loginButton, &QPushButton::clicked, this, &Register::onLoginButtonClicked);
+    connect(ui->togglePassphraseButton, &QPushButton::clicked, this, &Register::onTogglePassphraseClicked);
 }
 
 void Register::onRegisterButtonClicked()
@@ -70,21 +71,27 @@ void Register::onRegisterButtonClicked()
         StyledMessageBox::warning(this, "Error", "Passphrases do not match");
         return;
     }
+
     register_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
     StyledMessageBox::info(this, "Success", "Registration functionality here");
 }
 
 void Register::onLoginButtonClicked()
 {
-    if (m_loginWindow) {
-        m_loginWindow->show();
-    }
-
     // TODO: do on backend for NIST SP 800-63B standard
     // 1. Blocklist commonly used passphrases
     // 2. Passphrases from known breaches
     // 3. Context-specific words (username, app name, etc.)
     // Do NOT implement complexity requirements (uppercase, numbers, special chars)
-
-    this->close();
+    
+    WindowManager::instance().showLogin();
+    hide();
 }
+
+void Register::onTogglePassphraseClicked()
+{
+    m_passphraseVisible = !m_passphraseVisible;
+    ui->passphraseEdit->setEchoMode(m_passphraseVisible ? QLineEdit::Normal : QLineEdit::Password);
+    ui->confirmPassphraseEdit->setEchoMode(m_passphraseVisible ? QLineEdit::Normal : QLineEdit::Password);
+    ui->togglePassphraseButton->setText(m_passphraseVisible ? "Hide" : "Show");
+} 

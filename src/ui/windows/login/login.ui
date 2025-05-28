@@ -20,7 +20,7 @@
    <string>Nightwood - Login</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background-color: #f5f6fa;</string>
+   <string notr="true">background-color: white;</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">
@@ -117,16 +117,22 @@ QLineEdit:focus {
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="passphraseEdit">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>52</height>
-      </size>
+    <layout class="QHBoxLayout" name="passphraseLayout">
+     <property name="spacing">
+      <number>0</number>
      </property>
-     <property name="styleSheet">
-      <string notr="true">QLineEdit {
+     <item>
+      <widget class="QLineEdit" name="passphraseEdit">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>52</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QLineEdit {
   padding-left: 15px;
+  padding-right: 60px;
   font-size: 15px;
   border-radius: 10px;
   background-color: white;
@@ -136,14 +142,48 @@ QLineEdit:focus {
 QLineEdit:focus {
   border: 2px solid #6c5ce7;
 }</string>
-     </property>
-     <property name="echoMode">
-      <enum>QLineEdit::EchoMode::Password</enum>
-     </property>
-     <property name="placeholderText">
-      <string>Passphrase</string>
-     </property>
-    </widget>
+       </property>
+       <property name="echoMode">
+        <enum>QLineEdit::EchoMode::Password</enum>
+       </property>
+       <property name="placeholderText">
+        <string>Passphrase</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="togglePassphraseButton">
+       <property name="minimumSize">
+        <size>
+         <width>60</width>
+         <height>52</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>60</width>
+         <height>52</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+  border: none;
+  background-color: transparent;
+  padding: 0px;
+  font-size: 13px;
+  color: #6c5ce7;
+  font-weight: bold;
+}
+QPushButton:hover {
+  color: #5049c9;
+}</string>
+       </property>
+       <property name="text">
+        <string>Show</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <layout class="QHBoxLayout" name="forgotPassphraseLayout">

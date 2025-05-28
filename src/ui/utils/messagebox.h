@@ -16,7 +16,7 @@ public:
         msgBox->setStyleSheet(
             "QMessageBox {"
             "  background-color: #f5f6fa;"
-            "  font-family: BlinkMacSystemFont, 'SF Pro', 'Helvetica Neue', Arial, sans-serif;"
+            "  font-family: 'Helvetica Neue', Arial, sans-serif;"
             "  min-width: 300px;"
             "}"
             "QMessageBox QLabel {"
