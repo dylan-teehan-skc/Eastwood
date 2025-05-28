@@ -151,6 +151,9 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, c
             formatHeaders(headers) +
             "Connection: close\r\n\r\n";
 
+    QString request_json((req.data()));
+    qDebug().noquote().nospace() << "\n---START REQUEST---\n" << request_json.replace("\r", "") << "\n---END REQUEST---\n";
+
     SSL_write(ssl, req.c_str(), req.length());
 
     char buf[4096];
@@ -205,7 +208,7 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
             body;
 
     QString request_json((request.data()));
-    qDebug() << "---START REQUEST---\n" << request_json.replace("\r", "") << "\n---END REQUEST";
+    qDebug().noquote().nospace() << "\n---START REQUEST---\n" << request_json.replace("\r", "") << "\n---END REQUEST---\n";
 
     SSL_write(ssl, request.c_str(), request.length());
 
