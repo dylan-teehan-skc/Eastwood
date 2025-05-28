@@ -1,6 +1,4 @@
-//
-// Created by niall on 20/05/25.
-//
+// HTTPSClient.cpp
 
 #include "./HTTPSClient.h"
 #include <iostream>
@@ -18,7 +16,7 @@ void HTTPSClient::init() {
 
 HTTPSClient::HTTPSClient() {
     init();
-    ctx.reset(SSL_CTX_new(TLS_client_method())); // Create and assign SSL_CTX
+    ctx.reset(SSL_CTX_new(TLS_client_method()));
     if (!ctx) {
         ERR_print_errors_fp(stderr);
         throw std::runtime_error("Failed to create SSL context");
@@ -30,16 +28,16 @@ HTTPSClient::HTTPSClient() {
 
 HTTPSClient::HTTPSClient(const std::string &certPath) : certPath(certPath) {
     init();
-    ctx.reset(SSL_CTX_new(TLS_client_method())); // Create and assign SSL_CTX
+    ctx.reset(SSL_CTX_new(TLS_client_method()));
     if (!ctx) {
         ERR_print_errors_fp(stderr);
         throw std::runtime_error("Failed to create SSL context");
     }
+
     SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
 
     if (!SSL_CTX_load_verify_locations(ctx.get(), certPath.c_str(), nullptr)) {
         ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx.get());
         throw std::runtime_error("Failed to load certificate from path: " + certPath);
     }
 }
@@ -50,7 +48,6 @@ std::string HTTPSClient::formatHeaders(const std::string &headers) {
         std::istringstream header_stream(headers);
         std::string line;
         while (std::getline(header_stream, line)) {
-            // Remove any existing line endings
             while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
                 line.pop_back();
             }
@@ -60,7 +57,6 @@ std::string HTTPSClient::formatHeaders(const std::string &headers) {
         }
     }
 
-    // Add required headers if not present
     if (formatted_headers.find("Accept:") == std::string::npos) {
         formatted_headers += "Accept: */*\r\n";
     }
@@ -71,14 +67,13 @@ std::string HTTPSClient::formatHeaders(const std::string &headers) {
     return formatted_headers;
 }
 
-
 std::string HTTPSClient::get(const std::string &host, const std::string &path, std::string &port,
                              const std::string &headers) {
     int sock_fd = create_socket(host.c_str(), port.c_str());
     if (sock_fd < 0) {
-        SSL_CTX_Deleter{}(ctx.get());
         return "Socket connection closed / lost";
     }
+
     SSL *ssl = SSL_new(ctx.get());
     SSL_set_fd(ssl, sock_fd);
     SSL_set_tlsext_host_name(ssl, host.c_str());
@@ -86,23 +81,21 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, s
 
     if (SSL_connect(ssl) <= 0) {
         SSL_free(ssl);
-        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "TLS handshake failed";
     }
 
     if (SSL_get_verify_result(ssl) != X509_V_OK) {
         SSL_free(ssl);
-        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "Certificate verification failed";
     }
 
     std::string req =
-            "GET " + path + " HTTP/1.1\r\n" +
-            "Host: " + host + "\r\n" +
-            formatHeaders(headers) +
-            "Connection: close\r\n\r\n";
+        "GET " + path + " HTTP/1.1\r\n" +
+        "Host: " + host + "\r\n" +
+        formatHeaders(headers) +
+        "Connection: close\r\n\r\n";
 
     SSL_write(ssl, req.c_str(), req.length());
 
@@ -116,18 +109,17 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, s
 
     SSL_shutdown(ssl);
     SSL_free(ssl);
-    SSL_CTX_Deleter{}(ctx.get());
     close(sock_fd);
 
     return response;
 }
-
 
 std::string HTTPSClient::get(const std::string &host, const std::string &path, const std::string &headers) {
     int sock_fd = create_socket(host.c_str(), defaultPort(true).c_str());
     if (sock_fd < 0) {
         return "Socket connection closed / lost";
     }
+
     SSL *ssl = SSL_new(ctx.get());
     SSL_set_fd(ssl, sock_fd);
     SSL_set_tlsext_host_name(ssl, host.c_str());
@@ -146,10 +138,10 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, c
     }
 
     std::string req =
-            "GET " + path + " HTTP/1.1\r\n" +
-            "Host: " + host + "\r\n" +
-            formatHeaders(headers) +
-            "Connection: close\r\n\r\n";
+        "GET " + path + " HTTP/1.1\r\n" +
+        "Host: " + host + "\r\n" +
+        formatHeaders(headers) +
+        "Connection: close\r\n\r\n";
 
     QString request_json((req.data()));
     qDebug().noquote().nospace() << "\n---START REQUEST---\n" << request_json.replace("\r", "") << "\n---END REQUEST---\n";
@@ -177,7 +169,6 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
                               const std::string &body) {
     int sock_fd = create_socket(host.c_str(), defaultPort(true).c_str());
     if (sock_fd < 0) {
-        SSL_CTX_Deleter{}(ctx.get());
         return "Socket connection failed";
     }
 
@@ -188,26 +179,24 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
     if (SSL_connect(ssl) <= 0) {
         SSL_free(ssl);
-        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "TLS handshake failed";
     }
 
     if (SSL_get_verify_result(ssl) != X509_V_OK) {
         SSL_free(ssl);
-        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "Certificate verification failed";
     }
 
     std::string request =
-            "POST " + path + " HTTP/1.1\r\n" +
-            "Host: " + host + "\r\n" +
-            formatHeaders(headers) +
-            "Content-Type: application/json\r\n" +
-            "Content-Length: " + std::to_string(body.size()) + "\r\n" +
-            "Connection: close\r\n\r\n" +
-            body;
+        "POST " + path + " HTTP/1.1\r\n" +
+        "Host: " + host + "\r\n" +
+        formatHeaders(headers) +
+        "Content-Type: application/json\r\n" +
+        "Content-Length: " + std::to_string(body.size()) + "\r\n" +
+        "Connection: close\r\n\r\n" +
+        body;
 
     QString request_json((request.data()));
     qDebug().noquote().nospace() << "\n---START REQUEST---\n" << request_json.replace("\r", "") << "\n---END REQUEST---\n";
@@ -217,6 +206,7 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
     char buf[4096];
     std::string response;
     int bytes;
+
     while ((bytes = SSL_read(ssl, buf, sizeof(buf))) > 0) {
         response.append(buf, bytes);
     }
@@ -225,7 +215,6 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
     SSL_shutdown(ssl);
     SSL_free(ssl);
-        SSL_CTX_Deleter{}(ctx.get());
     close(sock_fd);
 
     return response;
@@ -235,7 +224,6 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
                               const std::string &body, const std::string &port) {
     int sock_fd = create_socket(host.c_str(), port.c_str());
     if (sock_fd < 0) {
-        SSL_CTX_Deleter{}(ctx.get());
         return "Socket connection failed";
     }
 
@@ -246,46 +234,42 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
     if (SSL_connect(ssl) <= 0) {
         SSL_free(ssl);
-        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "TLS handshake failed";
     }
 
     if (SSL_get_verify_result(ssl) != X509_V_OK) {
         SSL_free(ssl);
-        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "Certificate verification failed";
     }
 
     std::string request =
-            "POST " + path + " HTTP/1.1\r\n" +
-            "Host: " + host + "\r\n" +
-            formatHeaders(headers) +
-            "Content-Type: application/json\r\n" +
-            "Content-Length: " + std::to_string(body.size()) + "\r\n" +
-            "Connection: close\r\n\r\n" +
-            body;
+        "POST " + path + " HTTP/1.1\r\n" +
+        "Host: " + host + "\r\n" +
+        formatHeaders(headers) +
+        "Content-Type: application/json\r\n" +
+        "Content-Length: " + std::to_string(body.size()) + "\r\n" +
+        "Connection: close\r\n\r\n" +
+        body;
 
     SSL_write(ssl, request.c_str(), request.length());
 
     char buf[4096];
     std::string response;
     int bytes;
+
     while ((bytes = SSL_read(ssl, buf, sizeof(buf))) > 0) {
         response.append(buf, bytes);
     }
 
     SSL_shutdown(ssl);
     SSL_free(ssl);
-        SSL_CTX_Deleter{}(ctx.get());
     close(sock_fd);
 
     return response;
 }
 
-
 HTTPSClient::~HTTPSClient() {
-    SSL_CTX_Deleter{}(ctx.get());
     EVP_cleanup();
 }
