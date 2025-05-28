@@ -1,4 +1,6 @@
 #include "./login.h"
+#include "src/auth/login/login.h"
+
 #include "ui_login.h"
 #include "../../utils/messagebox.h"
 #include "../../utils/window_manager/window_manager.h"
@@ -51,6 +53,8 @@ void Login::onLoginButtonClicked()
         StyledMessageBox::warning(this, "Error", "Passphrase cannot be longer than 64 characters");
         return;
     }
+
+    login_user(username.toStdString());
 
     StyledMessageBox::info(this, "Success", "Login functionality here");
 }
