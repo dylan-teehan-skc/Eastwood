@@ -37,8 +37,10 @@ void post_ratchet_message(
 );
 
 void post_handshake_device(
+    const unsigned char *identity_session_id,
     const unsigned char *recipient_device_key_public,
     const unsigned char *recipient_signed_prekey_public,
+    const unsigned char *recipient_signed_prekey_signature,
     const unsigned char *recipient_onetime_prekey_public,
     const unsigned char *my_device_key_public,
     const unsigned char *my_ephemeral_key_public
@@ -47,7 +49,7 @@ void post_handshake_device(
 void get_messages();
 
 void get_keybundles(
-    unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES]
+    std::string username
 );
 
 void post_new_keybundles();

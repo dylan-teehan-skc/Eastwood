@@ -15,13 +15,21 @@ class KeyBundle {
     public:
     virtual ~KeyBundle() = default;
 
-    KeyBundle(){
-
+    KeyBundle(unsigned char* my_device_public_in,
+        unsigned char* their_device_public_in){
+        my_device_public = my_device_public_in;
+        their_device_public = their_device_public_in;
     };
 
     virtual Role get_role() const = 0;
 
     virtual unsigned char* get_shared_secret() = 0;
+
+    unsigned char *get_my_device_public() const { return my_device_public; }
+    unsigned char *get_their_device_public() const { return their_device_public; }
+protected:
+    unsigned char *my_device_public;
+    unsigned char *their_device_public;
 };
 
 class SendingKeyBundle: public KeyBundle {
@@ -35,12 +43,10 @@ public:
                 unsigned char* their_signed_public_in,
                 unsigned char* their_onetime_public_in,
                 unsigned char* their_signed_signature_in
-            ) {
-        my_device_public = my_device_public_in;
+            ) : KeyBundle(my_device_public_in, their_device_public_in) {
         my_device_private = my_device_private_in;
         my_ephemeral_public = my_ephemeral_public_in;
         my_ephemeral_private = my_ephemeral_private_in;
-        their_device_public = their_device_public_in;
         their_signed_public = their_signed_public_in;
         their_onetime_public = their_onetime_public_in;
         their_signed_signature = their_signed_signature_in;
@@ -61,16 +67,13 @@ public:
 
     // Getters for private attributes
     unsigned char* get_my_device_private() const { return my_device_private; }
-    unsigned char* get_my_device_public() const { return my_device_public; }
     unsigned char* get_my_ephemeral_public() const { return my_ephemeral_public; }
     unsigned char* get_my_ephemeral_private() const { return my_ephemeral_private; }
-    unsigned char* get_their_device_public() const { return their_device_public; }
     unsigned char* get_their_signed_public() const { return their_signed_public; }
     unsigned char* get_their_onetime_public() const { return their_onetime_public; }
     unsigned char* get_their_signed_signature() const { return their_signed_signature; }
 
 private:
-    unsigned char* my_device_public;
     unsigned char* my_device_private;
     unsigned char* my_ephemeral_public;
     unsigned char* my_ephemeral_private;
@@ -89,10 +92,8 @@ public:
                 unsigned char* my_device_private_in,
                 unsigned char* my_signed_private_in,
                 unsigned char* my_onetime_private_in
-            ) {
-        their_device_public = their_device_public_in;
+            ): KeyBundle(my_device_public_in, their_device_public_in) {
         their_ephemeral_public = their_ephemeral_public_in;
-        my_device_public = my_device_public_in;
         my_device_private = my_device_private_in;
         my_signed_private = my_signed_private_in;
         my_onetime_private = my_onetime_private_in;
@@ -111,17 +112,13 @@ public:
     };
 
     // Getters for private attributes
-    unsigned char* get_their_device_public() const { return their_device_public; }
     unsigned char* get_their_ephemeral_public() const { return their_ephemeral_public; }
-    unsigned char* get_my_device_public() const { return my_device_public; }
     unsigned char* get_my_device_private() const { return my_device_private; }
     unsigned char* get_my_signed_private() const { return my_signed_private; }
     unsigned char* get_my_onetime_private() const { return my_onetime_private; }
 
 private:
-    unsigned char* their_device_public;
     unsigned char* their_ephemeral_public;
-    unsigned char* my_device_public;
     unsigned char* my_device_private;
     unsigned char* my_signed_private;
     unsigned char* my_onetime_private;

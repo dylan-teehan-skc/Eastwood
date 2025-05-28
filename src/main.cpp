@@ -15,7 +15,7 @@
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     constexpr bool encrypted = false;
-    constexpr bool refresh_database = false;
+    constexpr bool refresh_database = true;
 
     auto &db = Database::get();
     if (db.initialize("master key", encrypted)) {

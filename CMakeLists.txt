@@ -121,6 +121,10 @@ set(AUTH_SOURCES
         src/auth/register_device/register_device.cpp
         src/auth/login/login.cpp
         src/sessions/KeyBundle.h
+        src/sessions/IdentitySession.cpp
+        src/sessions/IdentitySession.h
+        src/sessions/IdentityManager.cpp
+        src/sessions/IdentityManager.h
 )
 
 
@@ -159,6 +163,8 @@ add_executable(EastwoodTests
         src/database/database.cpp
         src/sessions/KeyBundle.h
         src/keys/session_token_manager.h
+        src/sessions/IdentityManager.cpp
+        src/sessions/IdentitySession.cpp
 )
 
 # Configure test target

@@ -5,6 +5,7 @@
 #include "src/auth/register_user/register_user.h"
 #include <iostream>
 #include "src/auth/register_device/register_device.h"
+#include "src/endpoints/endpoints.h"
 #include "src/utils/JsonParser.h"
 
 
