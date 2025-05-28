@@ -25,6 +25,7 @@ private slots:
     void validatePassphrase();
     void onCancelClicked();
     void onSettingsButtonClicked();
+    void onSaveChangesClicked();
 
 private:
     Ui::Settings *ui;

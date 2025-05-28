@@ -39,6 +39,7 @@ void Settings::setupConnections()
 
     // Connect buttons
     connect(ui->cancelButton, &QPushButton::clicked, this, &Settings::onCancelClicked);
+    connect(ui->saveButton, &QPushButton::clicked, this, &Settings::onSaveChangesClicked);
 
     // Connect NavBar signals
     NavBar* navbar = findChild<NavBar*>();
@@ -97,6 +98,7 @@ void Settings::onSentButtonClicked()
     hide();
 }
 
+// navbar button
 void Settings::onSendFileButtonClicked()
 {   
     ui->currentPassphrase->clear();
@@ -137,4 +139,9 @@ void Settings::onCancelClicked()
 void Settings::onLogoutButtonClicked() {
     // TODO: Implement logout functionality
     StyledMessageBox::info(this, "Not Implemented", "Logout functionality is not yet implemented.");
+}
+
+void Settings::onSaveChangesClicked()
+{
+    StyledMessageBox::info(this, "Not Implemented", "Save Changes functionality is not yet implemented.");
 }

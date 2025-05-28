@@ -123,6 +123,7 @@ void Received::sendFileToUser(const QString& username, const QString& fileId)
     // TODO: Implement file sharing logic
 }
 
+// navbar button
 void Received::onSendFileButtonClicked()
 {
     WindowManager::instance().showSendFile();

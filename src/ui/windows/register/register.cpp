@@ -3,6 +3,9 @@
 #include "../../utils/messagebox.h"
 #include "../../utils/window_manager/window_manager.h"
 #include "src/auth/register_user/register_user.h"
+#include <iostream>
+
+#include "src/auth/register_device/register_device.h"
 
 
 Register::Register(QWidget *parent)
@@ -22,6 +25,7 @@ void Register::setupConnections()
 {
     connect(ui->loginButton, &QPushButton::clicked, this, &Register::onLoginButtonClicked);
     connect(ui->togglePassphraseButton, &QPushButton::clicked, this, &Register::onTogglePassphraseClicked);
+    connect(ui->registerButton, &QPushButton::clicked, this, &Register::onRegisterButtonClicked);
 }
 
 void Register::onRegisterButtonClicked()
@@ -73,7 +77,7 @@ void Register::onRegisterButtonClicked()
     }
 
     register_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
-    StyledMessageBox::info(this, "Success", "Registration functionality here");
+    register_first_device();
 }
 
 void Register::onLoginButtonClicked()

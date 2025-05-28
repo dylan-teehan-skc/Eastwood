@@ -85,6 +85,7 @@ void SendFile::onBrowseClicked()
     }
 }
 
+// purple send button in send_file.ui
 void SendFile::onSendClicked()
 {
     QString filePath = ui->filePathInput->text();
@@ -123,6 +124,7 @@ void SendFile::onSentButtonClicked()
     hide();
 }
 
+// navbar button
 void SendFile::onSendFileButtonClicked()
 {   
     ui->usernameInput->clear();

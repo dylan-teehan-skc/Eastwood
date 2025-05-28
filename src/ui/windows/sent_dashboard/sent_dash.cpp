@@ -328,6 +328,7 @@ void Sent::onReceivedButtonClicked()
     hide();
 }
 
+// navbar button
 void Sent::onSendFileButtonClicked()
 {
     WindowManager::instance().showSendFile();
