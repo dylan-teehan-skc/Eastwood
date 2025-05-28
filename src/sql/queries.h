@@ -10,14 +10,13 @@
 
 #include "src/database/database.h"
 #include "src/keys/secure_memory_buffer.h"
-#include "src/keys/kek_manager.h"
 #include "src/algorithms/algorithms.h"
 #include <memory>
 
 #include "src/utils/ConversionUtils.h"
 
 
-inline std::tuple<QByteArray, QByteArray, QByteArray> get_keypair(const std::string &label) {
+inline std::tuple<QByteArray, QByteArray, QByteArray> get_encrypted_keypair(const std::string &label) {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
     db.prepare_or_throw("SELECT public_key, encrypted_private_key, nonce FROM keypairs WHERE label = ?", &stmt);
@@ -35,12 +34,23 @@ inline std::tuple<QByteArray, QByteArray, QByteArray> get_keypair(const std::str
     return std::make_tuple(publicKey, encryptedPrivateKey, nonce);
 }
 
+inline std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer>> get_decrypted_keypair(const std::string &label) {
+    auto [public_key, encrypted_sk, nonce] = get_encrypted_keypair(label);
+    auto secret_key = decrypt_secret_key(q_byte_array_to_chars(encrypted_sk), q_byte_array_to_chars(nonce));
+    return std::make_tuple(public_key, std::move(secret_key));
+}
+
+inline QByteArray get_public_key(const std::string &label) {
+    auto [publicKey, _, _1] = get_encrypted_keypair(label);
+    return publicKey;
+}
+
 inline std::unique_ptr<SecureMemoryBuffer> get_decrypted_sk(const std::string &label) {
-    const auto [_, encrypted_sk, nonce] = get_keypair(label);
-    return decrypt_secret_key(q_byte_array_to_chars(encrypted_sk), q_byte_array_to_chars(nonce));
+    auto [_, sk] = get_decrypted_keypair(label);
+    return std::move(sk);
 };
 
-inline void save_keypair(
+inline void save_encrypted_keypair(
     const std::string &label,
     unsigned char public_key[crypto_sign_PUBLICKEYBYTES],
     const std::unique_ptr<SecureMemoryBuffer> &encrypted_sk,
@@ -99,9 +109,5 @@ inline void save_encrypted_key(
     db.execute(stmt);
 }
 
-inline QByteArray get_public_key(const std::string &label) {
-    auto [publicKey, _, __] = get_keypair(label);
-    return publicKey;
-}
 
 #endif //QUERIES_H

@@ -11,7 +11,7 @@
 #include "src/utils/ConversionUtils.h"
 
 
-int     register_user(const std::string &username, const std::unique_ptr<const std::string> &master_password) {
+int register_user(const std::string &username, const std::unique_ptr<const std::string> &master_password) {
     qDebug() << "Registering user";
     if (sodium_init() < 0) {
         fprintf(stderr, "Libsodium initialization failed\n");
@@ -29,7 +29,7 @@ int     register_user(const std::string &username, const std::unique_ptr<const s
     unsigned char nonce_kek[CHA_CHA_NONCE_LEN];
     randombytes_buf(nonce_kek, sizeof(nonce_kek));
 
-    const auto encrypted_kek = encrypt_kek(kek, nonce_kek, std::move(master_key));
+    const auto encrypted_kek = encrypt_kek(kek, nonce_kek, master_key);
     KekManager::instance().setKEK(std::move(kek));
 
     save_encrypted_key("kek", encrypted_kek, nonce_kek);
@@ -37,15 +37,15 @@ int     register_user(const std::string &username, const std::unique_ptr<const s
 
     unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES];
 
-    auto sk_identity = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
+    const auto sk_identity = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
     crypto_sign_keypair(pk_identity, sk_identity->data());
 
     unsigned char nonce_sk[CHA_CHA_NONCE_LEN];
     randombytes_buf(nonce_sk, CHA_CHA_NONCE_LEN);
 
-    const auto encrypted_sk = encrypt_secret_key(std::move(sk_identity), nonce_sk);
+    const auto encrypted_sk = encrypt_secret_key(sk_identity, nonce_sk);
 
-    save_keypair("identity", pk_identity, encrypted_sk, nonce_sk);
+    save_encrypted_keypair("identity", pk_identity, encrypted_sk, nonce_sk);
 
     unsigned char registration_nonce[CHA_CHA_NONCE_LEN];
     randombytes_buf(registration_nonce, sizeof(registration_nonce));

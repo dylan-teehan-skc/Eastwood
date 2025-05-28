@@ -13,8 +13,7 @@ body : {
 */
 
 void login_user(const std::string &username) {
-    const auto [pk_device, esk_device, nonce_sk] = get_keypair("device");
-    const auto sk_device = decrypt_secret_key(esk_device, nonce_sk);
+    const auto [pk_device, sk_device] = get_decrypted_keypair("device");
 
     const auto nonce = post_request_login(username, q_byte_array_to_chars(pk_device));
     unsigned char signature[crypto_sign_BYTES];
