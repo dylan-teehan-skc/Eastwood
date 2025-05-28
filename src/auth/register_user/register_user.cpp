@@ -7,6 +7,7 @@
 
 #include "../../algorithms/constants.h"
 #include "src/endpoints/endpoints.h"
+#include "src/keys/kek_manager.h"
 #include "src/sql/queries.h"
 #include "src/utils/ConversionUtils.h"
 

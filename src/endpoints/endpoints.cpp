@@ -110,11 +110,8 @@ void get_keybundles(std::string username) {
     }
 
     // Get my device and signed prekey private keys from database
-    const auto [pk_device, esk_device, nonce_device] = get_keypair("device");
-    const auto [pk_signed, esk_signed, nonce_signed] = get_keypair("signed");
-    
-    const auto sk_device = decrypt_secret_key(esk_device, nonce_device);
-    const auto sk_signed = decrypt_secret_key(esk_signed, nonce_signed);
+    const auto [pk_device, sk_device] = get_decrypted_keypair("device");
+    const auto [pk_signed, sk_signed] = get_decrypted_keypair("signed");
 
     std::vector<KeyBundle*> bundles;
     std::string their_identity_public_hex;

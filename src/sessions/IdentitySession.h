@@ -5,6 +5,7 @@
 #ifndef IDENTITYSESSION_H
 #define IDENTITYSESSION_H
 #include <vector>
+#include <memory>
 #include "KeyBundle.h"
 #include "src/key_exchange/DoubleRatchet.h"
 
