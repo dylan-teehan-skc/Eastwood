@@ -4,6 +4,7 @@
 #include "ui_login.h"
 #include "../../utils/messagebox.h"
 #include "../../utils/window_manager/window_manager.h"
+#include "build/_deps/json-src/include/nlohmann/detail/exceptions.hpp"
 
 Login::Login(QWidget *parent)
     : QWidget(parent)
@@ -54,7 +55,11 @@ void Login::onLoginButtonClicked()
         return;
     }
 
-    login_user(username.toStdString());
+    try {
+        login_user(username.toStdString());
+    } catch (std::exception &e) {
+        StyledMessageBox::warning(this, "Error", e.what());
+    }
 
     StyledMessageBox::info(this, "Success", "Login functionality here");
 }
