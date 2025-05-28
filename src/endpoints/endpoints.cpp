@@ -22,6 +22,8 @@ void post_register_user(
     } else {
         qDebug() << "Signature is BAD";
     };
+
+    
     const json body = {
         {"username", username},
         {"identity_public", bin2hex(pk_identity, crypto_sign_PUBLICKEYBYTES)},
