@@ -153,9 +153,9 @@ void post_new_keybundles(){
     
     // Create JSON payload
     json body = {
-        {"signed_prekey", pk_hex},
-        {"signed_prekey_signature", signature_hex},
-        {"onetime_prekeys", json::array()}
+        {"signedpre_key", pk_hex},
+        {"signedpk_signature", signature_hex},
+        {"one_time_keys", json::array()}
     };
 
     for (int i = 0; i < 100; i++) {
@@ -175,6 +175,6 @@ void post_new_keybundles(){
     }
     
     // Send to server
-    post(body, "/keybundles");
+    post(body, "/updateKeybundle");
 
 }
