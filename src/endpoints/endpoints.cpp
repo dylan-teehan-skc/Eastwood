@@ -118,3 +118,63 @@ void post_handshake_device(
     };
     post(body, "/handshake");
 }
+
+void post_new_keybundles(){
+    unsigned char pk[crypto_sign_PUBLICKEYBYTES];
+    unsigned char sk[crypto_sign_SECRETKEYBYTES];
+    
+    // Generate new keypair
+    crypto_sign_keypair(pk, sk);
+
+    //TODO:: save signed prekey bundle to db
+    
+    // Convert keys to hex strings
+    std::string pk_hex = bin2hex(pk, crypto_sign_PUBLICKEYBYTES);
+    std::string sk_hex = bin2hex(sk, crypto_sign_SECRETKEYBYTES);
+
+    auto decrypted_device_key = get_decrypted_sk("device");
+    
+    // Convert QByteArray to hex string
+    std::string device_key_hex = bin_to_hex(decrypted_device_key->data(), decrypted_device_key->size());
+    
+    // Convert hex string to bytes
+    unsigned char device_key[crypto_sign_SECRETKEYBYTES];
+    if (!hex_to_bin(device_key_hex, device_key, crypto_sign_SECRETKEYBYTES)) {
+        std::cerr << "Failed to convert device key hex to binary" << std::endl;
+        throw;
+    }
+    
+    // Sign the public key with device key
+    unsigned char signature[crypto_sign_BYTES];
+    crypto_sign_detached(signature, nullptr, pk, crypto_sign_PUBLICKEYBYTES, device_key);
+    
+    // Convert signature to hex string
+    std::string signature_hex = bin2hex(signature, crypto_sign_BYTES);
+    
+    // Create JSON payload
+    json body = {
+        {"signed_prekey", pk_hex},
+        {"signed_prekey_signature", signature_hex},
+        {"onetime_prekeys", json::array()}
+    };
+
+    for (int i = 0; i < 100; i++) {
+        unsigned char onetime_pk[crypto_box_PUBLICKEYBYTES];
+        unsigned char onetime_sk[crypto_box_SECRETKEYBYTES];
+        
+        // Generate new keypair
+        crypto_box_keypair(onetime_pk, onetime_sk);
+        
+        // Convert public key to hex
+        std::string onetime_pk_hex = bin2hex(onetime_pk, crypto_box_PUBLICKEYBYTES);
+        
+        // Add to JSON array
+        body["onetime_prekeys"].push_back(onetime_pk_hex);
+        
+        // TODO: Save onetime_sk to database for later use
+    }
+    
+    // Send to server
+    post(body, "/keybundles");
+
+}

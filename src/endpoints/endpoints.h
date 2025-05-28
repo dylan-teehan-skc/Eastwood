@@ -50,4 +50,6 @@ void get_keybundles(
     unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES]
 );
 
+void post_new_keybundles();
+
 #endif //ENDPOINTS_H
