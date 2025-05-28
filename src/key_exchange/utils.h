@@ -16,41 +16,6 @@ inline std::string bin2hex(const unsigned char* data, size_t len) {
     return ss.str();
 }
 
-// Convert binary data to base64 string
-inline std::string bin2base64(const unsigned char* data, size_t len) {
-    static const char* base64_chars = 
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    
-    std::string ret;
-    ret.reserve(((len + 2) / 3) * 4);
-    
-    for (size_t i = 0; i < len; i += 3) {
-        unsigned char octet_a = i < len ? data[i] : 0;
-        unsigned char octet_b = i + 1 < len ? data[i + 1] : 0;
-        unsigned char octet_c = i + 2 < len ? data[i + 2] : 0;
-        
-        unsigned char triple = (octet_a << 16) + (octet_b << 8) + octet_c;
-        
-        ret.push_back(base64_chars[(triple >> 18) & 0x3F]);
-        ret.push_back(base64_chars[(triple >> 12) & 0x3F]);
-        ret.push_back(base64_chars[(triple >> 6) & 0x3F]);
-        ret.push_back(base64_chars[triple & 0x3F]);
-    }
-    
-    // Add padding
-    switch (len % 3) {
-        case 1:
-            ret[ret.size() - 2] = '=';
-            ret[ret.size() - 1] = '=';
-            break;
-        case 2:
-            ret[ret.size() - 1] = '=';
-            break;
-    }
-    
-    return ret;
-}
-
 // Convert base64 string to binary data
 inline std::vector<unsigned char> base642bin(const std::string& base64_str) {
     static const unsigned char base64_lookup[] = {
