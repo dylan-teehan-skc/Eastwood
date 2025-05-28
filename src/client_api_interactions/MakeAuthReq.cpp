@@ -106,11 +106,9 @@ json post(const json& data, const std::string& endpoint = "/") {
     try {
         return webwood::parse_json_response(response);
     } catch (const webwood::HttpError& e) {
-        std::cerr << "HTTP Error: " << e.what() << std::endl;
-        throw;
+        throw webwood::HttpError(webwood::extract_response_body(response), e.get_status_code());
     } catch (const std::exception& e) {
-        std::cerr << "Error parsing response: " << e.what() << std::endl;
-        throw;
+        throw webwood::HttpError(webwood::extract_response_body(response), 0);
     }
 }
 
@@ -197,10 +195,8 @@ json get(const std::string& endpoint = "/") {
     try {
         return webwood::parse_json_response(response);
     } catch (const webwood::HttpError& e) {
-        std::cerr << "HTTP Error: " << e.what() << std::endl;
-        throw;
+        throw webwood::HttpError(webwood::extract_response_body(response), e.get_status_code());
     } catch (const std::exception& e) {
-        std::cerr << "Error parsing response: " << e.what() << std::endl;
-        throw;
+        throw webwood::HttpError(webwood::extract_response_body(response), 0);
     }
 }
