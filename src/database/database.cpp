@@ -1,9 +1,9 @@
 #include "database.h"
 #include <QVariant>
-#include <QDebug>
 #include <QDir>
 #include <QStandardPaths>
 #include <iostream>
+#include "src/utils/utils.h"
 
 Database &Database::get() {
     static Database instance;

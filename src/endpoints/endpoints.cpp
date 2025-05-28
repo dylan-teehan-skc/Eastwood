@@ -7,6 +7,7 @@
 #include "src/client_api_interactions/MakeAuthReq.h"
 #include "src/sql/queries.h"
 #include "src/client_api_interactions/MakeUnauthReq.h"
+#include "src/utils/utils.h"
 
 using json = nlohmann::json;
 

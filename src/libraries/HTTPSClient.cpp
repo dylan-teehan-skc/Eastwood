@@ -6,7 +6,7 @@
 #include <iostream>
 #include <QString>
 #include <sstream>
-#include <QDebug>
+#include "src/utils/utils.h"
 
 using namespace webwood;
 
@@ -76,7 +76,7 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, s
                              const std::string &headers) {
     int sock_fd = create_socket(host.c_str(), port.c_str());
     if (sock_fd < 0) {
-        SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
         return "Socket connection closed / lost";
     }
     SSL *ssl = SSL_new(ctx.get());
@@ -86,14 +86,14 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, s
 
     if (SSL_connect(ssl) <= 0) {
         SSL_free(ssl);
-        SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "TLS handshake failed";
     }
 
     if (SSL_get_verify_result(ssl) != X509_V_OK) {
         SSL_free(ssl);
-        SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "Certificate verification failed";
     }
@@ -116,7 +116,7 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, s
 
     SSL_shutdown(ssl);
     SSL_free(ssl);
-    SSL_CTX_Deleter (ctx);
+    SSL_CTX_Deleter{}(ctx.get());
     close(sock_fd);
 
     return response;
@@ -164,6 +164,8 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, c
         response.append(buf, bytes);
     }
 
+    qDebug() << response;
+
     SSL_shutdown(ssl);
     SSL_free(ssl);
     close(sock_fd);
@@ -175,7 +177,7 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
                               const std::string &body) {
     int sock_fd = create_socket(host.c_str(), defaultPort(true).c_str());
     if (sock_fd < 0) {
-        SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
         return "Socket connection failed";
     }
 
@@ -186,14 +188,14 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
     if (SSL_connect(ssl) <= 0) {
         SSL_free(ssl);
-        SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "TLS handshake failed";
     }
 
     if (SSL_get_verify_result(ssl) != X509_V_OK) {
         SSL_free(ssl);
-        SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "Certificate verification failed";
     }
@@ -219,9 +221,11 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
         response.append(buf, bytes);
     }
 
+    qDebug() << response;
+
     SSL_shutdown(ssl);
     SSL_free(ssl);
-    SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
     close(sock_fd);
 
     return response;
@@ -231,7 +235,7 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
                               const std::string &body, const std::string &port) {
     int sock_fd = create_socket(host.c_str(), port.c_str());
     if (sock_fd < 0) {
-        SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
         return "Socket connection failed";
     }
 
@@ -242,14 +246,14 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
     if (SSL_connect(ssl) <= 0) {
         SSL_free(ssl);
-        SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "TLS handshake failed";
     }
 
     if (SSL_get_verify_result(ssl) != X509_V_OK) {
         SSL_free(ssl);
-        SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
         close(sock_fd);
         return "Certificate verification failed";
     }
@@ -274,7 +278,7 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
     SSL_shutdown(ssl);
     SSL_free(ssl);
-    SSL_CTX_Deleter (ctx);
+        SSL_CTX_Deleter{}(ctx.get());
     close(sock_fd);
 
     return response;
@@ -282,6 +286,6 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
 
 HTTPSClient::~HTTPSClient() {
-    SSL_CTX_Deleter (ctx);
-    EVP_cleanup(); // Clean up OpenSSL
+    SSL_CTX_Deleter{}(ctx.get());
+    EVP_cleanup();
 }

@@ -4,7 +4,6 @@
 #include "ui_login.h"
 #include "../../utils/messagebox.h"
 #include "../../utils/window_manager/window_manager.h"
-#include "build/_deps/json-src/include/nlohmann/detail/exceptions.hpp"
 
 Login::Login(QWidget *parent)
     : QWidget(parent)

@@ -8,6 +8,7 @@
 #include "../sql/queries.h"
 #include "src/keys/session_token_manager.h"
 #include "src/key_exchange/utils.h"
+#include "src/utils/utils.h"
 
 using json = nlohmann::json;
 
