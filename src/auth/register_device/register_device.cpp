@@ -15,8 +15,8 @@ void register_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES]) {
         throw std::runtime_error("Libsodium initialization failed");
     }
 
-    auto [pk_identity, encrypted_sk_identity, nonce_sk] = get_keypair("identity");
-    const auto sk_identity = decrypt_secret_key(encrypted_sk_identity, nonce_sk);
+    auto pk_identity = get_public_key("identity");
+    auto sk_identity = get_decrypted_sk("identity");
 
     unsigned char nonce[CHA_CHA_NONCE_LEN];
     randombytes_buf(nonce, sizeof(nonce));

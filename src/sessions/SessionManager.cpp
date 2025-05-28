@@ -23,15 +23,14 @@ void SessionManager::import_key_bundles(keyBundleRequest request) {
         my_key_bundle.isSending = true;  // We are the sender in this case
         
         // Fetch device keys from database
-        std::tuple<QByteArray, QByteArray, QByteArray> device_keypair = get_keypair("device");
-        QByteArray device_public = std::get<0>(device_keypair);
-        QByteArray device_private = std::get<1>(device_keypair);
+        auto device_public = get_public_key("device");
+        auto device_private = get_decrypted_sk("device");
         
         // Allocate and copy device keys
         my_key_bundle.device_key_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
         my_key_bundle.device_key_private = new unsigned char[crypto_box_SECRETKEYBYTES];
         memcpy(my_key_bundle.device_key_public, device_public.data(), crypto_box_PUBLICKEYBYTES);
-        memcpy(my_key_bundle.device_key_private, device_private.data(), crypto_box_SECRETKEYBYTES);
+        memcpy(my_key_bundle.device_key_private, device_private->data(), crypto_box_SECRETKEYBYTES);
         
         // Generate ephemeral keys
         my_key_bundle.ephemeral_key_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
@@ -54,8 +53,7 @@ void SessionManager::import_key_bundles(keyBundleRequest request) {
 }
 
 void SessionManager::routeToIdentity(DeviceMessage message, unsigned char* other_identity) {
-    std::tuple<QByteArray, QByteArray, QByteArray> keypair = get_keypair("identity");
-    QByteArray identity_key_ba = std::get<0>(keypair);
+    auto identity_key_ba = get_public_key("identity");
     unsigned char* identity_key = new unsigned char[identity_key_ba.size()];
     memcpy(identity_key, identity_key_ba.data(), identity_key_ba.size());
 

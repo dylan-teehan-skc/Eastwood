@@ -53,10 +53,10 @@ void post_register_device(
 };
 
 void get_messages(SessionManager manager) {
-    std::tuple<QByteArray, QByteArray, QByteArray> keypair = get_keypair("device");
-    std::string device_key = std::get<0>(keypair).toStdString();
+    auto device_key = get_public_key("device");
+    std::string device_key_str = device_key.toStdString();
     //TODO: get vector of messages and parse individually and send on through identity
-    json response = get("/getMessages/" + device_key);
+    json response = get("/getMessages/" + device_key_str);
 
     DeviceMessage msg;
     msg.header = new MessageHeader();
