@@ -55,16 +55,6 @@ void Login::onLoginButtonClicked()
         StyledMessageBox::warning(this, "Error", "Passphrase cannot be longer than 64 characters");
         return;
     }
-
-    try {
-        login_user(username.toStdString());
-        post_new_keybundles();
-        WindowManager::instance().showReceived();
-        hide();
-    } catch (std::exception &e) {
-        StyledMessageBox::warning(this, "Error", e.what());
-        return;
-    }
 }
 
 void Login::onRegisterButtonClicked()
