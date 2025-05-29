@@ -9,6 +9,7 @@
 #include "src/keys/secure_memory_buffer.h"
 #include <memory>
 #include <QByteArray>
+#include <vector>
 
 std::unique_ptr<SecureMemoryBuffer> derive_master_key(
     const std::unique_ptr<const std::string> &master_password,
