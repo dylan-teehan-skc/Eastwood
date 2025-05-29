@@ -1,7 +1,7 @@
 #include "./register.h"
 #include "ui_register.h"
-#include "../../utils/messagebox.h"
-#include "../../utils/window_manager/window_manager.h"
+#include "src/ui/utils/messagebox.h"
+#include "src/ui/utils/window_manager/window_manager.h"
 #include "src/auth/register_user/register_user.h"
 #include <iostream>
 #include "src/auth/register_device/register_device.h"
@@ -84,10 +84,15 @@ void Register::onRegisterButtonClicked()
         WindowManager::instance().showLogin();
         hide();
     } catch (const webwood::HttpError& e) {
-        // Extract the error body from the response
-        std::string errorBody = e.what();
-        StyledMessageBox::error(this, "Registration Failed", 
-            QString("Registration failed: %1").arg(QString::fromStdString(errorBody)));
+        const std::string errorBody = e.what();
+        const bool isHtmlError = errorBody.find("<!DOCTYPE HTML") != std::string::npos;
+        
+        const QString title = isHtmlError ? "Server Unavailable" : "Registration Failed";
+        const QString message = isHtmlError 
+            ? "The server is currently unavailable. Please try again later."
+            : QString("Registration failed: %1").arg(QString::fromStdString(errorBody));
+        
+        StyledMessageBox::error(this, title, message);
     } catch (const std::exception& e) {
         StyledMessageBox::error(this, "Registration Failed", 
             QString("An error occurred: %1").arg(e.what()));
@@ -96,12 +101,6 @@ void Register::onRegisterButtonClicked()
 
 void Register::onLoginButtonClicked()
 {
-    // TODO: do on backend for NIST SP 800-63B standard
-    // 1. Blocklist commonly used passphrases
-    // 2. Passphrases from known breaches
-    // 3. Context-specific words (username, app name, etc.)
-    // Do NOT implement complexity requirements (uppercase, numbers, special chars)
-    
     WindowManager::instance().showLogin();
     hide();
 }

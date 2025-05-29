@@ -86,19 +86,24 @@
        <property name="styleSheet">
         <string notr="true">QListWidget {
   background-color: white;
-  border: 1px solid #f5f6fa;
+  border: 1px solid #f8f9fa;
   border-radius: 12px;
   padding: 5px;
 }
 QListWidget::item {
   background-color: white;
-  border-bottom: 1px solid #f5f6fa;
+  border-bottom: 1px solid #f8f9fa;
 }
 QListWidget::item:last-child {
   border-bottom: none;
 }
 QListWidget::item:hover {
-  background-color: #f8f9fa;
+  background-color: #e9ecef;
+  border-bottom: 1px solid #e9ecef;
+}
+QListWidget::item QLabel,
+QListWidget::item QWidget {
+  background: transparent;
 }
 QScrollBar:vertical {
   border: none;

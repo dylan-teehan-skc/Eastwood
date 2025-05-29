@@ -58,6 +58,9 @@ void Login::onLoginButtonClicked()
 
     try {
         login_user(username.toStdString());
+        post_new_keybundles();
+        WindowManager::instance().showReceived();
+        hide();
     } catch (std::exception &e) {
         StyledMessageBox::warning(this, "Error", e.what());
         return;

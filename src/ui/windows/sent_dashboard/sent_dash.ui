@@ -99,6 +99,11 @@ QListWidget::item:last-child {
 }
 QListWidget::item:hover {
   background-color: #f8f9fa;
+  border-bottom: 1px solid #f8f9fa;
+}
+QListWidget::item QLabel,
+QListWidget::item QWidget {
+  background: transparent;
 }
 QScrollBar:vertical {
   border: none;
