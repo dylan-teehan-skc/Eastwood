@@ -314,7 +314,7 @@ void DoubleRatchet::set_ratchet_id_and_initial_keys(KeyBundle *bundle) {
                                     out_len);
 
         memcpy(local_dh_public, sender->get_my_ephemeral_public(), crypto_box_PUBLICKEYBYTES);
-        memcpy(local_dh_private, sender->get_my_ephemeral_private(), crypto_box_SECRETKEYBYTES);
+        memcpy(local_dh_private, sender->get_my_ephemeral_private()->data(), crypto_box_SECRETKEYBYTES);
         memcpy(remote_dh_public, sender->get_their_signed_public(), crypto_box_PUBLICKEYBYTES);
         memcpy(root_key, sender->get_shared_secret(), crypto_box_SECRETKEYBYTES);
     } else {
@@ -325,7 +325,7 @@ void DoubleRatchet::set_ratchet_id_and_initial_keys(KeyBundle *bundle) {
                                     out_len);
 
         // For responder, use Bob's signed prekey private and Alice's ephemeral public
-        memcpy(local_dh_private, receiver->get_my_signed_private(), crypto_box_SECRETKEYBYTES);
+        memcpy(local_dh_private, receiver->get_my_signed_private()->data(), crypto_box_SECRETKEYBYTES);
         memcpy(remote_dh_public, receiver->get_their_ephemeral_public(), crypto_box_PUBLICKEYBYTES);
         memcpy(root_key, receiver->get_shared_secret(), crypto_box_SECRETKEYBYTES);
     }

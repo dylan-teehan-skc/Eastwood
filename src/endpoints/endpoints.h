@@ -53,7 +53,7 @@ void get_keybundles(
 );
 
 void post_new_keybundles(
-    std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
+    std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
     std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > signed_prekeypair,
     std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>,unsigned char *> > otks
 );

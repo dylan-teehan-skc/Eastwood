@@ -171,15 +171,14 @@ void get_keybundles(std::string username) {
         }
 
         unsigned char *pk_eph = new unsigned char[crypto_sign_BYTES];
-        unsigned char *sk_eph = new unsigned char[crypto_sign_BYTES];
-        crypto_box_keypair(pk_eph, sk_eph);
+        auto sk_buffer_eph = SecureMemoryBuffer::create(ENC_SECRET_KEY_LEN);
+        crypto_box_keypair(pk_eph, sk_buffer_eph->data());
 
-        // Create a new ReceivingKeyBundle
+        // Create a new KeyBundle
         auto *key_bundle = new SendingKeyBundle(
-            reinterpret_cast<unsigned char *>(const_cast<char *>(pk_device.data())),
-            sk_device->data(),
+            reinterpret_cast<unsigned char*>(const_cast<char*>(pk_device.constData())),
             pk_eph,
-            sk_eph,
+            std::shared_ptr<SecureMemoryBuffer>(sk_buffer_eph.release()),
             their_device_public,
             their_signed_public,
             their_onetime_public,
@@ -224,12 +223,13 @@ void post_handshake_device(
     post(body, "/handshake");
 }
 
-void post_new_keybundles(std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
+void post_new_keybundles(std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
                          std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > signed_prekeypair,
                          std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>,
                              unsigned char *> > otks) {
     auto [pk_signed, sk_signed] = std::move(signed_prekeypair);
-    auto [pk_device, sk_device] = std::move(device_keypair);
+    auto [pk_device_q, sk_device] = std::move(device_keypair);
+    auto pk_device = reinterpret_cast<const unsigned char*>(pk_device_q.constData());
 
     //sign the public key with device key
     unsigned char signature[crypto_sign_BYTES];

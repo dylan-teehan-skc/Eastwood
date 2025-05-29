@@ -139,7 +139,7 @@ inline void save_encrypted_onetime_keys(
     std::cout << "Finished processing all one-time keys" << std::endl;
 }
 
-inline std::tuple<std::unique_ptr<SecureMemoryBuffer>, QByteArray> get_onetime_private_key(const unsigned char* public_key) {
+inline std::unique_ptr<SecureMemoryBuffer> get_onetime_private_key(const unsigned char* public_key) {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
     db.prepare_or_throw(
@@ -163,7 +163,7 @@ inline std::tuple<std::unique_ptr<SecureMemoryBuffer>, QByteArray> get_onetime_p
         q_byte_array_to_chars(nonce)
     );
 
-    return std::make_tuple(std::move(decrypted_key), nonce);
+    return decrypted_key;
 }
 
 #endif //QUERIES_H
