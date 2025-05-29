@@ -14,8 +14,8 @@ unsigned char* x3dh_initiator(
     const unsigned char* my_ephemeral_key_private,
     const unsigned char* recipient_identity_key_public,
     const unsigned char* recipient_signed_prekey_public,
-    const unsigned char* recipient_onetime_prekey_public,
-    const unsigned char* recipient_signed_prekey_signature);
+    const unsigned char* recipient_onetime_prekey_public
+    );
 
 unsigned char* x3dh_responder(
     const unsigned char* initiator_identity_key_public,

@@ -5,6 +5,7 @@
 #include "../../utils/messagebox.h"
 #include "../../utils/window_manager/window_manager.h"
 #include "src/endpoints/endpoints.h"
+#include "src/sql/queries.h"
 
 Login::Login(QWidget *parent)
     : QWidget(parent)
@@ -59,11 +60,8 @@ void Login::onLoginButtonClicked()
         login_user(username.toStdString());
     } catch (std::exception &e) {
         StyledMessageBox::warning(this, "Error", e.what());
+        return;
     }
-
-    std::string identity = "niall";
-    get_keybundles(identity);
-    StyledMessageBox::info(this, "Success", "Login functionality here");
 }
 
 void Login::onRegisterButtonClicked()

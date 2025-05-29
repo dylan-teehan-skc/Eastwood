@@ -1,6 +1,11 @@
 #include "algorithms.h"
 
+#include <tuple>
+#include <__ostream/basic_ostream.h>
+
 #include "src/keys/kek_manager.h"
+#include "src/key_exchange/utils.h"
+#include "src/sql/queries.h"
 #include "src/utils/ConversionUtils.h"
 
 std::unique_ptr<SecureMemoryBuffer> derive_master_key(
@@ -126,4 +131,41 @@ std::unique_ptr<SecureMemoryBuffer> decrypt_secret_key(
     const QByteArray &nonce
 ) {
     return decrypt_secret_key(q_byte_array_to_chars(encrypted_sk), q_byte_array_to_chars(nonce));
+}
+
+std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>> generate_signed_prekey() {
+    auto *pk = new unsigned char[crypto_box_PUBLICKEYBYTES];
+    auto sk_buffer = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
+
+    crypto_box_keypair(pk, sk_buffer->data());
+
+    // Generate nonce for encryption
+    auto *nonce = new unsigned char[CHA_CHA_NONCE_LEN];
+    randombytes_buf(nonce, CHA_CHA_NONCE_LEN);
+
+    // Encrypt and save the signed prekey pair
+    const auto encrypted_sk = encrypt_secret_key(sk_buffer, nonce);
+    save_encrypted_keypair("signed", pk, encrypted_sk, nonce);
+
+    auto decrypted_device_key = get_decrypted_sk("device");
+
+    return std::make_tuple(pk, std::move(sk_buffer));
+}
+
+std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>> generate_onetime_keys(int num) {
+    std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>> keys;
+    for (int i = 0; i < num; i++) {
+        auto *pk = new unsigned char[crypto_box_PUBLICKEYBYTES];
+        auto sk_buffer = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
+        crypto_box_keypair(pk, sk_buffer->data());
+
+        auto *nonce = new unsigned char[CHA_CHA_NONCE_LEN];
+        randombytes_buf(nonce, CHA_CHA_NONCE_LEN);
+
+        std::unique_ptr<SecureMemoryBuffer> encrypted_onetime_sk = encrypt_secret_key(sk_buffer, nonce);
+        keys.push_back(std::make_tuple(pk, std::move(encrypted_onetime_sk), nonce));
+    }
+
+    save_encrypted_onetime_keys(keys);
+    return keys;
 }

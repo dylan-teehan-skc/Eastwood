@@ -7,6 +7,7 @@
 
 #include <tuple>
 #include "src/algorithms/constants.h"
+#include <iostream>
 
 #include "src/database/database.h"
 #include "src/keys/secure_memory_buffer.h"
@@ -109,5 +110,60 @@ inline void save_encrypted_key(
     db.execute(stmt);
 }
 
+inline void save_encrypted_onetime_keys(
+    const std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>>& onetime_keys
+) {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+
+    for (const auto& [pk, encrypted_sk, nonce] : onetime_keys) {
+        try {
+            db.prepare_or_throw(
+                "INSERT INTO onetime_prekeys (public_key, encrypted_key, nonce) VALUES (?, ?, ?);", &stmt
+            );
+
+            if (!pk || !encrypted_sk || !nonce) {
+                std::cerr << "Invalid key data" << std::endl;
+                continue;
+            }
+
+            sqlite3_bind_blob(stmt, 1, pk, crypto_box_PUBLICKEYBYTES, SQLITE_TRANSIENT);
+            sqlite3_bind_blob(stmt, 2, encrypted_sk->data(), encrypted_sk->size(), SQLITE_TRANSIENT);
+            sqlite3_bind_blob(stmt, 3, nonce, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
+
+            db.execute(stmt);
+        } catch (const std::exception& e) {
+            std::cerr << "Error saving one-time key" << std::endl;
+        }
+    }
+    std::cout << "Finished processing all one-time keys" << std::endl;
+}
+
+inline std::tuple<std::unique_ptr<SecureMemoryBuffer>, QByteArray> get_onetime_private_key(const unsigned char* public_key) {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+    db.prepare_or_throw(
+        "SELECT encrypted_key, nonce FROM onetime_prekeys WHERE public_key = ?",
+        &stmt
+    );
+    sqlite3_bind_blob(stmt, 1, public_key, crypto_box_PUBLICKEYBYTES, SQLITE_TRANSIENT);
+
+    auto rows = db.query(stmt);
+    if (rows.empty()) {
+        throw std::runtime_error("No one-time key found for given public key");
+    }
+
+    const auto &row = rows[0];
+    QByteArray encrypted_key = row["encrypted_key"].toByteArray();
+    QByteArray nonce = row["nonce"].toByteArray();
+
+    // Decrypt the private key
+    auto decrypted_key = decrypt_secret_key(
+        q_byte_array_to_chars(encrypted_key),
+        q_byte_array_to_chars(nonce)
+    );
+
+    return std::make_tuple(std::move(decrypted_key), nonce);
+}
 
 #endif //QUERIES_H

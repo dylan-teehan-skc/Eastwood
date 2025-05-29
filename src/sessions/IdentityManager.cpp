@@ -21,6 +21,7 @@ void IdentityManager::update_or_create_identity_sessions(std::vector<KeyBundle*>
 
     // Check if a session already exists for this identity pair
     if (_sessions.find(concatenated) == _sessions.end()) {
+        std::cout << "Session creating... (identity manager)" << std::endl;
         // Create a new session with the bundles
         auto session = std::make_unique<IdentitySession>(bundles, identity_one, identity_two);
         _sessions[concatenated] = std::move(session);

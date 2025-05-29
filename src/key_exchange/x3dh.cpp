@@ -18,23 +18,10 @@ unsigned char* x3dh_initiator(
     const unsigned char* my_ephemeral_key_private,
     const unsigned char* recipient_identity_key_public,
     const unsigned char* recipient_signed_prekey_public,
-    const unsigned char* recipient_onetime_prekey_public,
-    const unsigned char* recipient_signed_prekey_signature) {
+    const unsigned char* recipient_onetime_prekey_public
+    ) {
     
     std::cout << "\n===== INITIATOR X3DH =====" << std::endl;
-    
-    if (recipient_signed_prekey_signature && recipient_identity_key_public) {
-        if (crypto_sign_verify_detached(
-                recipient_signed_prekey_signature, 
-                recipient_signed_prekey_public, 
-                crypto_box_PUBLICKEYBYTES, 
-                recipient_identity_key_public) != 0) {
-            throw std::runtime_error("Signature verification failed");
-        }
-        std::cout << "Signature verification successful" << std::endl;
-    } else {
-        throw std::runtime_error("No signature attached to x3dh key pair from server");
-    }
     
     constexpr size_t KEY_LEN = crypto_scalarmult_BYTES;
     

@@ -8,6 +8,8 @@
 #include "src/key_exchange/utils.h"
 
 IdentitySession::IdentitySession(std::vector<KeyBundle*> const &keys, unsigned char* identity_one, unsigned char* identity_two) {
+    std::cout << "IdentitySession::IdentitySession" << std::endl;
+
     size_t out_len;
     unsigned char *concatenated = concat_ordered(identity_one, crypto_box_PUBLICKEYBYTES,
                                                identity_two, crypto_box_PUBLICKEYBYTES,
