@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <vector>
 #include <cstring>
+#include <sodium.h>
+
 // Convert binary data to a hexadecimal string
 inline std::string bin2hex(const unsigned char* data, size_t len) {
     std::stringstream ss;
@@ -14,6 +16,13 @@ inline std::string bin2hex(const unsigned char* data, size_t len) {
         ss << std::setw(2) << static_cast<int>(data[i]);
     }
     return ss.str();
+}
+
+inline std::string hex2bin(const unsigned char* hex, const size_t len) {
+    const auto max_len = len * 2 + 1;
+    char bin[max_len];
+    sodium_bin2hex(bin, max_len, hex, len);
+    return std::string(bin);
 }
 
 // Convert base64 string to binary data

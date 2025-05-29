@@ -25,7 +25,6 @@ std::string pk_device_hex() {
 std::string sign_message(const std::string &message) {
     const auto sk_device = get_decrypted_sk("device");
 
-    // Sign the message with the private key
     unsigned char signature[crypto_sign_BYTES];
     crypto_sign_detached(
         signature, nullptr,
@@ -36,15 +35,24 @@ std::string sign_message(const std::string &message) {
     return bin2hex(signature, crypto_sign_BYTES);
 }
 
-std::string generate_get_headers(const std::string &nonce) {
-    auto pk_device = get_public_key("device");
-    std::string pk_device_hex = bin2hex(reinterpret_cast<const unsigned char *>(pk_device.data()), pk_device.size());
+std::string sign_nonce(const unsigned char nonce[CHA_CHA_NONCE_LEN]) {
+    const auto sk_device = get_decrypted_sk("device");
 
-    auto hex_signature = sign_message(nonce);
+    unsigned char signature[crypto_sign_BYTES];
+    crypto_sign_detached(
+        signature, nullptr,
+        nonce,
+        CHA_CHA_NONCE_LEN,
+        sk_device->data()
+    );
+    return bin2hex(signature, crypto_sign_BYTES);
+}
+
+std::string generate_get_headers(const unsigned char nonce[CHA_CHA_NONCE_LEN]) {
     std::map<std::string, std::string> headers = {
-        {"device_public", pk_device_hex},
-        {"signature", hex_signature},
-        {"nonce", nonce},
+        {"device_public", pk_device_hex()},
+        {"signature", sign_nonce(nonce)},
+        {"nonce", bin2hex(nonce, CHA_CHA_NONCE_LEN)},
         {"session_token", SessionTokenManager::instance().getToken()}
     };
 
@@ -58,11 +66,9 @@ std::string generate_get_headers(const std::string &nonce) {
 
 
 json generate_post_headers(const std::string &request_body) {
-    auto hex_signature = sign_message(request_body);
-
     std::map<std::string, std::string> headers = {
         {"device_public", pk_device_hex()},
-        {"signature", hex_signature},
+        {"signature", sign_message(request_body)},
         {"session_token", SessionTokenManager::instance().getToken()}
     };
 
@@ -85,40 +91,6 @@ json handle_response(const std::string &response) {
     }
 }
 
-std::string generate_base64_nonce() {
-    unsigned char nonce[CHA_CHA_NONCE_LEN];
-    randombytes_buf(nonce, CHA_CHA_NONCE_LEN);
-
-    constexpr auto max_len = sodium_base64_ENCODED_LEN(CHA_CHA_NONCE_LEN, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
-    char b64_nonce[max_len];
-    sodium_bin2base64(b64_nonce, max_len,
-                      nonce, sizeof(nonce),
-                      sodium_base64_VARIANT_URLSAFE_NO_PADDING);
-    return std::string(b64_nonce);
-}
-
-
-json post(const json &data, const std::string &endpoint = "/") {
-    const std::string API_HOST = load_env_variable("API_HOST");
-    if (API_HOST.empty()) {
-        std::cerr << "API_HOST not found in .env file" << std::endl;
-        throw;
-    }
-
-    std::string b64_nonce = generate_base64_nonce();
-    std::cout << b64_nonce;
-
-    json request_json = data;
-    request_json["nonce"] = b64_nonce;
-    const std::string request_body = request_json.dump();
-    qDebug().noquote() << "request.dump" << request_json.dump();
-    const std::string headers = generate_post_headers(request_body);
-
-    webwood::HTTPSClient client;
-    const std::string response = client.post(API_HOST, endpoint, headers, request_body);
-    return handle_response(response);
-}
-
 
 json get(const std::string &endpoint = "/") {
     const std::string API_HOST = load_env_variable("API_HOST");
@@ -127,11 +99,32 @@ json get(const std::string &endpoint = "/") {
         throw;
     }
 
-    const std::string b64_nonce = generate_base64_nonce();
+    unsigned char nonce[CHA_CHA_NONCE_LEN];
+    randombytes_buf(nonce, CHA_CHA_NONCE_LEN);
 
-    const std::string headers = generate_get_headers(b64_nonce);
+    const std::string headers = generate_get_headers(nonce);
 
     webwood::HTTPSClient client;
     const std::string response = client.get(API_HOST, endpoint, headers);
+    return handle_response(response);
+}
+
+json post(const json &data, const std::string &endpoint = "/") {
+    const std::string API_HOST = load_env_variable("API_HOST");
+    if (API_HOST.empty()) {
+        std::cerr << "API_HOST not found in .env file" << std::endl;
+        throw;
+    }
+
+    unsigned char nonce[CHA_CHA_NONCE_LEN];
+    randombytes_buf(nonce, CHA_CHA_NONCE_LEN);
+
+    json request_json = data;
+    request_json["nonce"] = bin2hex(nonce, CHA_CHA_NONCE_LEN);
+    const std::string request_body = request_json.dump();
+    const std::string headers = generate_post_headers(request_body);
+
+    webwood::HTTPSClient client;
+    const std::string response = client.post(API_HOST, endpoint, headers, request_body);
     return handle_response(response);
 }
