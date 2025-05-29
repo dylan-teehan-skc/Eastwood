@@ -16,7 +16,7 @@ public:
         return instance;
     }
 
-    void update_or_create_identity_sessions(std::vector<KeyBundle*> bundles, unsigned char* identity_one, unsigned char* identity_two);
+    void update_or_create_identity_sessions(std::vector<KeyBundle*> bundles, std::string username_one, std::string username_two);
     void update_or_create_identity_sessions(std::vector<KeyBundle*> bundles, unsigned char* identity_session_id);
 
 private:

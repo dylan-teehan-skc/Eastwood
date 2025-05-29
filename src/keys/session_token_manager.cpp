@@ -10,11 +10,19 @@ void SessionTokenManager::setToken(const std::string& token) {
     has_token_ = true;
 }
 
+void SessionTokenManager::setUsername(const std::string& username_in) {
+    username = username_in;
+}
+
 const std::string& SessionTokenManager::getToken() const {
     if (!has_token_) {
         throw std::runtime_error("Session token not set");
     }
     return token_;
+}
+
+const std::string& SessionTokenManager::getUsername() const {
+    return username;
 }
 
 bool SessionTokenManager::hasToken() const {

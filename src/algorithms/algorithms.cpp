@@ -168,3 +168,27 @@ std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsi
     save_encrypted_onetime_keys(keys);
     return keys;
 }
+
+unsigned char* generate_unique_id_pair(std::string *input_one, std::string *input_two) {
+    size_t out_size = crypto_hash_sha256_BYTES;
+    auto hashed_one = new unsigned char[out_size];
+    auto hashed_two = new unsigned char[out_size];
+
+    // Generate initial hashes
+    crypto_hash_sha256(hashed_one, reinterpret_cast<const unsigned char*>(input_one->c_str()), input_one->length());
+    crypto_hash_sha256(hashed_two, reinterpret_cast<const unsigned char*>(input_two->c_str()), input_two->length());
+    
+    unsigned char concatenated[64]; 
+    
+    if (memcmp(hashed_one, hashed_two, 32) <= 0) {
+        memcpy(concatenated, hashed_one, 32);
+        memcpy(concatenated + 32, hashed_two, 32);
+    } else {
+        memcpy(concatenated, hashed_two, 32);
+        memcpy(concatenated + 32, hashed_one, 32);
+    }
+    
+    crypto_hash_sha256(hashed_one, concatenated, 64);
+    delete[] hashed_two;
+    return hashed_one;
+}

@@ -20,4 +20,5 @@ void login_user(const std::string &username) {
     crypto_sign_detached(signature, nullptr, nonce.data(), nonce.size(), sk_device->data());
     const std::string token = post_authenticate(username, q_byte_array_to_chars(pk_device), signature);
     SessionTokenManager::instance().setToken(token);
+    SessionTokenManager::instance().setUsername(username);
 }

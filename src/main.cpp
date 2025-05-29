@@ -71,9 +71,9 @@ int main(int argc, char *argv[]) {
 
     init_schema();
 
-    register_user("sloggotesting9", std::make_unique<std::string>("1234"));
+    register_user("sloggotesting11", std::make_unique<std::string>("1234"));
     register_first_device();
-    login_user("sloggotesting9");
+    login_user("sloggotesting11");
     post_new_keybundles(
         get_decrypted_keypair("device"),
         generate_signed_prekey(),

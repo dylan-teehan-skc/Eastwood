@@ -7,7 +7,9 @@ public:
     static SessionTokenManager& instance();
 
     void setToken(const std::string& token);
+    void setUsername(const std::string& username_in);
     const std::string& getToken() const;
+    const std::string& getUsername() const;
     bool hasToken() const;
 
     // Non-copyable
@@ -16,5 +18,6 @@ public:
 private:
     SessionTokenManager() = default;
     std::string token_;
+    std::string username;
     bool has_token_ = false;
 }; 

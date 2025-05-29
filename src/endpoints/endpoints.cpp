@@ -7,6 +7,7 @@
 #include "src/client_api_interactions/MakeAuthReq.h"
 #include "src/sql/queries.h"
 #include "src/client_api_interactions/MakeUnauthReq.h"
+#include "src/keys/session_token_manager.h"
 #include "src/sessions/IdentityManager.h"
 #include "src/utils/utils.h"
 
@@ -196,8 +197,7 @@ void get_keybundles(std::string username) {
     }
 
     // Update or create identity session
-    IdentityManager::getInstance().update_or_create_identity_sessions(bundles, my_identity_public,
-                                                                      their_identity_public);
+    IdentityManager::getInstance().update_or_create_identity_sessions(bundles, username, SessionTokenManager::instance().getUsername());
 }
 
 void post_handshake_device(

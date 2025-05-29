@@ -58,4 +58,6 @@ std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>> generate_signed_
 
 std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>> generate_onetime_keys(int num);
 
+unsigned char* generate_unique_id_pair(std::string *input_one, std::string *input_two);
+
 #endif //ALGORITHMS_H
