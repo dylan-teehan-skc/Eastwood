@@ -12,7 +12,8 @@
 
 class IdentitySession {
 public:
-    IdentitySession(std::vector<KeyBundle*> const &keys, unsigned char* identity_one, unsigned char* identity_two);
+    IdentitySession(std::vector<KeyBundle*> const &keys, unsigned char* identity_session_id_in);
+
 
     void updateFromBundles(std::vector<KeyBundle*> bundles);
 private:

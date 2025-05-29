@@ -57,4 +57,5 @@ std::unique_ptr<SecureMemoryBuffer> decrypt_secret_key(
 std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>> generate_signed_prekey();
 
 std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>> generate_onetime_keys(int num);
+
 #endif //ALGORITHMS_H

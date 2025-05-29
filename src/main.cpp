@@ -19,6 +19,8 @@
 #include "database/schema.h"
 #include "endpoints/endpoints.h"
 #include "keys/session_token_manager.h"
+#include "sessions/IdentityManager.h"
+#include "sessions/IdentitySession.h"
 #include "sql/queries.h"
 
 std::string generateRandomString(int length) {
@@ -69,18 +71,20 @@ int main(int argc, char *argv[]) {
 
     init_schema();
 
-    const std::string username = generateRandomString(8);
-    register_user(username, std::make_unique<std::string>("1234"));
+    register_user("sloggotesting9", std::make_unique<std::string>("1234"));
     register_first_device();
-    login_user(username);
+    login_user("sloggotesting9");
     post_new_keybundles(
         get_decrypted_keypair("device"),
         generate_signed_prekey(),
         generate_onetime_keys(100)
     );
-    get_keybundles("dill3kco");
 
+    std::cout << "Press Enter to continue...";
+    std::cin.get();
 
+    auto [backlog, identity_id] = get_handshake_backlog();
+    IdentityManager::getInstance().update_or_create_identity_sessions(backlog, identity_id);
     // WindowManager::instance().showLogin();
     return app.exec();
 }

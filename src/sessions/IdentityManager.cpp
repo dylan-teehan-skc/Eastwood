@@ -23,7 +23,7 @@ void IdentityManager::update_or_create_identity_sessions(std::vector<KeyBundle*>
     if (_sessions.find(concatenated) == _sessions.end()) {
         std::cout << "Session creating... (identity manager)" << std::endl;
         // Create a new session with the bundles
-        auto session = std::make_unique<IdentitySession>(bundles, identity_one, identity_two);
+        auto session = std::make_unique<IdentitySession>(bundles, concatenated);
         _sessions[concatenated] = std::move(session);
     } else {
         // Update existing session with new bundles
@@ -33,4 +33,18 @@ void IdentityManager::update_or_create_identity_sessions(std::vector<KeyBundle*>
     // Clean up
     delete[] concatenated;
 }
+
+void IdentityManager::update_or_create_identity_sessions(std::vector<KeyBundle*> bundles, unsigned char* identity_session_id) {
+    // Check if a session already exists for this identity pair
+    if (_sessions.find(identity_session_id) == _sessions.end()) {
+        std::cout << "Session creating... (identity manager)" << std::endl;
+        // Create a new session with the bundles
+        auto session = std::make_unique<IdentitySession>(bundles, identity_session_id);
+        _sessions[identity_session_id] = std::move(session);
+    } else {
+        // Update existing session with new bundles
+        _sessions[identity_session_id]->updateFromBundles(bundles);
+    };
+}
+
 
