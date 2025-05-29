@@ -193,8 +193,46 @@ target_link_libraries(EastwoodTests PRIVATE
         ${SQLCIPHER_LIBRARIES}
 )
 
+# Create integration test executable
+add_executable(IntegrationTests
+        test/integration_main_flow_test.cpp
+        ${CRYPTO_SOURCES}
+        src/database/database.cpp
+        src/sessions/KeyBundle.h
+        src/keys/session_token_manager.h
+        src/sessions/IdentityManager.cpp
+        src/sessions/IdentitySession.cpp
+        src/auth/register_user/register_user.cpp
+        src/auth/register_device/register_device.cpp
+        src/auth/login/login.cpp
+)
+
+target_include_directories(IntegrationTests PRIVATE
+        ${SODIUM_INCLUDE_DIR}
+        ${SQLCIPHER_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/key_exchange
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/sessions
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/keys
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/cereal/include
+)
+
+target_link_libraries(IntegrationTests PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+        Qt6::UiTools
+        ${SODIUM_LIBRARY}
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        nlohmann_json::nlohmann_json
+        ${SQLCIPHER_LIBRARIES}
+)
+
 # Enable testing
 enable_testing()
 
 # Add test
 add_test(NAME EastwoodTests COMMAND EastwoodTests)
+add_test(NAME IntegrationTests COMMAND IntegrationTests)
