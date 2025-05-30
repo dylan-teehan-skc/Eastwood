@@ -127,6 +127,7 @@ set(AUTH_SOURCES
         src/sessions/IdentitySession.cpp
         src/sessions/IdentityManager.cpp
         src/files/upload_file.cpp
+        src/auth/salt.cpp
 
 )
 
