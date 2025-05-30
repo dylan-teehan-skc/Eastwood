@@ -84,7 +84,7 @@ void Database::execute(sqlite3_stmt *stmt) const {
     if (sqlite3_stmt_readonly(stmt)) {
         throw std::runtime_error("Attempted to execute a read-only (SELECT) statement with execute()");
     }
-    qDebug() << "Executing SQL: " << sqlite3_expanded_sql(stmt);
+    qDebug() << "Executing SQL:" << sqlite3_expanded_sql(stmt);
     int rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
         std::string err = sqlite3_errmsg(sqlite3_db_handle(stmt));
@@ -102,6 +102,7 @@ QVector<QVariantMap> Database::query(sqlite3_stmt *stmt) const {
     if (!sqlite3_stmt_readonly(stmt)) {
         throw std::runtime_error("Attempted to query with a non-SELECT statement");
     }
+    qDebug() << "Querying SQL:" << sqlite3_expanded_sql(stmt);
     QVector<QVariantMap> results;
     int colCount = sqlite3_column_count(stmt);
     int rc;

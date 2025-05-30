@@ -17,6 +17,9 @@
 #include "endpoints/endpoints.h"
 #include "sql/queries.h"
 #include <memory>
+#include <QApplication>
+
+#include "files/upload_file.h"
 
 std::string generateRandomString(int length) {
     const std::string characters =
@@ -36,6 +39,10 @@ std::string generateRandomString(int length) {
 }
 
 int main() {
+    if (sodium_init() < 0) {
+        throw std::runtime_error("Libsodium initialization failed");
+    }
+
     constexpr bool encrypted = false;
     constexpr bool refresh_database = true;
 
@@ -63,7 +70,5 @@ int main() {
         generate_onetime_keys(100)
     );
 
-
     std::cout << "Integration main flow test completed successfully." << std::endl;
-    return 0;
-} 
+}

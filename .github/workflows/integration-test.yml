@@ -21,6 +21,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Create file to test uploading
+        run: echo "This is the contents of an encrypted file" > file.txt
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -38,4 +41,4 @@ jobs:
       - name: Run integration test
         run: |
           cd build
-          ctest -V -R IntegrationTests 
+          ctest -V -R IntegrationTests

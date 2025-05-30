@@ -35,7 +35,7 @@ inline std::tuple<QByteArray, QByteArray, QByteArray> get_encrypted_keypair(cons
     return std::make_tuple(publicKey, encryptedPrivateKey, nonce);
 }
 
-inline std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer>> get_decrypted_keypair(const std::string &label) {
+inline std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > get_decrypted_keypair(const std::string &label) {
     auto [public_key, encrypted_sk, nonce] = get_encrypted_keypair(label);
     auto secret_key = decrypt_secret_key(q_byte_array_to_chars(encrypted_sk), q_byte_array_to_chars(nonce));
     return std::make_tuple(public_key, std::move(secret_key));
@@ -111,12 +111,12 @@ inline void save_encrypted_key(
 }
 
 inline void save_encrypted_onetime_keys(
-    const std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>>& onetime_keys
+    const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &onetime_keys
 ) {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
 
-    for (const auto& [pk, encrypted_sk, nonce] : onetime_keys) {
+    for (const auto &[pk, encrypted_sk, nonce]: onetime_keys) {
         try {
             db.prepare_or_throw(
                 "INSERT INTO onetime_prekeys (public_key, encrypted_key, nonce) VALUES (?, ?, ?);", &stmt
@@ -132,14 +132,14 @@ inline void save_encrypted_onetime_keys(
             sqlite3_bind_blob(stmt, 3, nonce, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
 
             db.execute(stmt);
-        } catch (const std::exception& e) {
+        } catch (const std::exception &e) {
             std::cerr << "Error saving one-time key" << std::endl;
         }
     }
     std::cout << "Finished processing all one-time keys" << std::endl;
 }
 
-inline std::unique_ptr<SecureMemoryBuffer> get_onetime_private_key(const unsigned char* public_key) {
+inline std::unique_ptr<SecureMemoryBuffer> get_onetime_private_key(const unsigned char *public_key) {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
     db.prepare_or_throw(
@@ -159,6 +159,51 @@ inline std::unique_ptr<SecureMemoryBuffer> get_onetime_private_key(const unsigne
 
     // Decrypt the private key
     auto decrypted_key = decrypt_secret_key(
+        q_byte_array_to_chars(encrypted_key),
+        q_byte_array_to_chars(nonce)
+    );
+
+    return decrypted_key;
+}
+
+inline void save_encrypted_file_key(
+    const std::string &file_uuid,
+    const std::unique_ptr<SecureMemoryBuffer> &encrypted_key,
+    const unsigned char nonce_sk[CHA_CHA_NONCE_LEN]
+) {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+    db.prepare_or_throw(
+        "INSERT INTO file_keys (file_uuid, encrypted_key, nonce) VALUES (?, ?, ?);", &stmt
+    );
+    sqlite3_bind_text(stmt, 1, file_uuid.data(), file_uuid.size(), SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 2, encrypted_key->data(), encrypted_key->size(), SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 3, nonce_sk, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
+    db.execute(stmt);
+}
+
+
+inline std::unique_ptr<SecureMemoryBuffer> get_decrypted_file_key(
+    const std::string &file_uuid
+) {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+    db.prepare_or_throw(
+        "SELECT encrypted_key, nonce FROM file_keys WHERE file_uuid = ?;", &stmt
+    );
+    sqlite3_bind_text(stmt, 1, file_uuid.data(), file_uuid.size(), SQLITE_TRANSIENT);
+
+    auto rows = db.query(stmt);
+    if (rows.empty()) {
+        throw std::runtime_error("Unable to find file for the given id. Check SQL logs");
+    }
+
+    const auto &row = rows[0];
+    const QByteArray encrypted_key = row["encrypted_key"].toByteArray();
+    const QByteArray nonce = row["nonce"].toByteArray();
+
+    // Decrypt the private key
+    auto decrypted_key = decrypt_symmetric_key(
         q_byte_array_to_chars(encrypted_key),
         q_byte_array_to_chars(nonce)
     );

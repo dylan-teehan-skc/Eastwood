@@ -82,7 +82,6 @@ json generate_post_headers(const std::string &request_body) {
 
 json handle_response(const std::string &response) {
     try {
-        qDebug() << response;
         return webwood::parse_json_response(response);
     } catch (const webwood::HttpError &e) {
         throw webwood::HttpError(webwood::extract_response_body(response), e.get_status_code());

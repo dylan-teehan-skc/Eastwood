@@ -58,4 +58,6 @@ void post_new_keybundles(
     const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &otks
 );
 
+std::string post_upload_file(std::vector<unsigned char> encrypted_bytes);
+
 #endif //ENDPOINTS_H

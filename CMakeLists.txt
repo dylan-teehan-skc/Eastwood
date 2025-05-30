@@ -122,9 +122,9 @@ set(AUTH_SOURCES
         src/auth/login/login.cpp
         src/sessions/KeyBundle.h
         src/sessions/IdentitySession.cpp
-        src/sessions/IdentitySession.h
         src/sessions/IdentityManager.cpp
-        src/sessions/IdentityManager.h
+        src/files/upload_file.cpp
+
 )
 
 
@@ -206,6 +206,7 @@ add_executable(IntegrationTests
         src/auth/register_user/register_user.cpp
         src/auth/register_device/register_device.cpp
         src/auth/login/login.cpp
+        src/files/upload_file.cpp
 )
 
 target_include_directories(IntegrationTests PRIVATE
