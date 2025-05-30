@@ -10,21 +10,8 @@
 #include <string>
 #include <vector>
 #include <tuple>
+#include "IdentitySessionId.h"
 #include "IdentitySession.h"
-#include <array>
-
-// Custom key type for identity session IDs
-struct IdentitySessionId {
-    std::array<unsigned char, crypto_hash_sha256_BYTES> data;
-    
-    bool operator<(const IdentitySessionId& other) const {
-        return memcmp(data.data(), other.data.data(), crypto_hash_sha256_BYTES) < 0;
-    }
-    
-    bool operator==(const IdentitySessionId& other) const {
-        return memcmp(data.data(), other.data.data(), crypto_hash_sha256_BYTES) == 0;
-    }
-};
 
 class IdentityManager {
 private:
@@ -40,7 +27,7 @@ public:
     void update_or_create_identity_sessions(std::vector<std::tuple<IdentitySessionId, KeyBundle*>> bundles_with_ids);
 
     void receive_messages(std::vector<std::tuple<IdentitySessionId, DeviceMessage*>> messages_with_ids);
-    void send_to_user(std::string username, unsigned char* msg);
+    std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> send_to_user(std::string username, unsigned char* msg);
     void print_all_session_ids();
 };
 

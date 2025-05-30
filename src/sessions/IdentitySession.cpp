@@ -61,10 +61,15 @@ void IdentitySession::create_ratchet_if_needed(const unsigned char* device_id_on
     }
 }
 
-void IdentitySession::send_message(unsigned char *message) {
+std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> IdentitySession::send_message(unsigned char *message) {
+    std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> responses;
+    IdentitySessionId session_id;
+    memcpy(session_id.data.data(), identity_session_id.data(), crypto_hash_sha256_BYTES);
+    
     for (const auto& [id, ratchet]: ratchets) {
-        ratchet.get()->message_send(message, identity_session_id.data());
+        responses.emplace_back(session_id, ratchet.get()->message_send(message));
     }
+    return responses;
 }
 
 void IdentitySession::receive_message(DeviceMessage *message) {

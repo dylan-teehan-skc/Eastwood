@@ -8,7 +8,8 @@
 #include <map>
 #include <vector>
 
-#include "src/sessions/KeyBundle.h"
+#include "../sessions/KeyBundle.h"
+#include "../sessions/IdentitySessionId.h"
 
 struct Chain {
     unsigned char chain_key[crypto_kdf_KEYBYTES];
@@ -136,7 +137,7 @@ public:
     ~DoubleRatchet();
     
     // Creates a message key and header for sending
-    DeviceMessage message_send(const unsigned char* message, unsigned char* identity_session_id);
+    DeviceMessage* message_send(const unsigned char* message);
 
     // Processes a received message with header and returns the decrypted plaintext
     std::vector<unsigned char> message_receive(const DeviceMessage& encrypted_message);

@@ -179,7 +179,7 @@ void DoubleRatchet::advance_chain_key(unsigned char* chain_key) {
     }
 }
 
-DeviceMessage DoubleRatchet::message_send(const unsigned char* message, unsigned char* identity_session_id) {
+DeviceMessage* DoubleRatchet::message_send(const unsigned char* message) {
     // Check if send chain is uninitialized (all zeros)
     bool send_chain_uninitialized = sodium_is_zero(send_chain.chain_key, crypto_kdf_KEYBYTES) == 1;
 
@@ -189,14 +189,14 @@ DeviceMessage DoubleRatchet::message_send(const unsigned char* message, unsigned
         needs_dh_ratchet_on_send = false;
     }
 
-    DeviceMessage device_message;
-    device_message.header = new MessageHeader{};
+    DeviceMessage* device_message = new DeviceMessage();
+    device_message->header = new MessageHeader{};
 
     // Populate header with current state
-    memcpy(device_message.header->dh_public, local_dh_public, crypto_kx_PUBLICKEYBYTES);
-    device_message.header->prev_chain_length = prev_send_chain_length;
-    device_message.header->message_index = send_chain.index;
-    memcpy(device_message.header->device_id, other_device_id, crypto_box_PUBLICKEYBYTES);
+    memcpy(device_message->header->dh_public, local_dh_public, crypto_kx_PUBLICKEYBYTES);
+    device_message->header->prev_chain_length = prev_send_chain_length;
+    device_message->header->message_index = send_chain.index;
+    memcpy(device_message->header->device_id, other_device_id, crypto_box_PUBLICKEYBYTES);
 
     // Derive message key for the current message
     unsigned char* message_key = derive_message_key(send_chain.chain_key);
@@ -209,18 +209,14 @@ DeviceMessage DoubleRatchet::message_send(const unsigned char* message, unsigned
     // Encrypt the message
     size_t message_len = strlen(reinterpret_cast<const char*>(message));
     std::vector<unsigned char> ciphertext_vec = encrypt_message_given_key(message, message_len, message_key);
-    device_message.ciphertext = new unsigned char[ciphertext_vec.size()];
-    memcpy(device_message.ciphertext, ciphertext_vec.data(), ciphertext_vec.size());
-    device_message.length = ciphertext_vec.size();
+    device_message->ciphertext = new unsigned char[ciphertext_vec.size()];
+    memcpy(device_message->ciphertext, ciphertext_vec.data(), ciphertext_vec.size());
+    device_message->length = ciphertext_vec.size();
 
     delete[] message_key;
 
     // Advance the chain key after encryption
     advance_chain_key(send_chain.chain_key);
-
-    IdentitySessionId session_id;
-    memcpy(session_id.data.data(), identity_session_id, crypto_hash_sha256_BYTES);
-    post_ratchet_message(&device_message, session_id);
     return device_message;
 }
 

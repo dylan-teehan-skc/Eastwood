@@ -53,7 +53,7 @@ void IdentityManager::update_or_create_identity_sessions(std::vector<std::tuple<
     }
 }
 
-void IdentityManager::send_to_user(std::string username, unsigned char *msg) {
+std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> IdentityManager::send_to_user(std::string username, unsigned char *msg) {
     std::string my_username = SessionTokenManager::instance().getUsername();
     unsigned char* session_id_raw = generate_unique_id_pair(&username, &my_username);
     IdentitySessionId session_id;
@@ -66,15 +66,12 @@ void IdentityManager::send_to_user(std::string username, unsigned char *msg) {
         for (size_t i = 0; i < crypto_hash_sha256_BYTES; i++) {
             printf("%02x", session_id.data[i]);
         }
-        std::cout << std::endl;
-        std::cout << "No session found for user: " << username << std::endl;
-        return;
+        std::cout << "Doing keybundle handshake due to lack of session" << std::endl;
+        get_keybundles(username);
     }
 
-    get_keybundles(username);
-    send_to_user(username, msg);
-
-    _sessions[session_id]->send_message(msg);
+    std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> msgs = _sessions[session_id]->send_message(msg);
+    return msgs;
 }
 
 void IdentityManager::receive_messages(std::vector<std::tuple<IdentitySessionId, DeviceMessage*>> messages_with_ids) {

@@ -144,25 +144,32 @@ std::vector<std::tuple<IdentitySessionId, DeviceMessage*>> get_messages() {
     return messages;
 }
 
-void post_ratchet_message(const DeviceMessage *msg, const IdentitySessionId& identity_session_id) {
-    auto dev_pub = new unsigned char[crypto_box_PUBLICKEYBYTES];
-    QByteArray dev_pub_byte = get_public_key("device");
-    memcpy(dev_pub, dev_pub_byte.constData(), crypto_sign_PUBLICKEYBYTES);
+void post_ratchet_message(std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> messages) {
+    std::cout << "posting ratchet message" << std::endl;
+    json data = json::object();
+    data["messages"] = json::array();
 
-    json body = {
-        {"file_id", 0},
-        {"identity_session_id", bin2hex(identity_session_id.data.data(), crypto_hash_sha256_BYTES)},
-        {"initiator_device_public_key", bin2hex(dev_pub, crypto_sign_PUBLICKEYBYTES)},
-        {"recipient_device_public_key", bin2hex(msg->header->device_id, sizeof(msg->header->device_id))},
-        {"dh_public", bin2hex(msg->header->dh_public, sizeof(msg->header->dh_public))},
-        {"prev_chain_length", msg->header->prev_chain_length},
-        {"message_index", msg->header->message_index},
-        {"ciphertext", bin2hex(msg->ciphertext, sizeof(msg->ciphertext))},
-        {"ciphertext_length", sizeof(msg->ciphertext)},
-    };
+    for (auto [identity_session_id, msg] : messages) {
+        const auto dev_pub = new unsigned char[crypto_box_PUBLICKEYBYTES];
+        QByteArray dev_pub_byte = get_public_key("device");
+        memcpy(dev_pub, dev_pub_byte.constData(), crypto_box_PUBLICKEYBYTES);
 
-    post(body, "/sendMessage");
-    delete[] dev_pub;
+        json body = json::object();
+        body["file_id"] = 0;
+        body["identity_session_id"] = bin2hex(identity_session_id.data.data(), crypto_hash_sha256_BYTES);
+        body["initiator_device_public_key"] = bin2hex(dev_pub, crypto_box_PUBLICKEYBYTES);
+        body["recipient_device_public_key"] = bin2hex(msg->header->device_id, crypto_box_PUBLICKEYBYTES);
+        body["dh_public"] = bin2hex(msg->header->dh_public, crypto_box_PUBLICKEYBYTES);
+        body["prev_chain_length"] = msg->header->prev_chain_length;
+        body["message_index"] = msg->header->message_index;
+        body["ciphertext"] = bin2hex(msg->ciphertext, msg->length);
+        body["ciphertext_length"] = msg->length;
+
+        data["messages"].push_back(body);
+        delete[] dev_pub;
+    }
+
+    post("/sendMessage", data);
 }
 
 void get_keybundles(const std::string &username) {
