@@ -91,7 +91,7 @@ inline std::tuple<QByteArray, QByteArray> get_encrypted_key(
 
 inline std::unique_ptr<SecureMemoryBuffer> get_decrypted_key(const std::string &label) {
     const auto [encrypted_key, nonce] = get_encrypted_key(label);
-    return decrypt_key(q_byte_array_to_chars(encrypted_key), q_byte_array_to_chars(nonce));
+    return decrypt_symmetric_key(q_byte_array_to_chars(encrypted_key), q_byte_array_to_chars(nonce));
 };
 
 inline void save_encrypted_key(

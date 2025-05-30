@@ -28,12 +28,17 @@ std::unique_ptr<SecureMemoryBuffer> decrypt_kek(
     const std::unique_ptr<SecureMemoryBuffer> &master_key
 );
 
-std::unique_ptr<SecureMemoryBuffer> decrypt_key(
+std::unique_ptr<SecureMemoryBuffer> encrypt_symmetric_key(
+    const std::unique_ptr<SecureMemoryBuffer> &sk,
+    unsigned char nonce[CHA_CHA_NONCE_LEN]
+);
+
+std::unique_ptr<SecureMemoryBuffer> decrypt_symmetric_key(
     const unsigned char encrypted_key[ENC_SYM_KEY_LEN],
     const unsigned char nonce[CHA_CHA_NONCE_LEN]
 );
 
-std::unique_ptr<SecureMemoryBuffer> decrypt_key(
+std::unique_ptr<SecureMemoryBuffer> decrypt_symmetric_key(
     const QByteArray &encrypted_key,
     const QByteArray &nonce
 );
@@ -59,5 +64,18 @@ std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>> generate_signed_
 std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>> generate_onetime_keys(int num);
 
 unsigned char* generate_unique_id_pair(std::string *input_one, std::string *input_two);
+
+
+std::vector<unsigned char> encrypt_bytes(
+    const QByteArray &data,
+    const std::unique_ptr<SecureMemoryBuffer> &key,
+    const unsigned char nonce[CHA_CHA_NONCE_LEN]
+);
+
+std::vector<unsigned char> decrypt_bytes(
+    const QByteArray &encrypted_bytes,
+    const std::unique_ptr<SecureMemoryBuffer> &key,
+    const std::vector<unsigned char> &nonce
+);
 
 #endif //ALGORITHMS_H
