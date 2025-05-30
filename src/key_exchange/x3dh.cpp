@@ -61,12 +61,6 @@ unsigned char *x3dh_initiator(
     unsigned char *shared_secret = new unsigned char[KEY_LEN];
     crypto_generichash(shared_secret, KEY_LEN, ikm, sizeof(ikm), nullptr, 0);
 
-    std::cout << "INITIATOR SHARED SECRETS:" << std::endl;
-    std::cout << "DH1: " << bin2hex(dh1, KEY_LEN) << std::endl;
-    std::cout << "DH2: " << bin2hex(dh2, KEY_LEN) << std::endl;
-    std::cout << "DH3: " << bin2hex(dh3, KEY_LEN) << std::endl;
-    std::cout << "DH4: " << bin2hex(dh4, KEY_LEN) << std::endl;
-
     std::cout << "\nFinal X3DH Shared Secret (Root Key): " << bin2hex(shared_secret, KEY_LEN) << std::endl;
 
     return shared_secret;
@@ -119,12 +113,6 @@ unsigned char *x3dh_responder(
 
     unsigned char *shared_secret = new unsigned char[KEY_LEN];
     crypto_generichash(shared_secret, KEY_LEN, ikm, sizeof(ikm), nullptr, 0);
-
-    std::cout << "RESPONDER SHARED SECRETS:" << std::endl;
-    std::cout << "DH1: " << bin2hex(dh1, KEY_LEN) << std::endl;
-    std::cout << "DH2: " << bin2hex(dh2, KEY_LEN) << std::endl;
-    std::cout << "DH3: " << bin2hex(dh3, KEY_LEN) << std::endl;
-    std::cout << "DH4: " << bin2hex(dh4, KEY_LEN) << std::endl;
 
     std::cout << "\nFinal X3DH Shared Secret (Root Key): " << bin2hex(shared_secret, KEY_LEN) << std::endl;
 
