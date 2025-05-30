@@ -165,6 +165,7 @@ add_executable(EastwoodTests
         src/keys/session_token_manager.h
         src/sessions/IdentityManager.cpp
         src/sessions/IdentitySession.cpp
+        src/endpoints/endpoints.cpp
 )
 
 # Configure test target

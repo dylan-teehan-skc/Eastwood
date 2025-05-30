@@ -1,6 +1,7 @@
 #include "algorithms.h"
 
 #include <tuple>
+#include <unistd.h>
 
 #include "src/keys/kek_manager.h"
 #include "src/key_exchange/utils.h"
@@ -188,7 +189,13 @@ unsigned char* generate_unique_id_pair(std::string *input_one, std::string *inpu
         memcpy(concatenated + 32, hashed_one, 32);
     }
     
-    crypto_hash_sha256(hashed_one, concatenated, 64);
+    auto result = new unsigned char[crypto_hash_sha256_BYTES];
+    // Hash the concatenated result into hashed_one
+    crypto_hash_sha256(result, concatenated, 64);  // Use full 64-byte concatenated array
+    
+    // Clean up hashed_two since we don't need it anymore
     delete[] hashed_two;
-    return hashed_one;
+    delete[] hashed_one;
+
+    return result;  // Caller is responsible for deleting this
 }

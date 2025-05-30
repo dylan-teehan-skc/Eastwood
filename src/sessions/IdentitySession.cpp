@@ -7,10 +7,15 @@
 #include "src/endpoints/endpoints.h"
 #include "src/key_exchange/utils.h"
 
-IdentitySession::IdentitySession(std::vector<KeyBundle*> const &keys, unsigned char* identity_session_id_in): identity_session_id(
-    identity_session_id_in) {
+IdentitySession::IdentitySession(std::vector<KeyBundle*> const &keys, const unsigned char* identity_session_id_in) {
     std::cout << "IdentitySession::IdentitySession" << std::endl;
+    memcpy(identity_session_id.data(), identity_session_id_in, crypto_hash_sha256_BYTES);
+    std::cout << bin2hex(identity_session_id.data(), crypto_hash_sha256_BYTES) << std::endl;
     updateFromBundles(keys);
+}
+
+IdentitySession::~IdentitySession() {
+    // Clean up any remaining resources
 }
 
 void IdentitySession::updateFromBundles(std::vector<KeyBundle*> bundles) {
@@ -27,10 +32,15 @@ void IdentitySession::updateFromBundles(std::vector<KeyBundle*> bundles) {
 
 void IdentitySession::create_ratchet_if_needed(const unsigned char* device_id_one, const unsigned char* device_id_two, KeyBundle* bundle) {
     std::cout << "IdentitySession::create_ratchet_if_needed" << std::endl;
-    size_t out_len;
-    unsigned char* concatenated = concat_ordered(device_id_one, crypto_box_PUBLICKEYBYTES,
-                                               device_id_two, crypto_box_PUBLICKEYBYTES,
-                                               out_len);
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES * 2> concatenated;
+    
+    if (memcmp(device_id_one, device_id_two, crypto_box_PUBLICKEYBYTES) <= 0) {
+        memcpy(concatenated.data(), device_id_one, crypto_box_PUBLICKEYBYTES);
+        memcpy(concatenated.data() + crypto_box_PUBLICKEYBYTES, device_id_two, crypto_box_PUBLICKEYBYTES);
+    } else {
+        memcpy(concatenated.data(), device_id_two, crypto_box_PUBLICKEYBYTES);
+        memcpy(concatenated.data() + crypto_box_PUBLICKEYBYTES, device_id_one, crypto_box_PUBLICKEYBYTES);
+    }
     
     // Check if a ratchet exists for this key
     bool exists = ratchets.find(concatenated) != ratchets.end();
@@ -44,10 +54,23 @@ void IdentitySession::create_ratchet_if_needed(const unsigned char* device_id_on
 
         if (bundle->get_role() == Role::Initiator) {
             auto sender = dynamic_cast<SendingKeyBundle*>(bundle);
-            post_handshake_device(identity_session_id, sender->get_their_device_public(), sender->get_their_signed_public(), sender->get_their_signed_signature(), sender->get_their_onetime_public(), sender->get_my_device_public(), sender->get_my_ephemeral_public());
-        };
+            IdentitySessionId session_id;
+            memcpy(session_id.data.data(), identity_session_id.data(), crypto_hash_sha256_BYTES);
+            post_handshake_device(session_id, sender->get_their_device_public(), sender->get_their_signed_public(), sender->get_their_signed_signature(), sender->get_their_onetime_public(), sender->get_my_device_public(), sender->get_my_ephemeral_public());
+        }
     }
-    
-    delete[] concatenated;
 }
+
+void IdentitySession::send_message(unsigned char *message) {
+    for (const auto& [id, ratchet]: ratchets) {
+        ratchet.get()->message_send(message, identity_session_id.data());
+    }
+}
+
+void IdentitySession::receive_message(DeviceMessage *message) {
+    for (const auto& [id, ratchet]: ratchets) {
+        ratchet.get()->message_receive(*message);
+    }
+}
+
 
