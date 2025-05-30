@@ -27,7 +27,7 @@ void post_register_user(
     };
     std::cout << body << std::endl;
 
-    post_unauth(body, "/registerUser");
+    post_unauth("/registerUser", body);
 };
 
 void post_register_device(
@@ -40,7 +40,7 @@ void post_register_device(
         {"device_public", bin2hex(pk_device, crypto_sign_PUBLICKEYBYTES)},
         {"signature", bin2hex(pk_signature, crypto_sign_BYTES)}
     };
-    post_unauth(body, "/registerDevice");
+    post_unauth("/registerDevice", body);
 };
 
 std::vector<unsigned char> post_request_login(
@@ -52,8 +52,7 @@ std::vector<unsigned char> post_request_login(
         {"username", username},
         {"device_public", bin2hex(pk_device, crypto_sign_PUBLICKEYBYTES)}
     };
-    const json response = post_unauth(body, "/requestLogin");
-    QString response_text(response.dump().data());
+    const json response = post_unauth("/requestLogin", body);
     const std::string nonce_string = response["data"]["nonce"];
 
     // Allocate vector of correct size
@@ -78,7 +77,7 @@ std::string post_authenticate(
         {"device_public", bin2hex(pk_device, crypto_sign_PUBLICKEYBYTES)},
         {"nonce_signature", bin2hex(signature, crypto_sign_BYTES)}
     };
-    const json response = post_unauth(body, "/authenticate");
+    const json response = post_unauth("/authenticate", body);
     return response["data"]["token"];
 }
 
@@ -96,15 +95,15 @@ void post_ratchet_message(const DeviceMessage *msg) {
     };
     //todo: post to /sendMessage/deviceId
 
-    post(body, "/sendMessage");
+    post("/sendMessage", body);
 };
 
-void get_keybundles(std::string username) {
+void get_keybundles(const std::string &username) {
     json response = get("/keybundle/" + username);
 
     // Get my identity public key
     std::string my_identity_public_hex = response["data"]["identity_public_key"];
-    unsigned char *my_identity_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
+    auto my_identity_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
     if (!hex_to_bin(my_identity_public_hex, my_identity_public, crypto_sign_PUBLICKEYBYTES)) {
         delete[] my_identity_public;
         throw std::runtime_error("Failed to decode my identity public key");
@@ -127,11 +126,11 @@ void get_keybundles(std::string username) {
         std::string their_signed_signature_hex = bundle["signedpk_signature"];
 
         // Allocate memory for binary data
-        unsigned char *their_device_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
-        unsigned char *their_identity_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
-        unsigned char *their_onetime_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
-        unsigned char *their_signed_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
-        unsigned char *their_signed_signature = new unsigned char[crypto_sign_BYTES]; // Use correct size for signature
+        auto their_device_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
+        auto their_identity_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
+        auto their_onetime_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
+        auto their_signed_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
+        auto their_signed_signature = new unsigned char[crypto_sign_BYTES]; // Use correct size for signature
 
         // Convert hex to binary
         std::cout << "Converting hex to binary:" << std::endl;
@@ -171,13 +170,13 @@ void get_keybundles(std::string username) {
             throw std::runtime_error("Failed to decode key bundle data");
         }
 
-        unsigned char *pk_eph = new unsigned char[crypto_sign_BYTES];
+        auto pk_eph = new unsigned char[crypto_sign_BYTES];
         auto sk_buffer_eph = SecureMemoryBuffer::create(ENC_SECRET_KEY_LEN);
         crypto_box_keypair(pk_eph, sk_buffer_eph->data());
 
         // Create a new KeyBundle
         auto *key_bundle = new SendingKeyBundle(
-            reinterpret_cast<unsigned char*>(const_cast<char*>(pk_device.constData())),
+            reinterpret_cast<unsigned char *>(const_cast<char *>(pk_device.constData())),
             pk_eph,
             std::shared_ptr<SecureMemoryBuffer>(sk_buffer_eph.release()),
             their_device_public,
@@ -190,14 +189,15 @@ void get_keybundles(std::string username) {
     }
 
     // Convert their identity public key to binary
-    unsigned char *their_identity_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
+    auto their_identity_public = new unsigned char[crypto_sign_PUBLICKEYBYTES];
     if (!hex_to_bin(their_identity_public_hex, their_identity_public, crypto_sign_PUBLICKEYBYTES)) {
         delete[] their_identity_public;
         throw std::runtime_error("Failed to decode their identity public key");
     }
 
     // Update or create identity session
-    IdentityManager::getInstance().update_or_create_identity_sessions(bundles, username, SessionTokenManager::instance().getUsername());
+    IdentityManager::getInstance().update_or_create_identity_sessions(bundles, username,
+                                                                      SessionTokenManager::instance().getUsername());
 }
 
 void post_handshake_device(
@@ -221,22 +221,22 @@ void post_handshake_device(
         {"initiator_ephemeral_public_key", bin2hex(my_ephemeral_key_public, crypto_box_PUBLICKEYBYTES)},
         {"initiator_device_public_key", bin2hex(my_device_key_public, crypto_box_PUBLICKEYBYTES)},
     };
-    post(body, "/handshake");
+    post("/handshake", body);
 }
 
-std::tuple<std::vector<KeyBundle*>, unsigned char*> get_handshake_backlog() {
+std::tuple<std::vector<KeyBundle *>, unsigned char *> get_handshake_backlog() {
     json response = get("/incomingHandshakes");
     std::cout << "Raw response: " << response.dump() << std::endl;
     std::cout << "Response keys: ";
-    for (auto& [key, value] : response.items()) {
+    for (auto &[key, value]: response.items()) {
         std::cout << key << " ";
     }
     std::cout << std::endl;
 
-    std::vector<KeyBundle*> bundles;
+    std::vector<KeyBundle *> bundles;
     auto identity_session_id = new unsigned char[crypto_box_PUBLICKEYBYTES * 2];
 
-    for (const auto& handshake : response["data"]) {
+    for (const auto &handshake: response["data"]) {
         auto initator_dev_key = new unsigned char[crypto_box_PUBLICKEYBYTES];
         auto initiator_eph_pub = new unsigned char[crypto_box_PUBLICKEYBYTES];
         auto recip_onetime_pub = new unsigned char[crypto_box_PUBLICKEYBYTES];
@@ -248,9 +248,9 @@ std::tuple<std::vector<KeyBundle*>, unsigned char*> get_handshake_backlog() {
         std::string session_id_str = handshake["identity_session_id"].get<std::string>();
 
         bool success = hex_to_bin(dev_key_str, initator_dev_key, crypto_box_PUBLICKEYBYTES) &&
-            hex_to_bin(eph_pub_str, initiator_eph_pub, crypto_box_PUBLICKEYBYTES) &&
-            hex_to_bin(onetime_pub_str, recip_onetime_pub, crypto_box_PUBLICKEYBYTES) &&
-            hex_to_bin(session_id_str, identity_session_id, crypto_box_PUBLICKEYBYTES * 2);
+                       hex_to_bin(eph_pub_str, initiator_eph_pub, crypto_box_PUBLICKEYBYTES) &&
+                       hex_to_bin(onetime_pub_str, recip_onetime_pub, crypto_box_PUBLICKEYBYTES) &&
+                       hex_to_bin(session_id_str, identity_session_id, crypto_box_PUBLICKEYBYTES * 2);
 
         if (!success) {
             delete[] initator_dev_key;
@@ -265,7 +265,7 @@ std::tuple<std::vector<KeyBundle*>, unsigned char*> get_handshake_backlog() {
         auto new_bundle = new ReceivingKeyBundle(
             initator_dev_key,
             initiator_eph_pub,
-            const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(device_key.constData())),
+            const_cast<unsigned char *>(reinterpret_cast<const unsigned char *>(device_key.constData())),
             recip_onetime_pub
         );
 
@@ -275,13 +275,13 @@ std::tuple<std::vector<KeyBundle*>, unsigned char*> get_handshake_backlog() {
     return std::make_tuple(bundles, identity_session_id);
 }
 
-void post_new_keybundles(std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
-                         std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > signed_prekeypair,
-                         std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>,
-                             unsigned char *> > otks) {
+void post_new_keybundles(
+    std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
+    std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > signed_prekeypair,
+    const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &otks
+) {
     auto [pk_signed, sk_signed] = std::move(signed_prekeypair);
     auto [pk_device_q, sk_device] = std::move(device_keypair);
-    auto pk_device = reinterpret_cast<const unsigned char*>(pk_device_q.constData());
 
     //sign the public key with device key
     unsigned char signature[crypto_sign_BYTES];
@@ -301,5 +301,5 @@ void post_new_keybundles(std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuff
     for (const auto &[pk, sk, nonce]: otks) {
         body["one_time_keys"].push_back(bin2hex(pk, crypto_box_PUBLICKEYBYTES));
     }
-    post(body, "/updateKeybundle");
+    post("/updateKeybundle", body);
 }

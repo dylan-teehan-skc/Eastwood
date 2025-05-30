@@ -7,7 +7,7 @@
 
 using json = nlohmann::json;
 
-json post_unauth(const json& data, const std::string& endpoint = "/") {
+json post_unauth(const std::string& endpoint, const json& data) {
     std::string API_HOST = load_env_variable("API_HOST");
     if (API_HOST.empty()) {
         std::cerr << "API_HOST not found in .env file" << std::endl;

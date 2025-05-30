@@ -109,7 +109,7 @@ json get(const std::string &endpoint = "/") {
     return handle_response(response);
 }
 
-json post(const json &data, const std::string &endpoint = "/") {
+json post(const std::string &endpoint, const json &data) {
     const std::string API_HOST = load_env_variable("API_HOST");
     if (API_HOST.empty()) {
         std::cerr << "API_HOST not found in .env file" << std::endl;

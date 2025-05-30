@@ -51,13 +51,13 @@ std::tuple<std::vector<KeyBundle*>, unsigned char*> get_handshake_backlog();
 void get_messages();
 
 void get_keybundles(
-    std::string username
+    const std::string& username
 );
 
 void post_new_keybundles(
     std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
     std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > signed_prekeypair,
-    std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>,unsigned char *> > otks
+    const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>,unsigned char *> >& otks
 );
 
 #endif //ENDPOINTS_H
