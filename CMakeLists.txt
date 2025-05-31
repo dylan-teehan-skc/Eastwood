@@ -131,6 +131,7 @@ target_include_directories(Eastwood PRIVATE
         ${SODIUM_INCLUDE_DIR}
         ${SQLCIPHER_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${GTEST_INCLUDE_DIRS}
         ${Qt6Core_INCLUDE_DIRS}
         ${Qt6Gui_INCLUDE_DIRS}
         ${Qt6Widgets_INCLUDE_DIRS}

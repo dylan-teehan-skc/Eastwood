@@ -105,8 +105,13 @@ void NewRatchet::dh_ratchet_step(const bool received_new_dh) {
         generate_new_local_dh_keypair();
         memcpy(send_chain.key, root_key, 32);
 
+        receive_chain.index = 0;
+        send_chain.index = 0;
+
     } else {
         memcpy(send_chain.key, new_chain_key, 32);
+
+        send_chain.index = 0;
     }
 
     delete[] dh_output;
@@ -124,7 +129,7 @@ unsigned char* NewRatchet::dh() const {
     return result;
 };
 
-unsigned char* NewRatchet::advance_send() {
+std::tuple<unsigned char*, MessageHeader*> NewRatchet::advance_send() {
 
     if (due_to_send_new_dh) {
         dh_ratchet_step(false);
@@ -134,6 +139,10 @@ unsigned char* NewRatchet::advance_send() {
     auto message_key = new unsigned char[32];
     unsigned char next_send_key[32];
     const char *ctx = reversed ? "DRSndKey" : "DRRcvKey";
+
+    auto header = new MessageHeader();
+    memcpy(header->dh_public, local_dh_public, 32);
+    header->message_index = send_chain.index;
 
     crypto_kdf_derive_from_key(
         message_key,
@@ -151,14 +160,16 @@ unsigned char* NewRatchet::advance_send() {
         send_chain.key
     );
 
+
     memcpy(send_chain.key, next_send_key, 32);
-    return message_key;
+    send_chain.index = send_chain.index + 1;
+    return std::make_tuple(message_key,header);
 }
 
-unsigned char* NewRatchet::advance_receive(const unsigned char* new_dh_public) {
+unsigned char* NewRatchet::advance_receive(MessageHeader* header) {
 
-    if (memcmp(remote_dh_public, new_dh_public, 32) != 0) {
-        memcpy(remote_dh_public, new_dh_public, 32);
+    if (memcmp(remote_dh_public, header->dh_public, 32) != 0) {
+        memcpy(remote_dh_public, header->dh_public, 32);
         dh_ratchet_step(true); // true as we received the new dh
         due_to_send_new_dh = true;
     }
@@ -166,6 +177,8 @@ unsigned char* NewRatchet::advance_receive(const unsigned char* new_dh_public) {
     auto message_key = new unsigned char[32];
     unsigned char next_receive_key[32];
     const char *ctx = reversed ? "DRRcvKey" : "DRSndKey";
+
+    receive_chain.index = receive_chain.index + 1;
 
     crypto_kdf_derive_from_key(
         message_key,
@@ -190,6 +203,10 @@ unsigned char* NewRatchet::advance_receive(const unsigned char* new_dh_public) {
 //remove this is for tesitng
 const unsigned char *NewRatchet::get_current_dh_public() const {
     return local_dh_public;
+}
+
+std::tuple<int, int> NewRatchet::get_chain_lengths() {
+    return std::make_tuple(send_chain.index, receive_chain.index);
 }
 
 

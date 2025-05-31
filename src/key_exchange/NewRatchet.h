@@ -6,6 +6,7 @@
 #define NEWRATCHET_H
 #include <memory>
 
+#include "DoubleRatchet.h"
 #include "src/keys/secure_memory_buffer.h"
 
 struct NewChain {
@@ -17,8 +18,10 @@ class NewRatchet {
 public:
     NewRatchet(const unsigned char* shared_secret, const unsigned char* other_key, bool is_sender);
 
-    unsigned char* advance_send();
-    unsigned char* advance_receive(const unsigned char* new_dh_public);
+    std::tuple<unsigned char*, MessageHeader*> advance_send();
+    unsigned char* advance_receive(MessageHeader* header);
+
+    std::tuple<int,int> get_chain_lengths();
 
     const unsigned char *get_current_dh_public() const; //testing!!
 private:
