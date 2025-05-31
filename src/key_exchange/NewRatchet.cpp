@@ -3,14 +3,20 @@
 //
 
 #include "NewRatchet.h"
+#include <sstream>
+#include "XChaCha20-Poly1305.h"
+#include "src/keys/kek_manager.h"
 #include "src/sql/queries.h"
-#include <cstring>
+#include "src/key_exchange/utils.h"
 #include <sodium.h>
+#include <memory>
 
 // other key is initiator ephemeral for recipient
 // other key is receiver signed prekey for initiator
-NewRatchet::NewRatchet(const unsigned char *shared_secret, const unsigned char *other_key, bool is_sender) {
+NewRatchet::NewRatchet(const unsigned char *shared_secret, const unsigned char *other_key, bool is_sender, unsigned char ratchet_id_in[32], unsigned char identity_session_id_in[32]) {
     memcpy(root_key, shared_secret, 32);
+    memcpy(ratchet_id, ratchet_id_in, 32);
+    memcpy(identity_session_id, identity_session_id_in, 32);
 
     if (is_sender) {
         set_up_initial_state_for_initiator(other_key);
@@ -19,10 +25,15 @@ NewRatchet::NewRatchet(const unsigned char *shared_secret, const unsigned char *
     }
 
     set_up_initial_chain_keys();
+    save();
 }
 
 //serialised
-NewRatchet::NewRatchet(std::istream& in) {
+NewRatchet::NewRatchet(const std::vector<unsigned char> &serialised_ratchet) {
+    std::istringstream in(std::string(
+        reinterpret_cast<const char*>(serialised_ratchet.data()),
+        serialised_ratchet.size()
+    ));
     deserialise(in);
 }
 
@@ -46,12 +57,10 @@ void NewRatchet::set_up_initial_state_for_recipient(const unsigned char *initiat
 };
 
 void NewRatchet::set_up_initial_chain_keys() {
-    const auto dh_output = dh();
+    auto dh_output = dh();
 
     unsigned char kdf_key[32];
-    crypto_generichash(kdf_key, sizeof(kdf_key), dh_output, sizeof(dh_output), nullptr, 0);
-
-    delete[] dh_output;
+    crypto_generichash(kdf_key, sizeof(kdf_key), dh_output.get(), 32, nullptr, 0);
 
     // run kdf
     crypto_kdf_derive_from_key(
@@ -60,7 +69,7 @@ void NewRatchet::set_up_initial_chain_keys() {
         0,
         "DRXsend1", // one side send is another recv
         kdf_key
-        );
+    );
 
     crypto_kdf_derive_from_key(
         receive_chain.key,
@@ -68,7 +77,7 @@ void NewRatchet::set_up_initial_chain_keys() {
         1,
         "DRXrecv1", // one side recv is another send
         kdf_key
-        );
+    );
 
     crypto_kdf_derive_from_key(
         root_key,
@@ -76,14 +85,14 @@ void NewRatchet::set_up_initial_chain_keys() {
         2,
         "DRXroot1",
         kdf_key
-        );
-};
+    );
+}
 
 void NewRatchet::dh_ratchet_step(const bool received_new_dh) {
-    unsigned char *dh_output = dh();
+    auto dh_output = dh();
 
     unsigned char kdf_key[32];
-    crypto_generichash(kdf_key, sizeof(kdf_key), dh_output, sizeof(dh_output), nullptr, 0);
+    crypto_generichash(kdf_key, sizeof(kdf_key), dh_output.get(), 32, nullptr, 0);
 
     unsigned char new_root_key[32];
     crypto_kdf_derive_from_key(
@@ -119,21 +128,19 @@ void NewRatchet::dh_ratchet_step(const bool received_new_dh) {
 
         send_chain.index = 0;
     }
-
-    delete[] dh_output;
-};
+}
 
 void NewRatchet::generate_new_local_dh_keypair() {
     crypto_box_keypair(local_dh_public, local_dh_priv->data());
 };
 
-unsigned char* NewRatchet::dh() const {
-    const auto result = new unsigned char[32];
-    if (crypto_scalarmult(result, local_dh_priv->data(), remote_dh_public) != 0) {
+std::unique_ptr<unsigned char[]> NewRatchet::dh() const {
+    auto result = std::make_unique<unsigned char[]>(32);
+    if (crypto_scalarmult(result.get(), local_dh_priv->data(), remote_dh_public) != 0) {
         throw std::runtime_error("Failed to perform dh");
-    };
+    }
     return result;
-};
+}
 
 std::tuple<unsigned char*, MessageHeader*> NewRatchet::advance_send() {
 
@@ -151,7 +158,11 @@ unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
         int skipped_count = receive_chain.index;
         // if we need to forward cache keys due to prev chain length being longer than expected
         for (int i = header->prev_chain_length; i < skipped_count; ++i) {
-            skipped_keys[i] = progress_receive_ratchet();
+            auto key = progress_receive_ratchet();
+            if (skipped_keys.find(i) != skipped_keys.end()) {
+                delete[] skipped_keys[i];  // Delete old key if it exists
+            }
+            skipped_keys[i] = key;
         }
         memcpy(remote_dh_public, header->dh_public, 32);
         dh_ratchet_step(true); // true as we received the new dh
@@ -160,14 +171,13 @@ unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
 
     // if we've already computed the key
     if (header->message_index < receive_chain.index) {
-        if (header->message_index < receive_chain.index) {
-            if (skipped_keys.find(header->message_index) == skipped_keys.end()) {
-                throw std::runtime_error("Key not found in backlog");
-            }
-            auto key = skipped_keys[header->message_index];
-            skipped_keys.erase(header->message_index);
-            return key;
+        if (skipped_keys.find(header->message_index) == skipped_keys.end()) {
+            throw std::runtime_error("Key not found in backlog");
         }
+        auto key = skipped_keys[header->message_index];
+        skipped_keys.erase(header->message_index);
+        save();
+        return key;
     }
 
     // get the key normally
@@ -175,7 +185,11 @@ unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
         const auto message_key = progress_receive_ratchet();
         if (i == header->message_index) {
             receive_chain.index = i + 1;
+            save();
             return message_key;
+        }
+        if (skipped_keys.find(i) != skipped_keys.end()) {
+            delete[] skipped_keys[i];  // Delete old key if it exists
         }
         skipped_keys[i] = message_key;
     }
@@ -210,6 +224,7 @@ std::tuple<unsigned char*, MessageHeader*> NewRatchet::progress_sending_ratchet(
     memcpy(send_chain.key, next_send_key, 32);
     send_chain.index = send_chain.index + 1;
 
+    save();
     return std::make_tuple(message_key, header);
 }
 
@@ -270,15 +285,41 @@ void NewRatchet::deserialise(std::istream &in) {
     skipped_keys.clear();
     for (uint32_t i = 0; i < skipped_count; ++i) {
         int key;
-        unsigned char *val = new unsigned char[32];
+        auto val = std::make_unique<unsigned char[]>(32);
         in.read((char*)&key, sizeof(key));
-        in.read((char*)val, 32);
-        skipped_keys[key] = val;
+        in.read((char*)val.get(), 32);
+        skipped_keys[key] = val.release();  // Transfer ownership to the map
     }
 
     in.read((char*)&due_to_send_new_dh, sizeof(due_to_send_new_dh));
     in.read((char*)&reversed, sizeof(reversed));
 }
+
+void NewRatchet::save() {
+    std::ostringstream oss(std::ios::binary);
+    serialise(oss);
+
+    std::string str = oss.str();
+    QByteArray bytes(str.data(), static_cast<int>(str.size()));
+
+    auto nonce_data = std::make_unique<unsigned char[]>(CHA_CHA_NONCE_LEN);
+    randombytes_buf(nonce_data.get(), CHA_CHA_NONCE_LEN);
+
+    auto nonce_key = std::make_unique<unsigned char[]>(CHA_CHA_NONCE_LEN);
+    randombytes_buf(nonce_key.get(), CHA_CHA_NONCE_LEN);
+
+    auto encryption_key = SecureMemoryBuffer::create(32);
+    crypto_stream_chacha20_keygen(encryption_key->data());
+
+    auto copy_encryption_key = SecureMemoryBuffer::create(32);
+    memcpy(copy_encryption_key->data(), encryption_key->data(), 32);
+
+    auto encrypted_data = encrypt_bytes(bytes, std::move(copy_encryption_key), nonce_data.get());
+    auto encrypted_encryption_key = encrypt_symmetric_key(encryption_key, nonce_key.get());
+
+    save_ratchet_and_key(ratchet_id, identity_session_id, encrypted_data, nonce_data.get(), std::move(encrypted_encryption_key), nonce_key.get());
+}
+
 
 
 

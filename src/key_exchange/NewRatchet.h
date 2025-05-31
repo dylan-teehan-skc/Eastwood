@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include "MessageStructs.h"
 #include "src/keys/secure_memory_buffer.h"
+#include <vector>
 
 struct NewChain {
     int index = 0;
@@ -16,8 +17,16 @@ struct NewChain {
 
 class NewRatchet {
 public:
-    NewRatchet(const unsigned char* shared_secret, const unsigned char* other_key, bool is_sender);
-    NewRatchet(std::istream& in);
+    NewRatchet(const unsigned char* shared_secret, const unsigned char* other_key, bool is_sender, unsigned char* ratchet_id_in, unsigned char* identity_session_id_in);
+    NewRatchet(const std::vector<unsigned char, std::allocator<unsigned char>> &serialised_ratchet);
+
+    ~NewRatchet() {
+        // Clean up skipped_keys
+        for (auto& pair : skipped_keys) {
+            delete[] pair.second;
+        }
+        skipped_keys.clear();
+    }
 
     std::tuple<unsigned char*, MessageHeader*> advance_send();
     unsigned char* advance_receive(const MessageHeader* header);
@@ -26,6 +35,9 @@ public:
 
     const unsigned char *get_current_dh_public() const; //testing!!
 private:
+    unsigned char ratchet_id[32];
+    unsigned char identity_session_id[32];
+
     bool reversed;
     bool due_to_send_new_dh;
     unsigned char root_key[32];
@@ -56,13 +68,14 @@ private:
     std::tuple<unsigned char*, MessageHeader*> progress_sending_ratchet();
 
     // dh output of local dh private * remote dh public
-    unsigned char* dh() const;
+    std::unique_ptr<unsigned char[]> dh() const;
 
     //serialisation
     void serialise(std::ostream& os) const;
-
     void deserialise(std::istream &in);
+    void save();
     friend class DoubleRatchetTest_Serialisation_Test;
+    friend class DoubleRatchetTest_SavingAndLoadingFromDB_Test;
 };
 
 

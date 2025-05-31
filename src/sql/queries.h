@@ -214,4 +214,76 @@ inline std::unique_ptr<SecureMemoryBuffer> get_decrypted_file_key(
     return decrypted_key;
 }
 
+inline void save_ratchet_and_key(const unsigned char* ratchet_id, const unsigned char* identity_session_id, const std::vector<unsigned char> &encrypted_ratchet, const unsigned char* ratchet_nonce, const std::unique_ptr<SecureMemoryBuffer> &encrypted_key, const unsigned char* sk_nonce) {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+    db.prepare_or_throw(
+        "INSERT OR REPLACE INTO ratchets (ratchet_id, identity_session_id, nonce, encrypted_data) VALUES (?, ?, ?, ?);", &stmt
+    );
+    sqlite3_bind_blob(stmt, 1, ratchet_id, 32, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 2, identity_session_id, 32, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 3, ratchet_nonce, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt, 4, encrypted_ratchet.data(), encrypted_ratchet.size(), SQLITE_TRANSIENT);
+    db.execute(stmt);
+
+    sqlite3_stmt *stmt2;
+    db.prepare_or_throw(
+        "INSERT OR REPLACE INTO ratchet_keys (ratchet_id, nonce, encrypted_key) VALUES (?, ?, ?);", &stmt2
+    );
+    sqlite3_bind_blob(stmt2, 1, ratchet_id, 32, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt2, 2, sk_nonce, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
+    sqlite3_bind_blob(stmt2, 3, encrypted_key.get()->data(), encrypted_key.get()->size(), SQLITE_TRANSIENT);
+    db.execute(stmt2);
+}
+
+inline std::vector<unsigned char> get_decrypted_ratchet(const unsigned char* ratchet_id) {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+    
+    // First get the encrypted ratchet data and its nonce
+    db.prepare_or_throw(
+        "SELECT encrypted_data, nonce FROM ratchets WHERE ratchet_id = ?;", &stmt
+    );
+    sqlite3_bind_blob(stmt, 1, ratchet_id, 32, SQLITE_TRANSIENT);
+    
+    auto rows = db.query(stmt);
+    if (rows.empty()) {
+        throw std::runtime_error("No ratchet found with the given ID");
+    }
+    
+    const auto &row = rows[0];
+    QByteArray encrypted_data = row["encrypted_data"].toByteArray();
+    QByteArray ratchet_nonce = row["nonce"].toByteArray();
+    
+    sqlite3_stmt *stmt2;
+    db.prepare_or_throw(
+        "SELECT encrypted_key, nonce FROM ratchet_keys WHERE ratchet_id = ?;", &stmt2
+    );
+    sqlite3_bind_blob(stmt2, 1, ratchet_id, 32, SQLITE_TRANSIENT);
+    
+    auto key_rows = db.query(stmt2);
+    if (key_rows.empty()) {
+        throw std::runtime_error("No key found for the given ratchet ID");
+    }
+    
+    const auto &key_row = key_rows[0];
+    QByteArray encrypted_key = key_row["encrypted_key"].toByteArray();
+    QByteArray key_nonce = key_row["nonce"].toByteArray();
+    
+    auto decrypted_key = decrypt_symmetric_key(
+        q_byte_array_to_chars(encrypted_key),
+        q_byte_array_to_chars(key_nonce)
+    );
+    
+    auto decrypted_ratchet = decrypt_bytes(
+        encrypted_data,
+        decrypted_key,
+        std::vector<unsigned char>(ratchet_nonce.begin(), ratchet_nonce.end())
+    );
+    
+    return decrypted_ratchet;
+}
+
+
+
 #endif //QUERIES_H

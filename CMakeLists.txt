@@ -50,6 +50,8 @@ FetchContent_MakeAvailable(json googletest qrcodegen)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SQLCIPHER REQUIRED sqlcipher)
 
+link_directories(${SQLCIPHER_LIBRARY_DIRS})
+
 # Find libsodium
 find_path(SODIUM_INCLUDE_DIR sodium.h
         PATHS
@@ -187,7 +189,6 @@ target_link_libraries(Eastwood PRIVATE
 
 # Create test executable
 add_executable(EastwoodTests
-        test/identity_communication_session_test.cpp
         test/double_ratchet_test.cpp
         ${CRYPTO_SOURCES}
         src/database/database.cpp
@@ -196,6 +197,7 @@ add_executable(EastwoodTests
         src/sessions/IdentityManager.cpp
         src/sessions/IdentitySession.cpp
         src/endpoints/endpoints.cpp
+        test/identity_session_test.cpp
 )
 
 # Configure test target

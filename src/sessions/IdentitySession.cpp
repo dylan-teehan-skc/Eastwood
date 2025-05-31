@@ -3,7 +3,6 @@
 //
 
 #include "IdentitySession.h"
-
 #include "src/endpoints/endpoints.h"
 #include "src/key_exchange/utils.h"
 #include "src/key_exchange/XChaCha20-Poly1305.h"
@@ -40,8 +39,7 @@ void IdentitySession::create_ratchet_if_needed(const unsigned char* device_id_on
     if (!exists) {
         // Create new DoubleRatchet instance with the bundle
         std::cout << "Creating ratchet" << std::endl;
-        auto ratchet = std::make_unique<NewRatchet>(bundle->create_ratchet());
-        ratchets[ratchet_id] = std::move(ratchet);
+        ratchets[ratchet_id] = bundle->create_ratchet(*identity_session_id, ratchet_id);
 
         if (bundle->get_role() == Role::Initiator) {
             auto sender = dynamic_cast<SendingKeyBundle*>(bundle);
