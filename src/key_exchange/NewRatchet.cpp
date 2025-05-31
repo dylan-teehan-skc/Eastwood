@@ -20,6 +20,11 @@ NewRatchet::NewRatchet(const unsigned char *shared_secret, const unsigned char *
     set_up_initial_chain_keys();
 }
 
+//serialised
+NewRatchet::NewRatchet(std::istream& in) {
+    deserialise(in);
+}
+
 void NewRatchet::set_up_initial_state_for_initiator(const unsigned char *recipient_signed_public) {
     reversed = false;
     //setup initial local dh pub priv
@@ -215,6 +220,65 @@ const unsigned char *NewRatchet::get_current_dh_public() const {
 std::tuple<int, int> NewRatchet::get_chain_lengths() {
     return std::make_tuple(send_chain.index, receive_chain.index);
 }
+
+void NewRatchet::serialise(std::ostream &out) const {
+    out.write((char*)root_key, 32);
+    out.write((char*)local_dh_public, 32);
+    out.write((char*)local_dh_priv->data(), 32);
+    out.write((char*)remote_dh_public, 32);
+
+    out.write((char*)send_chain.key, 32);
+    out.write((char*)&send_chain.index, sizeof(send_chain.index));
+
+    out.write((char*)receive_chain.key, 32);
+    out.write((char*)&receive_chain.index, sizeof(receive_chain.index));
+
+    // serialize skipped_keys count
+    uint32_t skipped_count = skipped_keys.size();
+    out.write((char*)&skipped_count, sizeof(skipped_count));
+    for (auto &pair : skipped_keys) {
+        out.write((char*)&pair.first, sizeof(pair.first));
+        out.write((char*)pair.second, 32);
+    }
+
+    out.write((char*)&due_to_send_new_dh, sizeof(due_to_send_new_dh));
+    out.write((char*)&reversed, sizeof(reversed));
+}
+
+void NewRatchet::deserialise(std::istream &in) {
+    in.read((char*)root_key, 32);
+    in.read((char*)local_dh_public, 32);
+
+    unsigned char priv[32];
+    in.read(reinterpret_cast<char*>(priv), 32);
+
+    // Now create or reuse your buffer, copying raw data into it
+    local_dh_priv = SecureMemoryBuffer::create(32);
+    memcpy(local_dh_priv->data(), priv, 32);
+
+    in.read((char*)remote_dh_public, 32);
+
+    in.read((char*)send_chain.key, 32);
+    in.read((char*)&send_chain.index, sizeof(send_chain.index));
+
+    in.read((char*)receive_chain.key, 32);
+    in.read((char*)&receive_chain.index, sizeof(receive_chain.index));
+
+    uint32_t skipped_count;
+    in.read((char*)&skipped_count, sizeof(skipped_count));
+    skipped_keys.clear();
+    for (uint32_t i = 0; i < skipped_count; ++i) {
+        int key;
+        unsigned char *val = new unsigned char[32];
+        in.read((char*)&key, sizeof(key));
+        in.read((char*)val, 32);
+        skipped_keys[key] = val;
+    }
+
+    in.read((char*)&due_to_send_new_dh, sizeof(due_to_send_new_dh));
+    in.read((char*)&reversed, sizeof(reversed));
+}
+
 
 
 

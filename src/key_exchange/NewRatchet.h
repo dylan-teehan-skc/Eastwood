@@ -17,6 +17,7 @@ struct NewChain {
 class NewRatchet {
 public:
     NewRatchet(const unsigned char* shared_secret, const unsigned char* other_key, bool is_sender);
+    NewRatchet(std::istream& in);
 
     std::tuple<unsigned char*, MessageHeader*> advance_send();
     unsigned char* advance_receive(const MessageHeader* header);
@@ -56,6 +57,12 @@ private:
 
     // dh output of local dh private * remote dh public
     unsigned char* dh() const;
+
+    //serialisation
+    void serialise(std::ostream& os) const;
+
+    void deserialise(std::istream &in);
+    friend class DoubleRatchetTest_Serialisation_Test;
 };
 
 

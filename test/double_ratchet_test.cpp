@@ -436,6 +436,26 @@ TEST_F(DoubleRatchetTest, SkippedMessagesAcrossRatchetTest) {
     ASSERT_EQ(memcmp(alice_key1, bob_key1, 32), 0);
 }
 
+TEST_F(DoubleRatchetTest, Serialisation) {
+    // Create initial ratchet
+    switch_to_alice_db();
+    NewRatchet ratchet1(alice_sending_bundle->get_shared_secret(), bob_presign_pub, true);
+
+    std::stringstream ss;
+    ratchet1.serialise(ss);
+
+    switch_to_bob_db();
+    NewRatchet ratchet2(ss);
+
+    EXPECT_EQ(0, memcmp(ratchet1.local_dh_priv->data(), ratchet2.local_dh_priv->data(), 32));
+    EXPECT_EQ(0, memcmp(ratchet1.local_dh_public, ratchet2.local_dh_public, 32));
+    EXPECT_EQ(0, memcmp(ratchet1.root_key, ratchet2.root_key, 32));
+    EXPECT_EQ(0, memcmp(ratchet1.send_chain.key, ratchet2.send_chain.key, 32));
+    EXPECT_EQ(ratchet1.send_chain.index, ratchet2.send_chain.index);
+    EXPECT_EQ(0, memcmp(ratchet1.receive_chain.key, ratchet2.receive_chain.key, 32));
+    EXPECT_EQ(ratchet1.receive_chain.index, ratchet2.receive_chain.index);
+}
+
 
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);
