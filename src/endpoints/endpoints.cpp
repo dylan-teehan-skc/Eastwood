@@ -25,7 +25,6 @@ void post_register_user(
         {"nonce", bin2hex(registration_nonce, CHA_CHA_NONCE_LEN)},
         {"nonce_signature", bin2hex(nonce_signature, crypto_sign_BYTES)}
     };
-    std::cout << body << std::endl;
 
     post_unauth("/registerUser", body);
 };
