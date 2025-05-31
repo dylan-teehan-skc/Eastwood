@@ -6,13 +6,16 @@
 #define SQLITE_HAS_CODEC 1
 #include <sqlite3.h>
 
+#include "src/keys/secure_memory_buffer.h"
+
 class Database {
 public:
     // Singleton access
     static Database &get();
 
     // Initialize the database with a master key
-    bool initialize(const QString &masterKey, bool encrypted = true);
+    void initialize(const std::string &username, const std::unique_ptr<SecureMemoryBuffer> &master_key,
+                    bool encrypted = true);
     bool isInitialized() const { return db != nullptr; }
     sqlite3 *getDatabase() const { return db; }
     void closeDatabase();

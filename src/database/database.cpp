@@ -3,6 +3,8 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <iostream>
+
+#include "src/keys/secure_memory_buffer.h"
 #include "src/utils/utils.h"
 
 Database &Database::get() {
@@ -16,33 +18,36 @@ Database::~Database() {
     closeDatabase();
 }
 
-bool Database::initialize(const QString &masterKey, const bool encrypted) {
+void Database::initialize(
+    const std::string &username,
+    const std::unique_ptr<SecureMemoryBuffer> &master_key,
+    const bool encrypted
+) {
     if (initialized) {
-        return true;
+        return;
     }
     // Get the application data directory
     const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     if (!QDir().mkpath(dataPath)) {
         throw std::runtime_error("Failed to access datapath");
     };
-    const QString dbPath = dataPath + (encrypted ? "/encrypted.db" : "/db.db");
+    // $APP_DIR/alice-encrypted.db
+    const QString dbPath = dataPath + "/" + QString(username.c_str()) + (encrypted ? "-encrypted.db" : "-db.db");
     std::cerr << "DB saved at " << dbPath.toStdString() << std::endl;
 
     // Open the database
     int rc = sqlite3_open(dbPath.toUtf8().constData(), &db);
     if (rc != SQLITE_OK) {
-        qDebug() << "Can't open database:" << sqlite3_errmsg(db);
-        return false;
+        throw std::runtime_error("Can't open database:" + std::string(sqlite3_errmsg(db)));
     }
 
     // Set encryption key
     if (encrypted) {
-        rc = sqlite3_key(db, masterKey.toUtf8().constData(), masterKey.length());
+        rc = sqlite3_key(db, master_key->data(), master_key->size());
         if (rc != SQLITE_OK) {
             qDebug() << "Can't set encryption key:" << sqlite3_errmsg(db);
             sqlite3_close(db);
-            db = nullptr;
-            return false;
+            throw std::runtime_error("Can't set encryption key:" + std::string(sqlite3_errmsg(db)));
         }
     }
 
@@ -53,12 +58,9 @@ bool Database::initialize(const QString &masterKey, const bool encrypted) {
         qDebug() << "Database verification failed:" << errMsg;
         sqlite3_free(errMsg);
         sqlite3_close(db);
-        db = nullptr;
-        return false;
+        throw std::runtime_error("Database verification failed:" + std::string(errMsg));
     }
-
     initialized = true;
-    return true;
 }
 
 void Database::closeDatabase() {

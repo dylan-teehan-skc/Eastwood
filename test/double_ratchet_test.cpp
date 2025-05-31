@@ -42,12 +42,9 @@ protected:
 
         bool encrypted = false;
 
-        auto &db = Database::get();
-        if (db.initialize("master key", encrypted)) {
-            // Database initialized successfully
-        } else {
-            std::cerr << "Failed to initialize database." << std::endl;
-        }
+    const auto master_key = SecureMemoryBuffer::create(MASTER_KEY_LEN);
+    randombytes_buf(master_key->data(), MASTER_KEY_LEN);
+    Database::get().initialize("username", master_key, encrypted);
 
         auto master_password = std::make_unique<std::string>("correct horse battery stapler");
         drop_all_tables();
@@ -121,7 +118,7 @@ protected:
             delete bob_receiving_bundle;
             bob_receiving_bundle = nullptr;
         }
-        
+
         // Reset database state
         drop_all_tables();
     }
@@ -135,7 +132,7 @@ protected:
 
         std::unique_ptr<SecureMemoryBuffer> encrypted_alice_device_priv = encrypt_secret_key(std::move(alice_device_priv), nonce);
         save_encrypted_keypair("device", alice_device_pub, encrypted_alice_device_priv, nonce);
-        
+
         delete[] nonce;
     }
 
@@ -159,15 +156,15 @@ protected:
         randombytes_buf(nonce_3, CHA_CHA_NONCE_LEN);
 
         std::unique_ptr<SecureMemoryBuffer> encrypted_bob_onetime_priv = encrypt_secret_key(std::move(bob_onetime_priv), nonce_3);
-        
+
         unsigned char* onetime_pub_copy = new unsigned char[crypto_box_PUBLICKEYBYTES];
         memcpy(onetime_pub_copy, bob_onetime_pub, crypto_box_PUBLICKEYBYTES);
-        
+
         std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>> onetime_keys;
         onetime_keys.emplace_back(onetime_pub_copy, std::move(encrypted_bob_onetime_priv), nonce_3);
-        
+
         save_encrypted_onetime_keys(std::move(onetime_keys));
-        
+
         // Clean up the copy
         delete[] onetime_pub_copy;
         delete[] nonce;

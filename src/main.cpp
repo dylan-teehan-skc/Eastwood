@@ -22,16 +22,16 @@
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
+    if (sodium_init() < 0) {
+        throw std::runtime_error("Libsodium initialization failed");
+    }
+
     constexpr bool encrypted = true;
     constexpr bool refresh_database = true;
 
-    auto &db = Database::get();
-    if (db.initialize("master key", encrypted)) {
-        qDebug() << "Database initialized successfully.";
-    } else {
-        qDebug() << "Failed to initialize database.";
-        return 1;
-    }
+    const auto master_key = SecureMemoryBuffer::create(MASTER_KEY_LEN);
+    randombytes_buf(master_key->data(), MASTER_KEY_LEN);
+    Database::get().initialize("username", std::move(master_key), encrypted);
 
     auto master_password = std::make_unique<std::string>("correct horse battery stapler");
 
