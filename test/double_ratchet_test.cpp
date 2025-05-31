@@ -295,12 +295,106 @@ TEST_F(DoubleRatchetTest, MessageIndexResetTest) {
 }
 
 TEST_F(DoubleRatchetTest, OneMessageFromEitherSideTest) {
-    //
+    // Initialize both parties
+    switch_to_alice_db();
+    NewRatchet alice(alice_sending_bundle->get_shared_secret(), bob_presign_pub, true);
+
+    switch_to_bob_db();
+    NewRatchet bob(bob_receiving_bundle->get_shared_secret(), alice_eph_pub, false);
+
+    auto [alice_key1, header1] = alice.advance_send();
+
+    auto bob_key1 = bob.advance_receive(header1);
+    ASSERT_EQ(memcmp(alice_key1, bob_key1, 32), 0);
+
+    auto [bob_key2, header2] = bob.advance_send();
+
+    auto alice_key2 = alice.advance_receive(header2);
+
+    ASSERT_EQ(memcmp(alice_key2, bob_key2, 32), 0);
 }
 
 TEST_F(DoubleRatchetTest, MultipleMessageFromOneSideThenMultipleSwitchTest) {
-    ///
+    // Initialize both parties
+    switch_to_alice_db();
+    NewRatchet alice(alice_sending_bundle->get_shared_secret(), bob_presign_pub, true);
+
+    switch_to_bob_db();
+    NewRatchet bob(bob_receiving_bundle->get_shared_secret(), alice_eph_pub, false);
+
+    // alice sends a few
+    auto [alice_key1, header1] = alice.advance_send();
+    auto [alice_key2, header2] = alice.advance_send();
+
+    // bob receives a few
+    auto bob_key1 = bob.advance_receive(header1);
+    auto bob_key2 = bob.advance_receive(header2);
+
+    ASSERT_EQ(memcmp(alice_key1, bob_key1, 32), 0);
+    ASSERT_EQ(memcmp(alice_key2, bob_key2, 32), 0);
+
+    // bob sends a few
+
+    auto[bob_key3, header3] = bob.advance_send();
+    auto[bob_key4, header4] = bob.advance_send();
+
+    auto alice_key3 = alice.advance_receive(header3);
+    auto alice_key4 = alice.advance_receive(header4);
+
+    ASSERT_EQ(memcmp(bob_key3, alice_key3, 32), 0);
+    ASSERT_EQ(memcmp(alice_key4, bob_key4, 32), 0);
 }
+
+TEST_F(DoubleRatchetTest, OutOfOrderMessageTest) {
+    // Initialize both parties
+    switch_to_alice_db();
+    NewRatchet alice(alice_sending_bundle->get_shared_secret(), bob_presign_pub, true);
+
+    switch_to_bob_db();
+    NewRatchet bob(bob_receiving_bundle->get_shared_secret(), alice_eph_pub, false);
+
+    // alice sends a few
+    auto [alice_key1, header1] = alice.advance_send();
+    auto [alice_key2, header2] = alice.advance_send();
+    auto [alice_key3, header3] = alice.advance_send();
+
+    // bob receives a few
+    auto bob_key3 = bob.advance_receive(header3);
+    auto bob_key2 = bob.advance_receive(header2);
+    auto bob_key1 = bob.advance_receive(header1);
+
+    ASSERT_EQ(memcmp(alice_key1, bob_key1, 32), 0);
+    ASSERT_EQ(memcmp(alice_key2, bob_key2, 32), 0);
+    ASSERT_EQ(memcmp(alice_key3, bob_key3, 32), 0);
+}
+
+TEST_F(DoubleRatchetTest, SkippedMessagesAcrossRatchetTest) {
+    switch_to_alice_db();
+    NewRatchet alice(alice_sending_bundle->get_shared_secret(), bob_presign_pub, true);
+
+    switch_to_bob_db();
+    NewRatchet bob(bob_receiving_bundle->get_shared_secret(), alice_eph_pub, false);
+
+    // alice sends two messages
+    auto [alice_key1, header1] = alice.advance_send();
+    auto [alice_key2, header2] = alice.advance_send();
+
+    // bob receives only the second message, skipping first
+    auto bob_key2 = bob.advance_receive(header2);
+    ASSERT_EQ(memcmp(alice_key2, bob_key2, 32), 0);
+
+    // alice dh ratchet
+    auto [alice_key3, header3] = alice.advance_send();
+
+    // bob receives the new ratcheted message
+    auto bob_key3 = bob.advance_receive(header3);
+    ASSERT_EQ(memcmp(alice_key3, bob_key3, 32), 0);
+
+    // bob receives previous ratchet message
+    auto bob_key1 = bob.advance_receive(header1);
+    ASSERT_EQ(memcmp(alice_key1, bob_key1, 32), 0);
+}
+
 
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);

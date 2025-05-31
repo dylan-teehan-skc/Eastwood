@@ -5,7 +5,7 @@
 #ifndef NEWRATCHET_H
 #define NEWRATCHET_H
 #include <memory>
-
+#include <unordered_map>
 #include "DoubleRatchet.h"
 #include "src/keys/secure_memory_buffer.h"
 
@@ -19,7 +19,7 @@ public:
     NewRatchet(const unsigned char* shared_secret, const unsigned char* other_key, bool is_sender);
 
     std::tuple<unsigned char*, MessageHeader*> advance_send();
-    unsigned char* advance_receive(MessageHeader* header);
+    unsigned char* advance_receive(const MessageHeader* header);
 
     std::tuple<int,int> get_chain_lengths();
 
@@ -41,10 +41,8 @@ private:
     // recipient -> initiator ephemeral
     unsigned char remote_dh_public[32];
 
-    std::tuple<int, unsigned char*> skipped_keys;
+    std::unordered_map<int, unsigned char*> skipped_keys;
     int prev_chain_length;
-
-    // std::vector<NewRatchet*> old_chains = {}; if we want idk
 
     //methods
     void set_up_initial_state_for_initiator(const unsigned char* recipient_signed_public);
@@ -53,6 +51,8 @@ private:
     void generate_new_local_dh_keypair();
 
     void dh_ratchet_step(bool received_new_dh);
+    unsigned char* progress_receive_ratchet();
+    std::tuple<unsigned char*, MessageHeader*> progress_sending_ratchet();
 
     // dh output of local dh private * remote dh public
     unsigned char* dh() const;

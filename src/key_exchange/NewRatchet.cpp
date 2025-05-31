@@ -132,10 +132,64 @@ unsigned char* NewRatchet::dh() const {
 std::tuple<unsigned char*, MessageHeader*> NewRatchet::advance_send() {
 
     if (due_to_send_new_dh) {
-        dh_ratchet_step(false);
+        dh_ratchet_step(false); // we are sending the new dh not receiving
         due_to_send_new_dh = false;
     }
 
+    return progress_sending_ratchet();
+}
+
+unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
+    // if new dh public
+    if (memcmp(remote_dh_public, header->dh_public, 32) != 0) {
+        int skipped_count = receive_chain.index;
+        // if we need to forward cache keys due to prev chain length being longer than expected
+        for (int i = header->prev_chain_length; i < skipped_count; ++i) {
+            skipped_keys[i] = progress_receive_ratchet();
+        }
+        memcpy(remote_dh_public, header->dh_public, 32);
+        dh_ratchet_step(true); // true as we received the new dh
+        due_to_send_new_dh = true;
+    }
+
+    // if we've already computed the key
+    if (header->message_index < receive_chain.index) {
+        if (header->message_index < receive_chain.index) {
+            if (skipped_keys.find(header->message_index) == skipped_keys.end()) {
+                throw std::runtime_error("Key not found in backlog");
+            }
+            auto key = skipped_keys[header->message_index];
+            skipped_keys.erase(header->message_index);
+            return key;
+        }
+    }
+
+    // get the key normally
+    for (int i = receive_chain.index; i <= header->message_index; i++) {
+        const auto message_key = progress_receive_ratchet();
+        if (i == header->message_index) {
+            receive_chain.index = i + 1;
+            return message_key;
+        }
+        skipped_keys[i] = message_key;
+    }
+
+    throw std::runtime_error("Unexpected error in advance_receive");
+}
+
+unsigned char* NewRatchet::progress_receive_ratchet() {
+    auto msg_key = new unsigned char[32];
+    unsigned char next_receive_key[32];
+    const char *ctx = reversed ? "DRRcvKey" : "DRSndKey";
+
+    crypto_kdf_derive_from_key(msg_key, 32, 0, ctx, receive_chain.key);
+    crypto_kdf_derive_from_key(next_receive_key, 32, 1, ctx, receive_chain.key);
+
+    memcpy(receive_chain.key, next_receive_key, 32);
+    return msg_key;
+}
+
+std::tuple<unsigned char*, MessageHeader*> NewRatchet::progress_sending_ratchet() {
     auto message_key = new unsigned char[32];
     unsigned char next_send_key[32];
     const char *ctx = reversed ? "DRSndKey" : "DRRcvKey";
@@ -144,60 +198,13 @@ std::tuple<unsigned char*, MessageHeader*> NewRatchet::advance_send() {
     memcpy(header->dh_public, local_dh_public, 32);
     header->message_index = send_chain.index;
 
-    crypto_kdf_derive_from_key(
-        message_key,
-        32,
-        0,
-        ctx,
-        send_chain.key
-    );
-
-    crypto_kdf_derive_from_key(
-        next_send_key,
-        32,
-        1,
-        ctx,
-        send_chain.key
-    );
-
+    crypto_kdf_derive_from_key(message_key, 32, 0, ctx, send_chain.key);
+    crypto_kdf_derive_from_key(next_send_key, 32, 1, ctx, send_chain.key);
 
     memcpy(send_chain.key, next_send_key, 32);
     send_chain.index = send_chain.index + 1;
-    return std::make_tuple(message_key,header);
-}
 
-unsigned char* NewRatchet::advance_receive(MessageHeader* header) {
-
-    if (memcmp(remote_dh_public, header->dh_public, 32) != 0) {
-        memcpy(remote_dh_public, header->dh_public, 32);
-        dh_ratchet_step(true); // true as we received the new dh
-        due_to_send_new_dh = true;
-    }
-
-    auto message_key = new unsigned char[32];
-    unsigned char next_receive_key[32];
-    const char *ctx = reversed ? "DRRcvKey" : "DRSndKey";
-
-    receive_chain.index = receive_chain.index + 1;
-
-    crypto_kdf_derive_from_key(
-        message_key,
-        32,
-        0,
-        ctx,
-        receive_chain.key
-    );
-
-    crypto_kdf_derive_from_key(
-        next_receive_key,
-        32,
-        1,
-        ctx,
-        receive_chain.key
-    );
-
-    memcpy(receive_chain.key, next_receive_key, 32);
-    return message_key;
+    return std::make_tuple(message_key, header);
 }
 
 //remove this is for tesitng
