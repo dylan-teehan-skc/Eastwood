@@ -56,10 +56,12 @@ int main() {
 
     init_schema();
 
+    auto password = std::make_unique<const std::string>("password1234");
+
     const std::string username = generateRandomString(8);
-    register_user(username, std::make_unique<std::string>("1234"));
+    register_user(username, password);
     register_first_device();
-    login_user(username);
+    login_user(username, password);
     post_new_keybundles(
         get_decrypted_keypair("device"),
         generate_signed_prekey(),

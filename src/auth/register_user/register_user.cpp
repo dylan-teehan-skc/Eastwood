@@ -6,35 +6,17 @@
 #include "src/algorithms/algorithms.h"
 
 #include "../../algorithms/constants.h"
+#include "src/auth/set_up_client.h"
 #include "src/endpoints/endpoints.h"
-#include "src/keys/kek_manager.h"
 #include "src/sql/queries.h"
 #include "src/utils/ConversionUtils.h"
 
 
-int register_user(const std::string &username, const std::unique_ptr<const std::string> &master_password) {
+void register_user(const std::string &username, const std::unique_ptr<const std::string> &master_password,
+                  const bool DEBUG_REFRESH_TABLES = false) {
     qDebug() << "Registering user";
-    if (sodium_init() < 0) {
-        fprintf(stderr, "Libsodium initialization failed\n");
-        return 1;
-    }
 
-    unsigned char salt[crypto_pwhash_SALTBYTES];
-    randombytes_buf(salt, sizeof salt);
-
-    auto master_key = derive_master_key(std::move(master_password), salt);
-
-    auto kek = SecureMemoryBuffer::create(SYM_KEY_LEN);
-    crypto_secretbox_keygen(kek->data());
-
-    unsigned char nonce_kek[CHA_CHA_NONCE_LEN];
-    randombytes_buf(nonce_kek, sizeof(nonce_kek));
-
-    const auto encrypted_kek = encrypt_kek(kek, nonce_kek, master_key);
-    KekManager::instance().setKEK(std::move(kek));
-
-    save_encrypted_key("kek", encrypted_kek, nonce_kek);
-    // TODO: post_store_kek(kek, nonce_kek);
+    set_up_client_for_user(username, std::move(master_password), DEBUG_REFRESH_TABLES);
 
     unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES];
 
@@ -55,5 +37,4 @@ int register_user(const std::string &username, const std::unique_ptr<const std::
     crypto_sign_detached(nonce_signature, nullptr, registration_nonce, CHA_CHA_NONCE_LEN, sk_identity->data());
 
     post_register_user(username, pk_identity, registration_nonce, nonce_signature);
-    return 0;
 }

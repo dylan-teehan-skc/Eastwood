@@ -55,6 +55,9 @@ void Login::onLoginButtonClicked()
         StyledMessageBox::warning(this, "Error", "Passphrase cannot be longer than 64 characters");
         return;
     }
+
+
+    login_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
     WindowManager::instance().showReceived();
     hide();
 

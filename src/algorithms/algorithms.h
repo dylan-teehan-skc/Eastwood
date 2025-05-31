@@ -27,6 +27,11 @@ std::unique_ptr<SecureMemoryBuffer> decrypt_kek(
     unsigned char nonce[CHA_CHA_NONCE_LEN],
     const std::unique_ptr<SecureMemoryBuffer> &master_key
 );
+std::unique_ptr<SecureMemoryBuffer> decrypt_kek(
+    QByteArray &encrypted_kek,
+    QByteArray &nonce,
+    const std::unique_ptr<SecureMemoryBuffer> &master_key
+);
 
 std::unique_ptr<SecureMemoryBuffer> encrypt_symmetric_key(
     const std::unique_ptr<SecureMemoryBuffer> &sk,

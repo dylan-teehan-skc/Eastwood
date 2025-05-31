@@ -9,7 +9,7 @@
 #include "src/endpoints/endpoints.h"
 #include "src/utils/ConversionUtils.h"
 
-void register_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES]) {
+void add_trusted_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES]) {
     qDebug() << "Registering device";
     if (sodium_init() < 0) {
         throw std::runtime_error("Libsodium initialization failed");
@@ -37,5 +37,5 @@ void register_first_device() {
 
     const auto esk_device = encrypt_secret_key(sk_device, nonce);
     save_encrypted_keypair("device", pk_device, esk_device, nonce);
-    register_device(pk_device);
+    add_trusted_device(pk_device);
 }

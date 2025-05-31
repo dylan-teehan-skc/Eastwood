@@ -66,6 +66,18 @@ std::unique_ptr<SecureMemoryBuffer> decrypt_kek(
     return kek;
 }
 
+std::unique_ptr<SecureMemoryBuffer> decrypt_kek(
+    QByteArray &encrypted_kek,
+    QByteArray &nonce,
+    const std::unique_ptr<SecureMemoryBuffer> &master_key
+) {
+    return decrypt_kek(
+        reinterpret_cast<unsigned char *>(encrypted_kek.data()),
+        reinterpret_cast<unsigned char *>(nonce.data()),
+        master_key
+    );
+}
+
 std::unique_ptr<SecureMemoryBuffer> encrypt_symmetric_key(
     const std::unique_ptr<SecureMemoryBuffer> &sk,
     unsigned char nonce[CHA_CHA_NONCE_LEN]
@@ -208,16 +220,16 @@ unsigned char *generate_unique_id_pair(std::string *input_one, std::string *inpu
         memcpy(concatenated, hashed_two, 32);
         memcpy(concatenated + 32, hashed_one, 32);
     }
-    
+
     auto result = new unsigned char[crypto_hash_sha256_BYTES];
     // Hash the concatenated result into hashed_one
-    crypto_hash_sha256(result, concatenated, 64);  // Use full 64-byte concatenated array
+    crypto_hash_sha256(result, concatenated, 64); // Use full 64-byte concatenated array
 
     // Clean up hashed_two since we don't need it anymore
     delete[] hashed_two;
     delete[] hashed_one;
 
-    return result;  // Caller is responsible for deleting this
+    return result; // Caller is responsible for deleting this
 }
 
 
@@ -238,7 +250,7 @@ std::vector<unsigned char> encrypt_bytes(
             nullptr, // Always null for this algorithm
             nonce, key->data()
         ) != 0) {
-       throw std::runtime_error("Failed to encrypt file");
+        throw std::runtime_error("Failed to encrypt file");
     }
     return encrypted_bytes;
 }
@@ -260,7 +272,7 @@ std::vector<unsigned char> decrypt_bytes(
             nullptr, // Always null for this algorithm
             nonce.data(), key->data()
         ) != 0) {
-       throw std::runtime_error("Failed to encrypt file");
+        throw std::runtime_error("Failed to encrypt file");
     }
     decrypted_bytes.resize(size_out);
     return decrypted_bytes;

@@ -26,20 +26,6 @@ int main(int argc, char *argv[]) {
         throw std::runtime_error("Libsodium initialization failed");
     }
 
-    constexpr bool encrypted = true;
-    constexpr bool refresh_database = true;
-
-    const auto master_key = SecureMemoryBuffer::create(MASTER_KEY_LEN);
-    randombytes_buf(master_key->data(), MASTER_KEY_LEN);
-    Database::get().initialize("username", std::move(master_key), encrypted);
-
-    auto master_password = std::make_unique<std::string>("correct horse battery stapler");
-
-    // TODO: Debugging only
-    if (refresh_database) drop_all_tables();
-
-    init_schema();
-
     WindowManager::instance().showLogin();
     return app.exec();
 }

@@ -80,6 +80,8 @@ void Register::onRegisterButtonClicked()
     try {
         register_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
         register_first_device();
+        // TODO: post keybundles
+        // post_new_keybundles();
         StyledMessageBox::info(this, "Success", "Registration successful!");
         WindowManager::instance().showLogin();
         hide();
