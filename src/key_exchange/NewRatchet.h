@@ -6,7 +6,7 @@
 #define NEWRATCHET_H
 #include <memory>
 #include <unordered_map>
-#include "DoubleRatchet.h"
+#include "MessageStructs.h"
 #include "src/keys/secure_memory_buffer.h"
 
 struct NewChain {

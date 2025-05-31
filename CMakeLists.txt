@@ -52,21 +52,31 @@ pkg_check_modules(SQLCIPHER REQUIRED sqlcipher)
 
 # Find libsodium
 find_path(SODIUM_INCLUDE_DIR sodium.h
-        PATHS /opt/homebrew/include
-        /usr/local/include
+        PATHS 
         /usr/include
+        /usr/local/include
+        /opt/homebrew/include
+        /usr/include/x86_64-linux-gnu
+        /usr/include/aarch64-linux-gnu
+        NO_DEFAULT_PATH
 )
 find_library(SODIUM_LIBRARY
         NAMES sodium libsodium
-        PATHS /opt/homebrew/lib
-        /usr/local/lib
+        PATHS 
         /usr/lib
+        /usr/local/lib
+        /opt/homebrew/lib
+        /usr/lib/x86_64-linux-gnu
+        /usr/lib/aarch64-linux-gnu
+        NO_DEFAULT_PATH
 )
-link_directories(${SQLCIPHER_LIBRARY_DIRS})
 
 if (NOT SODIUM_INCLUDE_DIR OR NOT SODIUM_LIBRARY)
     message(FATAL_ERROR "libsodium not found. Please install it using your package manager.")
 endif ()
+
+message(STATUS "Found libsodium: ${SODIUM_LIBRARY}")
+message(STATUS "Found sodium.h: ${SODIUM_INCLUDE_DIR}")
 
 # Define frontend sources
 set(FRONTEND_SOURCES
@@ -108,7 +118,6 @@ set(DATABASE_SOURCES
 
 # Define cryptography sources and headers
 set(CRYPTO_SOURCES
-        src/key_exchange/DoubleRatchet.cpp
         src/key_exchange/x3dh.cpp
         src/key_exchange/XChaCha20-Poly1305.cpp
         src/key_exchange/NewRatchet.cpp
@@ -135,6 +144,7 @@ set(AUTH_SOURCES
         src/sessions/IdentityManager.cpp
         src/files/upload_file.cpp
         src/auth/salt.cpp
+        src/key_exchange/MessageStructs.h
 )
 
 # Create main executable

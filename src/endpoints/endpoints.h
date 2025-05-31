@@ -5,7 +5,6 @@
 #include <array>
 #include "src/algorithms/constants.h"
 #include "src/keys/secure_memory_buffer.h"
-#include "src/key_exchange/DoubleRatchet.h"
 #include "src/sessions/IdentityManager.h"
 
 void post_register_user(

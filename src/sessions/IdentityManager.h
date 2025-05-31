@@ -27,7 +27,7 @@ public:
     void update_or_create_identity_sessions(std::vector<std::tuple<IdentitySessionId, KeyBundle*>> bundles_with_ids);
 
     void receive_messages(std::vector<std::tuple<IdentitySessionId, DeviceMessage*>> messages_with_ids);
-    std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> send_to_user(std::string username, unsigned char* msg);
+    std::vector<std::tuple<IdentitySessionId, std::unique_ptr<DeviceMessage>>> send_to_user(std::string username, unsigned char* msg);
     void print_all_session_ids();
 };
 

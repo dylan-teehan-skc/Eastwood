@@ -53,7 +53,7 @@ void IdentityManager::update_or_create_identity_sessions(std::vector<std::tuple<
     }
 }
 
-std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> IdentityManager::send_to_user(std::string username, unsigned char *msg) {
+std::vector<std::tuple<IdentitySessionId, std::unique_ptr<DeviceMessage>>> IdentityManager::send_to_user(std::string username, unsigned char *msg) {
     std::string my_username = SessionTokenManager::instance().getUsername();
     unsigned char* session_id_raw = generate_unique_id_pair(&username, &my_username);
     IdentitySessionId session_id;
@@ -70,7 +70,7 @@ std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> IdentityManager::sen
         get_keybundles(username);
     }
 
-    std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> msgs = _sessions[session_id]->send_message(msg);
+    std::vector<std::tuple<IdentitySessionId, std::unique_ptr<DeviceMessage>>> msgs = _sessions[session_id]->send_message(msg, sizeof(msg));
     return msgs;
 }
 

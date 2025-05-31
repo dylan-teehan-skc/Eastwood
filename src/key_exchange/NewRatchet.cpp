@@ -3,8 +3,9 @@
 //
 
 #include "NewRatchet.h"
-
 #include "src/sql/queries.h"
+#include <cstring>
+#include <sodium.h>
 
 // other key is initiator ephemeral for recipient
 // other key is receiver signed prekey for initiator

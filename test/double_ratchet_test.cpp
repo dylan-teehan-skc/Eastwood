@@ -9,23 +9,15 @@
 #include "NewRatchet.h"
 #include "utils.h"
 #include "database/schema.h"
-#include "src/key_exchange/DoubleRatchet.h"
-#include "key_exchange/x3dh.h"
-#include "key_exchange/XChaCha20-Poly1305.h"
-#include "utils/ConversionUtils.h"
-#include "utils/JsonParser.h"
 #include "client_api_interactions/MakeAuthReq.h"
-#include "client_api_interactions/MakeUnauthReq.h"
 #include "libraries/BaseClient.h"
 #include "libraries/HTTPSClient.h"
 #include "endpoints/endpoints.h"
 #include "keys/secure_memory_buffer.h"
-#include "keys/session_token_manager.h"
 #include "algorithms/algorithms.h"
 #include "database/database.h"
 #include "sessions/KeyBundle.h"
 #include "sessions/IdentityManager.h"
-#include "sessions/IdentitySession.h"
 
 // Test fixture class for DoubleRatchet tests
 class DoubleRatchetTest : public ::testing::Test {
