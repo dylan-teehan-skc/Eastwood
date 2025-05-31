@@ -139,7 +139,10 @@ inline void save_encrypted_onetime_keys(
     std::cout << "Finished processing all one-time keys" << std::endl;
 }
 
-inline std::unique_ptr<SecureMemoryBuffer> get_onetime_private_key(const unsigned char *public_key) {
+inline std::unique_ptr<SecureMemoryBuffer> get_onetime_private_key(const unsigned char *public_key = nullptr) {
+    if (!public_key) {
+        return nullptr;
+    }
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
     db.prepare_or_throw(
@@ -150,7 +153,7 @@ inline std::unique_ptr<SecureMemoryBuffer> get_onetime_private_key(const unsigne
 
     auto rows = db.query(stmt);
     if (rows.empty()) {
-        throw std::runtime_error("No one-time key found for given public key");
+        return nullptr;
     }
 
     const auto &row = rows[0];

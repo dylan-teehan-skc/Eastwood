@@ -85,8 +85,11 @@ protected:
             bob_device_priv->data()
         );
 
-        // Unwrap alice_eph_priv and put it in a shared pointer
-        std::shared_ptr<SecureMemoryBuffer> shared_alice_eph_priv = std::shared_ptr<SecureMemoryBuffer>(alice_eph_priv.release());
+        // Create a copy of alice_eph_priv and put it in a shared pointer
+        auto alice_eph_priv_copy = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
+        memcpy(alice_eph_priv_copy->data(), alice_eph_priv->data(), crypto_sign_SECRETKEYBYTES);
+
+        std::shared_ptr<SecureMemoryBuffer> shared_alice_eph_priv = std::shared_ptr<SecureMemoryBuffer>(alice_eph_priv_copy.release());
 
         alice_sending_bundle = new SendingKeyBundle(
             alice_device_pub,
@@ -200,6 +203,44 @@ TEST_F(DoubleRatchetTest, SharedSecretDerivationTest) {
 
     // Compare the actual values of the shared secrets
     EXPECT_EQ(memcmp(shared_secret_alice, shared_secret_bob, crypto_scalarmult_BYTES), 0);
+}
+
+TEST_F(DoubleRatchetTest, SharedSecretDerivationTestNoOnetime) {
+    // Create a copy of alice_eph_priv and put it in a shared pointer
+    auto alice_eph_priv_copy = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
+    memcpy(alice_eph_priv_copy->data(), alice_eph_priv->data(), crypto_sign_SECRETKEYBYTES);
+
+    std::shared_ptr<SecureMemoryBuffer> shared_alice_eph_priv = std::shared_ptr<SecureMemoryBuffer>(alice_eph_priv_copy.release());
+    auto alice_sending_bundle_no_onetime = new SendingKeyBundle(
+            alice_device_pub,
+            alice_eph_pub,
+            std::move(shared_alice_eph_priv),
+            bob_device_pub,
+            bob_presign_pub,
+            nullptr,
+            bob_presign_signature
+        );
+
+    auto bob_receiving_bundle_no_onetime = new ReceivingKeyBundle(
+        alice_device_pub,
+        alice_eph_pub,
+        bob_device_pub,
+        nullptr
+    );
+
+    switch_to_alice_db();
+    unsigned char* shared_secret_alice = alice_sending_bundle_no_onetime->get_shared_secret();
+
+    switch_to_bob_db();
+    unsigned char* shared_secret_bob = bob_receiving_bundle_no_onetime->get_shared_secret();
+
+    // Compare the actual values of the shared secrets
+    EXPECT_EQ(memcmp(shared_secret_alice, shared_secret_bob, crypto_scalarmult_BYTES), 0);
+
+    delete[] shared_secret_alice;
+    delete[] shared_secret_bob;
+    delete alice_sending_bundle_no_onetime;
+    delete bob_receiving_bundle_no_onetime;
 }
 
 TEST_F(DoubleRatchetTest, RatchetBothSidesTest) {
