@@ -53,12 +53,15 @@ void Database::initialize(
 
     // Verify the database is accessible by running a test query
     char *errMsg = nullptr;
-    rc = sqlite3_exec(db, "SELECT 1;", nullptr, nullptr, &errMsg);
+    rc = sqlite3_exec(db, "SELECT 1 FROM sqlite_master;", nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
-        qDebug() << "Database verification failed:" << errMsg;
+        auto err = std::string(errMsg);
+        if (err == "file is not a database") {
+            err = "Incorrect password";
+        }
         sqlite3_free(errMsg);
         sqlite3_close(db);
-        throw std::runtime_error("Database verification failed:" + std::string(errMsg));
+        throw std::runtime_error("Database verification failed: " + err);
     }
     initialized = true;
 }
