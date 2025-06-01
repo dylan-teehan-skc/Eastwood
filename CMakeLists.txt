@@ -124,6 +124,7 @@ set(FRONTEND_SOURCES
         src/ui/windows/settings/settings.ui
         src/ui/utils/qr_code_generation/QRCodeGenerator.cpp
         src/ui/utils/qr_code_generation/QRCodeGenerator.h
+        src/ui/utils/camera_functionality/camera_functionality.cpp
 )
 
 # Define database sources

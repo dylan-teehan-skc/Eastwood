@@ -8,11 +8,21 @@
 #include "src/algorithms/constants.h"
 #include "src/endpoints/endpoints.h"
 #include "src/utils/ConversionUtils.h"
+#include "src/database/database.h"
 
 void add_trusted_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES]) {
     qDebug() << "Registering device";
     if (sodium_init() < 0) {
         throw std::runtime_error("Libsodium initialization failed");
+    }
+
+    try {
+        if (!Database::get().isInitialized()) {
+            throw std::runtime_error("Database not initialized");
+        }
+    } catch (const std::exception& e) {
+        qDebug() << "Database initialization error:" << e.what();
+        throw std::runtime_error("Failed to initialize database");
     }
 
     const auto [pk_identity,sk_identity] = get_decrypted_keypair("identity");
@@ -23,7 +33,12 @@ void add_trusted_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES])
     unsigned char pk_signature[crypto_sign_BYTES];
     crypto_sign_detached(pk_signature, nullptr, pk_new_device, crypto_sign_PUBLICKEYBYTES, sk_identity->data());
 
-    post_register_device(q_byte_array_to_chars(pk_identity), pk_new_device, pk_signature);
+    try {
+        post_register_device(q_byte_array_to_chars(pk_identity), pk_new_device, pk_signature);
+    } catch (const std::exception& e) {
+        qDebug() << "Failed to register device:" << e.what();
+        throw std::runtime_error("Failed to register device with server");
+    }
 }
 
 void register_first_device() {

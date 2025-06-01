@@ -83,3 +83,4 @@ src/ui/windows/login/login_ui.py
 src/ui/windows/register/register_ui.py
 .env
 *.db
+external/qrcodegen
