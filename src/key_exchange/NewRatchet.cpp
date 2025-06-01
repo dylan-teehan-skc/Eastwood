@@ -13,19 +13,21 @@
 
 // other key is initiator ephemeral for recipient
 // other key is receiver signed prekey for initiator
-NewRatchet::NewRatchet(const unsigned char *shared_secret, const unsigned char *other_key, bool is_sender, unsigned char ratchet_id_in[32], unsigned char identity_session_id_in[32]) {
+NewRatchet::NewRatchet(const unsigned char *shared_secret, const unsigned char *other_key) {
     memcpy(root_key, shared_secret, 32);
-    memcpy(ratchet_id, ratchet_id_in, 32);
-    memcpy(identity_session_id, identity_session_id_in, 32);
 
-    if (is_sender) {
-        set_up_initial_state_for_initiator(other_key);
-    } else {
-        set_up_initial_state_for_recipient(other_key);
-    }
+    set_up_initial_state_for_recipient(other_key);
 
     set_up_initial_chain_keys();
-    save();
+}
+
+NewRatchet::NewRatchet(const unsigned char* shared_secret, const unsigned char* other_key,
+                       const unsigned char* my_ephemeral_public, const std::shared_ptr<SecureMemoryBuffer> &my_ephemeral_private) {
+    memcpy(root_key, shared_secret, 32);
+
+    set_up_initial_state_for_initiator(other_key, my_ephemeral_public, my_ephemeral_private);
+
+    set_up_initial_chain_keys();
 }
 
 //serialised
@@ -37,12 +39,13 @@ NewRatchet::NewRatchet(const std::vector<unsigned char> &serialised_ratchet) {
     deserialise(in);
 }
 
-void NewRatchet::set_up_initial_state_for_initiator(const unsigned char *recipient_signed_public) {
+void NewRatchet::set_up_initial_state_for_initiator(const unsigned char* recipient_signed_public,
+                                                    const unsigned char* my_ephemeral_public,
+                                                    std::shared_ptr<SecureMemoryBuffer> my_ephemeral_private) {
     reversed = false;
-    //setup initial local dh pub priv
-    crypto_box_keypair(local_dh_public, local_dh_priv->data());
-
-    //remote dh pub
+    memcpy(local_dh_public, my_ephemeral_public, 32);
+    local_dh_priv = SecureMemoryBuffer::create(32);
+    memcpy(local_dh_priv->data(), my_ephemeral_private->data(), 32);
     memcpy(remote_dh_public, recipient_signed_public, 32);
 }
 
@@ -51,6 +54,7 @@ void NewRatchet::set_up_initial_state_for_recipient(const unsigned char *initiat
     //setup initial local dh pub priv
     auto [public_signed, sk_signed] = get_decrypted_keypair("signed");
     local_dh_priv = std::move(sk_signed);
+    memcpy(local_dh_public, public_signed.constData(), 32);
 
     //remote dh pub
     memcpy(remote_dh_public, initiator_ephemeral_public, 32);
@@ -86,10 +90,21 @@ void NewRatchet::set_up_initial_chain_keys() {
         "DRXroot1",
         kdf_key
     );
+
+    // Swap send/receive chains for responder
+    if (reversed) {
+        unsigned char tmp[32];
+        memcpy(tmp, send_chain.key, 32);
+        memcpy(send_chain.key, receive_chain.key, 32);
+        memcpy(receive_chain.key, tmp, 32);
+    }
+
+    due_to_send_new_dh = false;
 }
 
 void NewRatchet::dh_ratchet_step(const bool received_new_dh) {
     auto dh_output = dh();
+
 
     unsigned char kdf_key[32];
     crypto_generichash(kdf_key, sizeof(kdf_key), dh_output.get(), 32, nullptr, 0);
@@ -115,19 +130,53 @@ void NewRatchet::dh_ratchet_step(const bool received_new_dh) {
     memcpy(root_key, new_root_key, 32);
 
     if (received_new_dh) {
+        // When receiving a new DH key, update the receive chain
         memcpy(receive_chain.key, new_chain_key, 32);
-
-        generate_new_local_dh_keypair();
-        memcpy(send_chain.key, root_key, 32);
-
         receive_chain.index = 0;
+
+        // Generate new local DH keypair for future sends
+        generate_new_local_dh_keypair();
+        
+        // Derive new send chain from updated root key and new DH
+        auto new_dh_output = dh();
+        unsigned char new_kdf_key[32];
+        crypto_generichash(new_kdf_key, sizeof(new_kdf_key), new_dh_output.get(), 32, nullptr, 0);
+        
+        unsigned char updated_root_key[32];
+        crypto_kdf_derive_from_key(
+            updated_root_key,
+            32,
+            0,
+            "DHRatchet",
+            new_kdf_key
+        );
+        
+        unsigned char new_send_chain_key[32];
+        crypto_kdf_derive_from_key(
+            new_send_chain_key,
+            32,
+            1,
+            "DHRatchet",
+            new_kdf_key
+        );
+        
+        memcpy(root_key, updated_root_key, 32);
+        memcpy(send_chain.key, new_send_chain_key, 32);
         send_chain.index = 0;
 
     } else {
+        // When sending a new DH key, update the send chain
         memcpy(send_chain.key, new_chain_key, 32);
-
         send_chain.index = 0;
     }
+
+    printf("  send_chain.key: ");
+    for (int i = 0; i < 32; ++i) printf("%02x", send_chain.key[i]);
+    printf("\n  receive_chain.key: ");
+    for (int i = 0; i < 32; ++i) printf("%02x", receive_chain.key[i]);
+    printf("\n  root_key: ");
+    for (int i = 0; i < 32; ++i) printf("%02x", root_key[i]);
+    printf("\n");
 }
 
 void NewRatchet::generate_new_local_dh_keypair() {
@@ -142,17 +191,22 @@ std::unique_ptr<unsigned char[]> NewRatchet::dh() const {
     return result;
 }
 
-std::tuple<unsigned char*, MessageHeader*> NewRatchet::advance_send() {
+std::tuple<std::array<unsigned char,32>, MessageHeader*> NewRatchet::advance_send() {
 
     if (due_to_send_new_dh) {
         dh_ratchet_step(false); // we are sending the new dh not receiving
         due_to_send_new_dh = false;
     }
 
-    return progress_sending_ratchet();
+    auto [raw_id, message_header] = progress_sending_ratchet();
+    std::array<unsigned char, 32> device_id;
+    std::memcpy(device_id.data(), raw_id, 32);
+
+    return std::make_tuple(device_id, message_header);
 }
 
 unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
+
     // if new dh public
     if (memcmp(remote_dh_public, header->dh_public, 32) != 0) {
         int skipped_count = receive_chain.index;
@@ -166,7 +220,7 @@ unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
         }
         memcpy(remote_dh_public, header->dh_public, 32);
         dh_ratchet_step(true); // true as we received the new dh
-        due_to_send_new_dh = true;
+        due_to_send_new_dh = true; // Next send should use new DH keys
     }
 
     // if we've already computed the key
@@ -176,16 +230,18 @@ unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
         }
         auto key = skipped_keys[header->message_index];
         skipped_keys.erase(header->message_index);
-        save();
         return key;
     }
 
     // get the key normally
     for (int i = receive_chain.index; i <= header->message_index; i++) {
         const auto message_key = progress_receive_ratchet();
+        printf("  Derived message_key at index %d: ", i);
+        for (int j = 0; j < 32; ++j) printf("%02x", message_key[j]);
+        printf("\n");
+
         if (i == header->message_index) {
             receive_chain.index = i + 1;
-            save();
             return message_key;
         }
         if (skipped_keys.find(i) != skipped_keys.end()) {
@@ -200,7 +256,7 @@ unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
 unsigned char* NewRatchet::progress_receive_ratchet() {
     auto msg_key = new unsigned char[32];
     unsigned char next_receive_key[32];
-    const char *ctx = reversed ? "DRRcvKey" : "DRSndKey";
+    const char *ctx = "DRSndKey"; // Use same context as sender
 
     crypto_kdf_derive_from_key(msg_key, 32, 0, ctx, receive_chain.key);
     crypto_kdf_derive_from_key(next_receive_key, 32, 1, ctx, receive_chain.key);
@@ -212,19 +268,19 @@ unsigned char* NewRatchet::progress_receive_ratchet() {
 std::tuple<unsigned char*, MessageHeader*> NewRatchet::progress_sending_ratchet() {
     auto message_key = new unsigned char[32];
     unsigned char next_send_key[32];
-    const char *ctx = reversed ? "DRSndKey" : "DRRcvKey";
+    const char *ctx = "DRSndKey"; // Use same context as in advance_send
 
     auto header = new MessageHeader();
     memcpy(header->dh_public, local_dh_public, 32);
     header->message_index = send_chain.index;
+    header->prev_chain_length = receive_chain.index; // Set previous chain length
 
     crypto_kdf_derive_from_key(message_key, 32, 0, ctx, send_chain.key);
     crypto_kdf_derive_from_key(next_send_key, 32, 1, ctx, send_chain.key);
 
     memcpy(send_chain.key, next_send_key, 32);
-    send_chain.index = send_chain.index + 1;
+    send_chain.index++;
 
-    save();
     return std::make_tuple(message_key, header);
 }
 
@@ -259,6 +315,7 @@ void NewRatchet::serialise(std::ostream &out) const {
 
     out.write((char*)&due_to_send_new_dh, sizeof(due_to_send_new_dh));
     out.write((char*)&reversed, sizeof(reversed));
+    out.write((char*)&prev_chain_length, sizeof(prev_chain_length));
 }
 
 void NewRatchet::deserialise(std::istream &in) {
@@ -293,9 +350,10 @@ void NewRatchet::deserialise(std::istream &in) {
 
     in.read((char*)&due_to_send_new_dh, sizeof(due_to_send_new_dh));
     in.read((char*)&reversed, sizeof(reversed));
+    in.read((char*)&prev_chain_length, sizeof(prev_chain_length));
 }
 
-void NewRatchet::save() {
+void NewRatchet::save(const std::string& username, const std::array<unsigned char, 32>& device_id) {
     std::ostringstream oss(std::ios::binary);
     serialise(oss);
 
@@ -317,7 +375,7 @@ void NewRatchet::save() {
     auto encrypted_data = encrypt_bytes(bytes, std::move(copy_encryption_key), nonce_data.get());
     auto encrypted_encryption_key = encrypt_symmetric_key(encryption_key, nonce_key.get());
 
-    save_ratchet_and_key(ratchet_id, identity_session_id, encrypted_data, nonce_data.get(), std::move(encrypted_encryption_key), nonce_key.get());
+    save_ratchet_and_key_by_username_device(username, device_id, encrypted_data, nonce_data.get(), std::move(encrypted_encryption_key), nonce_key.get());
 }
 
 

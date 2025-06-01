@@ -22,11 +22,21 @@ jobs:
       - name: Write .env file
         run: echo "${{ secrets.ENV_FILE }}" > .env
 
-      - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_VERBOSE_MAKEFILE=ON
+      - name: Configure CMake with debug symbols
+        run: cmake -S . -B build -DCMAKE_VERBOSE_MAKEFILE=ON -DENABLE_DEBUG_SYMBOLS=ON -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
-        run: cmake --build build --config Release --verbose
+        run: cmake --build build --config Debug --verbose
 
-      - name: Run tests
-        run: cd build && ctest --output-on-failure -R "EastwoodTests"
+      - name: Run tests with core dump analysis
+        run: |
+          cd build
+          # Enable core dumps
+          ulimit -c unlimited
+          echo "Core dump pattern: $(cat /proc/sys/kernel/core_pattern)"
+          # Run tests with detailed output
+          ctest --output-on-failure -R "EastwoodTests" -V || {
+            echo "Test failed, checking for core dumps..."
+            find . -name "core*" -exec ls -la {} \;
+            exit 1
+          }

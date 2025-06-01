@@ -8,7 +8,6 @@
 #include "src/sql/queries.h"
 #include "src/client_api_interactions/MakeUnauthReq.h"
 #include "src/keys/session_token_manager.h"
-#include "src/sessions/IdentityManager.h"
 #include "src/utils/utils.h"
 
 using json = nlohmann::json;
@@ -80,7 +79,7 @@ std::string post_authenticate(
     return response["data"]["token"];
 }
 
-std::vector<std::tuple<IdentitySessionId, DeviceMessage *> > get_messages() {
+std::vector<std::tuple<std::string, DeviceMessage *> > get_messages() {
     json response = get("/incomingMessages");
 
     std::cout << "Raw response: " << response.dump() << std::endl;
@@ -90,7 +89,7 @@ std::vector<std::tuple<IdentitySessionId, DeviceMessage *> > get_messages() {
     }
     std::cout << std::endl;
 
-    std::vector<std::tuple<IdentitySessionId, DeviceMessage *> > messages;
+    std::vector<std::tuple<std::string, DeviceMessage *> > messages;
 
     // Check if data array exists
     if (!response.contains("data") || !response["data"].is_array()) {
@@ -101,12 +100,11 @@ std::vector<std::tuple<IdentitySessionId, DeviceMessage *> > get_messages() {
     for (const auto &message: response["data"]) {
         int ciphertext_length = message["ciphertext_length"].get<int>();
 
-        IdentitySessionId identity_session_id;
         auto initator_dev_key = new unsigned char[crypto_box_PUBLICKEYBYTES];
         auto new_dh_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
         auto ciphertext = new unsigned char[ciphertext_length];
 
-        std::string identity_session_str = message["identity_session_id"].get<std::string>();
+        std::string username = message["username"].get<std::string>();
         std::string dev_key_str = message["initiator_device_public_key"].get<std::string>();
         std::string dh_pub_str = message["dh_public"].get<std::string>();
         std::string ciphertext_str = message["ciphertext"].get<std::string>();
@@ -114,8 +112,7 @@ std::vector<std::tuple<IdentitySessionId, DeviceMessage *> > get_messages() {
         int prev_chain_length = message["prev_chain_length"].get<int>();
         int message_index = message["message_index"].get<int>();
 
-        bool success = hex_to_bin(identity_session_str, identity_session_id.data.data(), crypto_hash_sha256_BYTES) &&
-                       hex_to_bin(dev_key_str, initator_dev_key, crypto_box_PUBLICKEYBYTES) &&
+        bool success = hex_to_bin(dev_key_str, initator_dev_key, crypto_box_PUBLICKEYBYTES) &&
                        hex_to_bin(dh_pub_str, new_dh_public, crypto_box_PUBLICKEYBYTES) &&
                        hex_to_bin(ciphertext_str, ciphertext, ciphertext_length);
 
@@ -138,24 +135,22 @@ std::vector<std::tuple<IdentitySessionId, DeviceMessage *> > get_messages() {
         msg->ciphertext = ciphertext;
         msg->length = ciphertext_length;
 
-        messages.push_back(std::make_tuple(identity_session_id, msg));
+        messages.push_back(std::make_tuple(username, msg));
     }
     return messages;
 }
 
-void post_ratchet_message(std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>> messages) {
-    std::cout << "posting ratchet message" << std::endl;
+void post_ratchet_message(std::vector<DeviceMessage*> messages) {
     json data = json::object();
     data["messages"] = json::array();
 
-    for (auto [identity_session_id, msg] : messages) {
+    for (auto msg : messages) {
         const auto dev_pub = new unsigned char[crypto_box_PUBLICKEYBYTES];
         QByteArray dev_pub_byte = get_public_key("device");
         memcpy(dev_pub, dev_pub_byte.constData(), crypto_box_PUBLICKEYBYTES);
 
         json body = json::object();
-        body["file_id"] = 0;
-        body["identity_session_id"] = bin2hex(identity_session_id.data.data(), crypto_hash_sha256_BYTES);
+        body["file_id"] = 0; // update
         body["initiator_device_public_key"] = bin2hex(dev_pub, crypto_box_PUBLICKEYBYTES);
         body["recipient_device_public_key"] = bin2hex(msg->header->device_id, crypto_box_PUBLICKEYBYTES);
         body["dh_public"] = bin2hex(msg->header->dh_public, crypto_box_PUBLICKEYBYTES);
@@ -171,7 +166,7 @@ void post_ratchet_message(std::vector<std::tuple<IdentitySessionId&, DeviceMessa
     post("/sendMessage", data);
 }
 
-void get_keybundles(const std::string &username) {
+std::vector<KeyBundle*> get_keybundles(const std::string &username) {
     json response = get("/keybundle/" + username);
 
     // Get my identity public key
@@ -257,13 +252,10 @@ void get_keybundles(const std::string &username) {
         throw std::runtime_error("Failed to decode their identity public key");
     }
 
-    // Update or create identity session
-    IdentityManager::getInstance().update_or_create_identity_sessions(bundles, username,
-                                                                      SessionTokenManager::instance().getUsername());
+    return bundles;
 }
 
 void post_handshake_device(
-    const IdentitySessionId &identity_session_id,
     const unsigned char *recipient_device_key_public,
     const unsigned char *recipient_signed_prekey_public,
     const unsigned char *recipient_signed_prekey_signature,
@@ -272,7 +264,6 @@ void post_handshake_device(
     const unsigned char *my_ephemeral_key_public
 ) {
     json body = {
-        {"identity_session_id", bin2hex(identity_session_id.data.data(), crypto_hash_sha256_BYTES)},
         {"recipient_device_key", bin2hex(recipient_device_key_public, crypto_box_PUBLICKEYBYTES)},
         {"recipient_signed_public_prekey", bin2hex(recipient_signed_prekey_public, crypto_box_PUBLICKEYBYTES)},
         {
@@ -291,7 +282,7 @@ void post_handshake_device(
     post("/handshake", body);
 }
 
-std::vector<std::tuple<IdentitySessionId, KeyBundle *> > get_handshake_backlog() {
+std::vector<std::tuple<std::string, KeyBundle *> > get_handshake_backlog() {
     json response = get("/incomingHandshakes");
     std::cout << "Raw response: " << response.dump() << std::endl;
     std::cout << "Response keys: ";
@@ -300,22 +291,19 @@ std::vector<std::tuple<IdentitySessionId, KeyBundle *> > get_handshake_backlog()
     }
     std::cout << std::endl;
 
-    std::vector<std::tuple<IdentitySessionId, KeyBundle *> > bundles;
+    std::vector<std::tuple<std::string, KeyBundle *> > bundles;
 
     for (const auto &handshake: response["data"]) {
-        IdentitySessionId identity_session_id;
         auto initator_dev_key = new unsigned char[crypto_box_PUBLICKEYBYTES];
         auto initiator_eph_pub = new unsigned char[crypto_box_PUBLICKEYBYTES];
         unsigned char* recip_onetime_pub = nullptr;
 
         std::string dev_key_str = handshake["initiator_device_public_key"].get<std::string>();
         std::string eph_pub_str = handshake["initiator_ephemeral_public_key"].get<std::string>();
-        std::string session_id_str = handshake["identity_session_id"].get<std::string>();
+        std::string username = handshake["username"].get<std::string>();
 
         bool success = hex_to_bin(dev_key_str, initator_dev_key, crypto_box_PUBLICKEYBYTES) &&
-                       hex_to_bin(eph_pub_str, initiator_eph_pub, crypto_box_PUBLICKEYBYTES) &&
-                       hex_to_bin(session_id_str, identity_session_id.data.data(), crypto_hash_sha256_BYTES);
-
+                       hex_to_bin(eph_pub_str, initiator_eph_pub, crypto_box_PUBLICKEYBYTES);
         if (!success) {
             delete[] initator_dev_key;
             delete[] initiator_eph_pub;
@@ -342,7 +330,7 @@ std::vector<std::tuple<IdentitySessionId, KeyBundle *> > get_handshake_backlog()
             recip_onetime_pub
         );
 
-        bundles.push_back(std::make_tuple(identity_session_id, new_bundle));
+        bundles.push_back(std::make_tuple(username, new_bundle));
     }
 
     return bundles;

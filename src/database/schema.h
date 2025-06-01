@@ -73,8 +73,8 @@ inline void init_schema() {
     END;
 
     CREATE TABLE IF NOT EXISTS ratchets (
-        ratchet_id       BLOB PRIMARY KEY,
-        identity_session_id BLOB UNIQUE,
+        username       TEXT,
+        device_id BLOB PRIMARY KEY,
         nonce         BLOB UNIQUE,
         encrypted_data         BLOB UNIQUE,
         created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -89,7 +89,8 @@ inline void init_schema() {
     END;
 
     CREATE TABLE IF NOT EXISTS ratchet_keys (
-        ratchet_id       BLOB PRIMARY KEY,
+        username TEXT,
+        device_id       BLOB PRIMARY KEY,
         nonce         BLOB UNIQUE,
         encrypted_key         BLOB UNIQUE,
         created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,

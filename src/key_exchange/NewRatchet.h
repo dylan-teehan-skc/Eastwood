@@ -9,6 +9,7 @@
 #include "MessageStructs.h"
 #include "src/keys/secure_memory_buffer.h"
 #include <vector>
+#include <string>
 
 struct NewChain {
     int index = 0;
@@ -17,7 +18,11 @@ struct NewChain {
 
 class NewRatchet {
 public:
-    NewRatchet(const unsigned char* shared_secret, const unsigned char* other_key, bool is_sender, unsigned char* ratchet_id_in, unsigned char* identity_session_id_in);
+    NewRatchet(const unsigned char* shared_secret, const unsigned char* other_key);
+
+    // Overload for initiator: pass ephemeral pub/priv
+    NewRatchet(const unsigned char* shared_secret, const unsigned char* other_key,
+               const unsigned char* my_ephemeral_public, const std::shared_ptr<SecureMemoryBuffer> &my_ephemeral_private);
     NewRatchet(const std::vector<unsigned char, std::allocator<unsigned char>> &serialised_ratchet);
 
     ~NewRatchet() {
@@ -28,15 +33,16 @@ public:
         skipped_keys.clear();
     }
 
-    std::tuple<unsigned char*, MessageHeader*> advance_send();
+    std::tuple<std::array<unsigned char,32>, MessageHeader*> advance_send();
     unsigned char* advance_receive(const MessageHeader* header);
 
     std::tuple<int,int> get_chain_lengths();
 
     const unsigned char *get_current_dh_public() const; //testing!!
+    
+    void save(const std::string& username, const std::array<unsigned char, 32>& device_id);
+
 private:
-    unsigned char ratchet_id[32];
-    unsigned char identity_session_id[32];
 
     bool reversed;
     bool due_to_send_new_dh;
@@ -59,6 +65,10 @@ private:
 
     //methods
     void set_up_initial_state_for_initiator(const unsigned char* recipient_signed_public);
+    // Overload for initiator: pass ephemeral pub/priv
+    void set_up_initial_state_for_initiator(const unsigned char* recipient_signed_public,
+                                            const unsigned char* my_ephemeral_public,
+                                            std::shared_ptr<SecureMemoryBuffer> my_ephemeral_private);
     void set_up_initial_state_for_recipient(const unsigned char* initiator_ephemeral_public);
     void set_up_initial_chain_keys();
     void generate_new_local_dh_keypair();
@@ -73,7 +83,7 @@ private:
     //serialisation
     void serialise(std::ostream& os) const;
     void deserialise(std::istream &in);
-    void save();
+
     friend class DoubleRatchetTest_Serialisation_Test;
     friend class DoubleRatchetTest_SavingAndLoadingFromDB_Test;
 };

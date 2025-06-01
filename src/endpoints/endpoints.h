@@ -5,7 +5,8 @@
 #include <array>
 #include "src/algorithms/constants.h"
 #include "src/keys/secure_memory_buffer.h"
-#include "src/sessions/IdentityManager.h"
+#include "src/key_exchange/MessageStructs.h"
+#include "src/sessions/KeyBundle.h"
 
 void post_register_user(
     const std::string &username,
@@ -32,11 +33,10 @@ std::string post_authenticate(
 );
 
 void post_ratchet_message(
-    const std::vector<std::tuple<IdentitySessionId&, DeviceMessage*>>
+    const std::vector<DeviceMessage*>
 );
 
 void post_handshake_device(
-    const IdentitySessionId& identity_session_id,
     const unsigned char *recipient_device_key_public,
     const unsigned char *recipient_signed_prekey_public,
     const unsigned char *recipient_signed_prekey_signature,
@@ -45,11 +45,13 @@ void post_handshake_device(
     const unsigned char *my_ephemeral_key_public
 );
 
-std::vector<std::tuple<IdentitySessionId, KeyBundle*>> get_handshake_backlog();
+// [ <username, keybundle (includes device id)> ]
+std::vector<std::tuple<std::string, KeyBundle*>> get_handshake_backlog();
 
-std::vector<std::tuple<IdentitySessionId, DeviceMessage*>> get_messages();
+// [ <username, message (includes device id) > ]
+std::vector<std::tuple<std::string, DeviceMessage*>> get_messages();
 
-void get_keybundles(const std::string &username);
+std::vector<KeyBundle*> get_keybundles(const std::string &username);
 
 void post_new_keybundles(
     std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,

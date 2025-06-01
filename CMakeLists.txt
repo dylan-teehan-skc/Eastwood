@@ -24,24 +24,19 @@ FetchContent_Declare(
         DOWNLOAD_EXTRACT_TIMESTAMP true
 )
 FetchContent_MakeAvailable(json)
-# Enable testing and find GTest
 
+# Fetch GoogleTest - following official guide
 FetchContent_Declare(
         googletest
-        URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
+        URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz
 )
-
-# Make the content available
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+# Enable testing - following official guide
 enable_testing()
 include(GoogleTest)
-# Fetch GoogleTest
-FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
-        DOWNLOAD_EXTRACT_TIMESTAMP true
-)
 
 # Fetch QR Code Generator
 FetchContent_Declare(
@@ -50,10 +45,7 @@ FetchContent_Declare(
         GIT_TAG master
 )
 
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-FetchContent_MakeAvailable(googletest qrcodegen)
+FetchContent_MakeAvailable(qrcodegen)
 
 # Find pkg-config and SQLCipher
 find_package(PkgConfig REQUIRED)
@@ -122,6 +114,8 @@ set(FRONTEND_SOURCES
         src/ui/windows/settings/settings.cpp
         src/ui/windows/settings/settings.h
         src/ui/windows/settings/settings.ui
+        src/sessions/RatchetSessionManager.cpp
+        src/sessions/RatchetSessionManager.h
         src/ui/utils/qr_code_generation/QRCodeGenerator.cpp
         src/ui/utils/qr_code_generation/QRCodeGenerator.h
         src/ui/utils/camera_functionality/camera_functionality.cpp
@@ -157,8 +151,6 @@ set(AUTH_SOURCES
         src/auth/register_device/register_device.cpp
         src/auth/login/login.cpp
         src/sessions/KeyBundle.h
-        src/sessions/IdentitySession.cpp
-        src/sessions/IdentityManager.cpp
         src/files/upload_file.cpp
         src/auth/salt.cpp
         src/key_exchange/MessageStructs.h
@@ -210,19 +202,18 @@ target_link_libraries(Eastwood PRIVATE
         OpenSSL::Crypto
         nlohmann_json::nlohmann_json
         ${SQLCIPHER_LIBRARIES}
-        ${GTEST_LIBRARIES}
         ${OpenCV_LIBS}
 )
 
 # Create test executable
 add_executable(EastwoodTests
         test/double_ratchet_test.cpp
+        test/identity_session_test.cpp
         ${CRYPTO_SOURCES}
         src/database/database.cpp
         src/sessions/KeyBundle.h
+        src/sessions/RatchetSessionManager.cpp
         src/keys/session_token_manager.h
-        src/sessions/IdentityManager.cpp
-        src/sessions/IdentitySession.cpp
         src/endpoints/endpoints.cpp
 )
 
@@ -238,13 +229,12 @@ target_include_directories(EastwoodTests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/database
         ${CMAKE_CURRENT_SOURCE_DIR}/external/cereal/include
         ${CMAKE_CURRENT_SOURCE_DIR}/external/qrcodegen/cpp
-        ${GTEST_INCLUDE_DIRS}
 )
 
 # Link libraries using proper CMake targets
 target_link_libraries(EastwoodTests PRIVATE
-        GTest::gtest
-        GTest::gtest_main
+        gtest_main
+        gtest
         Qt6::Core
         Qt6::Gui
         Qt6::Widgets
