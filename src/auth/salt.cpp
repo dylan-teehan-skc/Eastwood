@@ -15,6 +15,7 @@ QString salt_path(const std::string &username) {
 
 void get_salt_from_file(const std::string &username, unsigned char salt[crypto_pwhash_SALTBYTES]) {
     const QString file_path = salt_path(username);
+    qDebug() << "Loading salt from file:" << file_path;
     QFile file(file_path);
     if (!file.open(QIODevice::ReadOnly)) {
         throw std::runtime_error("Failed to open file for reading:" + file.errorString().toStdString());
@@ -27,6 +28,7 @@ void get_salt_from_file(const std::string &username, unsigned char salt[crypto_p
 
 void save_salt_to_file(const std::string &username, unsigned char salt[crypto_pwhash_SALTBYTES]) {
     const QString file_path = salt_path(username);
+    qDebug() << "Saving salt to file:" << file_path;
     QFile file(file_path);
     if (!file.open(QIODevice::WriteOnly)) {
         throw std::runtime_error("Failed to open file for writing:" + file.errorString().toStdString());

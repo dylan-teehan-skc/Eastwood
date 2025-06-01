@@ -1,11 +1,7 @@
 #include "ui/windows/login/login.h"
-#include "ui/windows/received_dashboard/received_dash.h"
-#include "ui/windows/sent_dashboard/sent_dash.h"
 #include "./libraries/HTTPSClient.h"
-#include "ui/utils/window_manager/window_manager.h"
 #include <iostream>
 #define SQLITE_HAS_CODEC 1
-#include <QFile>
 #include <random>
 
 #include "auth/login/login.h"
@@ -17,9 +13,7 @@
 #include "endpoints/endpoints.h"
 #include "sql/queries.h"
 #include <memory>
-#include <QApplication>
-
-#include "files/upload_file.h"
+#include "src/auth/rotate_master_key/rotate_master_key.h"
 
 std::string generateRandomString(int length) {
     const std::string characters =
@@ -43,14 +37,13 @@ int main() {
         throw std::runtime_error("Libsodium initialization failed");
     }
 
-    constexpr bool encrypted = false;
+    constexpr bool encrypted = true;
     constexpr bool refresh_database = true;
 
+    const std::string username = generateRandomString(8);
     const auto master_key = SecureMemoryBuffer::create(MASTER_KEY_LEN);
     randombytes_buf(master_key->data(), MASTER_KEY_LEN);
-    Database::get().initialize("username", master_key, encrypted);
-
-    auto master_password = std::make_unique<std::string>("correct horse battery stapler");
+    Database::get().initialize(username, master_key, encrypted);
 
     if (refresh_database) drop_all_tables();
 
@@ -58,10 +51,11 @@ int main() {
 
     auto password = std::make_unique<const std::string>("password1234");
 
-    const std::string username = generateRandomString(8);
     register_user(username, password);
     register_first_device();
     login_user(username, password);
+    const std::string new_password = "even_stronger_password";
+    rotate_master_password(username, new_password);
     post_new_keybundles(
         get_decrypted_keypair("device"),
         generate_signed_prekey(),

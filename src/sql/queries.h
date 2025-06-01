@@ -60,7 +60,7 @@ inline void save_encrypted_keypair(
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
     db.prepare_or_throw(
-        "INSERT INTO keypairs (label, public_key, encrypted_private_key, nonce) VALUES (?, ?, ?, ?);", &stmt
+        "INSERT OR REPLACE INTO keypairs (label, public_key, encrypted_private_key, nonce) VALUES (?, ?, ?, ?);", &stmt
     );
     sqlite3_bind_text(stmt, 1, label.c_str(), static_cast<int>(label.length()), SQLITE_TRANSIENT);
     sqlite3_bind_blob(stmt, 2, public_key, crypto_sign_PUBLICKEYBYTES, SQLITE_TRANSIENT);
@@ -102,7 +102,7 @@ inline void save_encrypted_key(
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
     db.prepare_or_throw(
-        "INSERT INTO keys (label, encrypted_key, nonce) VALUES (?, ?, ?);", &stmt
+        "INSERT OR REPLACE INTO keys (label, encrypted_key, nonce) VALUES (?, ?, ?);", &stmt
     );
     sqlite3_bind_text(stmt, 1, label.c_str(), static_cast<int>(label.length()), SQLITE_TRANSIENT);
     sqlite3_bind_blob(stmt, 2, encrypted_key->data(), encrypted_key->size(), SQLITE_TRANSIENT);

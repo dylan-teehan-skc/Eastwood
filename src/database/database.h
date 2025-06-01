@@ -30,6 +30,8 @@ public:
     // Throws std::runtime_error on error or if statement is not a SELECT
     QVector<QVariantMap> query(sqlite3_stmt *stmt) const;
 
+    void rotate_master_password(const std::unique_ptr<SecureMemoryBuffer> &new_master_key) const;
+
 private:
     Database();
     ~Database();
