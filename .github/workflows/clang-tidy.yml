@@ -3,6 +3,12 @@ name: Clang-Tidy on PR Files Only
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - '**/*.cpp'
+      - '**/*.h'
+      - '**/*.hpp'
+      - '**/*.cc'
+      - '**/*.cxx'
 
 permissions:
   contents: read
@@ -19,14 +25,21 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install dependencies
+    - name: Cache APT packages
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt/archives
+        key: apt-${{ runner.os }}-${{ hashFiles('.github/workflows/clang-tidy.yml') }}
+
+    - name: Install clang-tidy and minimal build deps
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-tidy cmake build-essential qt6-base-dev libssl-dev \
-          qt6-tools-dev qt6-tools-dev-tools libxkbcommon-dev libsodium-dev libvulkan-dev libsqlcipher-dev qt6-svg-dev libgtest-dev
-        sudo apt-get install -y libqt6core6 libqt6gui6 libqt6widgets6 libqt6uitools6 libqt6svg6
+        sudo apt-get install -y --no-install-recommends \
+          clang-tidy cmake build-essential qt6-base-dev libssl-dev qt6-tools-dev \
+          qt6-tools-dev-tools libxkbcommon-dev libsodium-dev libvulkan-dev \
+          libsqlcipher-dev qt6-svg-dev libgtest-dev libopencv-dev
 
-    - name: Configure and build project with CMake
+    - name: Configure and build with CMake
       run: |
         mkdir -p build
         cd build
@@ -44,17 +57,16 @@ jobs:
           echo "changed_files=$CHANGED_FILES_ESCAPED" >> $GITHUB_OUTPUT
         else
           echo "files_found=false" >> $GITHUB_OUTPUT
-          echo "changed_files=" >> $GITHUB_OUTPUT
         fi
 
-    - name: Check if any files were found
+    - name: Exit if no C++ files changed
       if: steps.changed-files.outputs.files_found == 'false'
       run: echo "No C++ files changed in this PR."
 
-    - name: Run clang-tidy on changed files
+    - name: Run clang-tidy
       if: steps.changed-files.outputs.files_found == 'true'
       run: |
-        echo "Changed files: ${{ steps.changed-files.outputs.changed_files }}"
+        echo "Running clang-tidy on: ${{ steps.changed-files.outputs.changed_files }}"
         clang-tidy -p build ${{ steps.changed-files.outputs.changed_files }} > build/tidy-report.txt 2>&1 || true
         cat build/tidy-report.txt
 
@@ -99,12 +111,12 @@ jobs:
           > 💡 Tip: Run this locally and inspect the diffs before committing.
 
           </details>`
-                        : '## ✅ Clang-Tidy Report\n\nNo issues found in the changed files! 🎉';
+              : '## ✅ Clang-Tidy Report\n\nNo issues found in the changed files! 🎉';
 
-                      github.rest.issues.createComment({
-                        issue_number: context.issue.number,
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        body
-                      });
-                    }
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+          }

@@ -59,14 +59,11 @@ void Login::onLoginButtonClicked()
 
     login_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
     WindowManager::instance().showReceived();
-    hide();
-
 }
 
 void Login::onRegisterButtonClicked()
 {
     WindowManager::instance().showRegister();
-    hide();
 }
 
 void Login::onTogglePassphraseClicked()

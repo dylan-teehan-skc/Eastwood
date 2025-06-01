@@ -7,6 +7,14 @@
 #include "src/auth/login/login.h"
 #include "src/auth/register_device/register_device.h"
 #include "src/utils/JsonParser.h"
+#include <QScreen>
+#include <QApplication>
+#include <sodium.h>
+#include <QByteArray>
+#include "src/key_exchange/utils.h"
+#include "src/ui/utils/qr_code_generation/QRCodeGenerator.h"
+#include "src/keys/secure_memory_buffer.h"
+
 #include <QtConcurrent>
 
 Register::Register(QWidget *parent)
@@ -14,6 +22,12 @@ Register::Register(QWidget *parent)
       , ui(new Ui::Register) {
     ui->setupUi(this);
     setupConnections();
+
+    QScreen *screen = QApplication::primaryScreen();
+    QRect screenGeometry = screen->geometry();
+    int x = (screenGeometry.width() - width()) / 2;
+    int y = (screenGeometry.height() - height()) / 2;
+    move(x, y);
 }
 
 Register::~Register() {
@@ -24,6 +38,7 @@ void Register::setupConnections() {
     connect(ui->loginButton, &QPushButton::clicked, this, &Register::onLoginButtonClicked);
     connect(ui->togglePassphraseButton, &QPushButton::clicked, this, &Register::onTogglePassphraseClicked);
     connect(ui->registerButton, &QPushButton::clicked, this, &Register::onRegisterButtonClicked);
+    connect(ui->deviceRegisterButton, &QPushButton::clicked, this, &Register::onDeviceRegisterButtonClicked);
 
     connect(this, &Register::registrationSuccess, this, &Register::onRegistrationSuccess);
     connect(this, &Register::registrationError, this, &Register::onRegistrationError);
@@ -33,7 +48,6 @@ void Register::onRegistrationSuccess() {
     ui->registerButton->setText("Register");
     ui->registerButton->setEnabled(true);
     WindowManager::instance().showReceived();
-    hide();
 }
 
 void Register::onRegistrationError(const QString& title, const QString& message) {
@@ -119,7 +133,8 @@ void Register::onRegisterButtonClicked() {
 
 void Register::onLoginButtonClicked() {
     WindowManager::instance().showLogin();
-    hide();
+
+
 }
 
 void Register::onTogglePassphraseClicked() {
@@ -127,4 +142,30 @@ void Register::onTogglePassphraseClicked() {
     ui->passphraseEdit->setEchoMode(m_passphraseVisible ? QLineEdit::Normal : QLineEdit::Password);
     ui->confirmPassphraseEdit->setEchoMode(m_passphraseVisible ? QLineEdit::Normal : QLineEdit::Password);
     ui->togglePassphraseButton->setText(m_passphraseVisible ? "Hide" : "Show");
+}
+
+void Register::onDeviceRegisterButtonClicked()
+{
+    if (sodium_init() < 0) {
+        throw std::runtime_error("Libsodium initialization failed");
+    }
+
+    unsigned char pk_device[crypto_sign_PUBLICKEYBYTES];
+    auto sk_device = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
+
+    crypto_sign_keypair(pk_device, sk_device->data());
+    std::string auth_code = bin2base64(pk_device, crypto_sign_PUBLICKEYBYTES);
+    QImage qr_code = getQRCodeForMyDevicePublicKey(auth_code);
+
+    if (auth_code.empty()) {
+        StyledMessageBox::error(this, "Device Registration Failed", "Failed to generate authentication code");
+        return;
+    }
+
+    if (qr_code.isNull()) {
+        StyledMessageBox::error(this, "Device Registration Failed", "Failed to generate QR code");
+        return;
+    }
+
+    WindowManager::instance().showDeviceRegister(auth_code, qr_code);
 }

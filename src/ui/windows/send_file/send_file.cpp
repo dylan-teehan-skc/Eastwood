@@ -109,7 +109,6 @@ void SendFile::onReceivedButtonClicked() {
     ui->filePathInput->clear();
     ui->fileDetailsLabel->clear();
     WindowManager::instance().showReceived();
-    hide();
 }
 
 void SendFile::onSentButtonClicked() {
@@ -117,7 +116,6 @@ void SendFile::onSentButtonClicked() {
     ui->filePathInput->clear();
     ui->fileDetailsLabel->clear();
     WindowManager::instance().showSent();
-    hide();
 }
 
 // navbar button
@@ -132,7 +130,6 @@ void SendFile::onSettingsButtonClicked() {
     ui->fileDetailsLabel->clear();
     ui->usernameInput->clear();
     WindowManager::instance().showSettings();
-    hide();
 }
 
 void SendFile::onWindowShown(const QString &windowName) {

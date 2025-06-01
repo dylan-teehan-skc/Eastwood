@@ -25,6 +25,20 @@ inline std::string hex2bin(const unsigned char* hex, const size_t len) {
     return std::string(bin);
 }
 
+inline std::string bin2base64(const unsigned char* data, size_t len) {
+    // Calculate the max base64 length
+    size_t b64_maxlen = sodium_base64_ENCODED_LEN(len, sodium_base64_VARIANT_ORIGINAL);
+    std::string b64(b64_maxlen, '\0');
+    sodium_bin2base64(
+        &b64[0], b64_maxlen,
+        data, len,
+        sodium_base64_VARIANT_ORIGINAL
+    );
+    // Remove any trailing nulls
+    b64.resize(strlen(b64.c_str()));
+    return b64;
+}
+
 // Convert base64 string to binary data
 inline std::vector<unsigned char> base642bin(const std::string& base64_str) {
     static const unsigned char base64_lookup[] = {

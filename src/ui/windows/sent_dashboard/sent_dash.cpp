@@ -325,20 +325,17 @@ void Sent::navigateTo(QWidget* newWindow)
 void Sent::onReceivedButtonClicked()
 {
     WindowManager::instance().showReceived();
-    hide();
 }
 
 // navbar button
 void Sent::onSendFileButtonClicked()
 {
     WindowManager::instance().showSendFile();
-    hide();
 }
 
 void Sent::onSettingsButtonClicked()
 {
     WindowManager::instance().showSettings();
-    hide();
 }
 
 void Sent::onLogoutButtonClicked()

@@ -88,7 +88,6 @@ void Received::navigateTo(QWidget* newWindow)
 void Received::onSendButtonClicked()
 {
     WindowManager::instance().showSendFile();
-    hide();
 }
 
 void Received::onFileItemClicked(FileItemWidget* widget)
@@ -99,13 +98,11 @@ void Received::onFileItemClicked(FileItemWidget* widget)
 void Received::onSentButtonClicked()
 {
     WindowManager::instance().showSent();
-    hide();
 }
 
 void Received::onSettingsButtonClicked()
 {
-    WindowManager::instance().showSettings();
-    hide();
+    WindowManager::instance().showSettings(); 
 }
 
 void Received::showFileMetadata(FileItemWidget* widget)
@@ -127,7 +124,6 @@ void Received::sendFileToUser(const QString& username, const QString& fileId)
 void Received::onSendFileButtonClicked()
 {
     WindowManager::instance().showSendFile();
-    hide();
 }
 
 void Received::onWindowShown(const QString& windowName)
@@ -141,7 +137,7 @@ void Received::onWindowShown(const QString& windowName)
 
 void Received::onLogoutButtonClicked()
 {
-    StyledMessageBox::info(this, "Not Implemented", "Logout functionality is not yet implemented.");
+    WindowManager::instance().showLogin();
 }
 
 void Received::onDownloadFileClicked(FileItemWidget* widget)
