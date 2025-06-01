@@ -15,10 +15,6 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets UiTools Concurrent)
 find_package(OpenSSL REQUIRED)
 find_package(OpenCV REQUIRED)
 
-# Enable testing and find GTest
-enable_testing()
-find_package(GTest REQUIRED)
-include(GoogleTest)
 
 # Add nlohmann_json
 include(FetchContent)
@@ -28,19 +24,30 @@ FetchContent_Declare(
         DOWNLOAD_EXTRACT_TIMESTAMP true
 )
 FetchContent_MakeAvailable(json)
+# Enable testing and find GTest
 
+FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
+)
+
+# Make the content available
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+include(GoogleTest)
 # Fetch GoogleTest
 FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
-    DOWNLOAD_EXTRACT_TIMESTAMP true
+        googletest
+        URL https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
+        DOWNLOAD_EXTRACT_TIMESTAMP true
 )
 
 # Fetch QR Code Generator
 FetchContent_Declare(
-    qrcodegen
-    GIT_REPOSITORY https://github.com/nayuki/QR-Code-generator.git
-    GIT_TAG master
+        qrcodegen
+        GIT_REPOSITORY https://github.com/nayuki/QR-Code-generator.git
+        GIT_TAG master
 )
 
 # For Windows: Prevent overriding the parent project's compiler/linker settings
@@ -171,9 +178,9 @@ add_executable(Eastwood
 # I hope this works nially
 if(APPLE)
     set_target_properties(Eastwood PROPERTIES
-        MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
-        MACOSX_BUNDLE_ENTITLEMENTS ${CMAKE_CURRENT_SOURCE_DIR}/Eastwood.entitlements
+            MACOSX_BUNDLE TRUE
+            MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
+            MACOSX_BUNDLE_ENTITLEMENTS ${CMAKE_CURRENT_SOURCE_DIR}/Eastwood.entitlements
     )
 endif()
 
@@ -235,8 +242,8 @@ target_include_directories(EastwoodTests PRIVATE
 
 # Link libraries using proper CMake targets
 target_link_libraries(EastwoodTests PRIVATE
-        GTest::GTest
-        GTest::Main
+        GTest::gtest
+        GTest::gtest_main
         Qt6::Core
         Qt6::Gui
         Qt6::Widgets
