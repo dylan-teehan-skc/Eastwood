@@ -10,6 +10,8 @@ public:
     SecureMemoryBuffer* getKEK() const;
     bool isLoaded() const;
 
+    void unload();
+
     // Non-copyable
     KekManager(const KekManager&) = delete;
     KekManager& operator=(const KekManager&) = delete;

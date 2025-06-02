@@ -17,4 +17,8 @@ SecureMemoryBuffer* KekManager::getKEK() const {
 
 bool KekManager::isLoaded() const {
     return kek_ != nullptr;
-} 
+}
+
+void KekManager::unload() {
+    kek_.reset();
+}

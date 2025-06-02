@@ -8,6 +8,8 @@
 #include <QTimer>
 #include <QCheckBox>
 
+#include "src/auth/logout.h"
+
 Received::Received(QWidget *parent, QWidget* sendFileWindow)
     : QWidget(parent)
     , ui(new Ui::Received)
@@ -137,6 +139,7 @@ void Received::onWindowShown(const QString& windowName)
 
 void Received::onLogoutButtonClicked()
 {
+    logout();
     WindowManager::instance().showLogin();
 }
 

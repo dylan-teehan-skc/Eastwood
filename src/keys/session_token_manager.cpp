@@ -27,4 +27,9 @@ const std::string& SessionTokenManager::getUsername() const {
 
 bool SessionTokenManager::hasToken() const {
     return has_token_;
-} 
+}
+
+void SessionTokenManager::clearToken() {
+    token_.clear();
+    has_token_ = false;
+}
