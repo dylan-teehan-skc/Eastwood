@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QStyle>
 #include <QPixmap>
+#include <QInputDialog>
 
 class StyledMessageBox {
 public:
@@ -133,8 +134,8 @@ public:
         
         return msgBox.exec() == QMessageBox::Yes;
     }
-
-    static bool confirmDialog(QWidget* parent, const QString& title, const QString& text) {
+    
+    static bool connectionRequest(QWidget* parent, const QString& title, const QString& text, QString& deviceName) {
         QMessageBox msgBox(QMessageBox::Question, title, text, 
                           QMessageBox::Yes | QMessageBox::No, parent);
         applyStyle(&msgBox);
@@ -178,7 +179,62 @@ public:
             }
         }
         
-        return msgBox.exec() == QMessageBox::Yes;
+        if (msgBox.exec() == QMessageBox::Yes) {
+            bool ok;
+            QInputDialog inputDialog(parent);
+            inputDialog.setWindowTitle("New Device");
+            inputDialog.setLabelText("Enter a name for this device:");
+            inputDialog.setTextValue("");
+            inputDialog.setStyleSheet(R"(
+                QInputDialog {
+                    background-color: #f5f6fa;
+                    font-family: 'Helvetica Neue', Arial, sans-serif;
+                }
+                QInputDialog QLabel {
+                    color: #2d3436;
+                    font-size: 14px;
+                    padding: 10px;
+                }
+                QInputDialog QLineEdit {
+                    padding: 8px 12px;
+                    font-size: 14px;
+                    border-radius: 6px;
+                    background-color: white;
+                    border: 1px solid #dfe6e9;
+                    color: #2d3436;
+                    margin: 4px 0;
+                    min-height: 20px;
+                }
+                QInputDialog QLineEdit:focus {
+                    border: 2px solid #6c5ce7;
+                }
+                QInputDialog QPushButton {
+                    background-color: #6c5ce7;
+                    color: white;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    font-weight: bold;
+                    min-width: 80px;
+                    font-size: 13px;
+                    margin: 5px;
+                }
+                QInputDialog QPushButton:hover {
+                    background-color: #5049c9;
+                }
+                QInputDialog QPushButton:pressed {
+                    background-color: #4040b0;
+                }
+            )");
+            
+            ok = inputDialog.exec();
+            deviceName = inputDialog.textValue();
+            
+            if (ok && !deviceName.isEmpty()) {
+                return true;
+            }
+            return false;
+        }
+        return false;
     }
 };
 

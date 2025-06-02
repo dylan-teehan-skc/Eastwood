@@ -7,13 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>440</width>
-    <height>800</height>
+    <height>750</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>440</width>
-    <height>800</height>
+    <height>750</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -286,35 +286,6 @@ QLineEdit:focus {
     </spacer>
    </item>
    <item>
-    <widget class="QPushButton" name="loginButton">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>54</height>
-      </size>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QPushButton {
-  font-size: 16px;
-  font-weight: bold;
-  border-radius: 10px;
-  color: #6c5ce7;
-  background-color: white;
-  border: 2px solid #6c5ce7;
-}
-QPushButton:hover {
-  background-color: #f5f3ff;
-}
-QPushButton:pressed {
-  background-color: #eeeaff;
-}</string>
-     </property>
-     <property name="text">
-      <string>Already have an account? Login</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QPushButton" name="registerButton">
      <property name="minimumSize">
       <size>
@@ -340,23 +311,6 @@ QPushButton:pressed {
      </property>
      <property name="text">
       <string>Create Account</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="passphraseWarningLabel">
-     <property name="styleSheet">
-      <string notr="true">color:rgb(198, 36, 18); font-size: 10px; margin-left: 5px; margin-top: 3px; font-weight: bold; letter-spacing: 0.3px;</string>
-     </property>
-     <property name="text">
-      <string>Ensure you remember your passphrase
-It cannot be recovered</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
     </widget>
    </item>
@@ -413,7 +367,7 @@ It cannot be recovered</string>
     </layout>
    </item>
    <item>
-    <widget class="QPushButton" name="deviceRegisterButton">
+    <widget class="QPushButton" name="loginButton">
      <property name="minimumSize">
       <size>
        <width>0</width>
@@ -437,7 +391,24 @@ QPushButton:pressed {
 }</string>
      </property>
      <property name="text">
-      <string>Register a new device</string>
+      <string>Already have an account? Login</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="passphraseWarningLabel">
+     <property name="styleSheet">
+      <string notr="true">color:rgb(198, 36, 18); font-size: 10px; margin-left: 5px; margin-top: 3px; font-weight: bold; letter-spacing: 0.3px;</string>
+     </property>
+     <property name="text">
+      <string>Ensure you remember your passphrase
+It cannot be recovered</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
     </widget>
    </item>

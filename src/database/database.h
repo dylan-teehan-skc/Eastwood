@@ -32,6 +32,8 @@ public:
 
     void rotate_master_password(const std::unique_ptr<SecureMemoryBuffer> &new_master_key) const;
 
+    static bool user_has_database(std::string username);
+
 private:
     Database();
     ~Database();

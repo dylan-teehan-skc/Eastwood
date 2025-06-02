@@ -5,6 +5,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include "src/ui/utils/camera_functionality/camera_functionality.h"
+#include <QTimer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Settings; }
@@ -27,16 +28,22 @@ private slots:
     void onPassphraseCancelClicked();
     void onPassphraseSaveClicked();
     void onAuthCancelClicked();
-    void onAuthSaveClicked();
+    void onAuthVerifyClicked();
     void onSettingsButtonClicked();
     void onScanQRButtonClicked();
+    void onRefreshDevicesClicked();
+    void updateDeviceList();
 
 private:
     void setupConnections();
     void navigateTo(QWidget* newWindow);
+    void createDeviceBox(const std::string& deviceName);
+    void handleRefreshSpinner();
 
     Ui::Settings *ui;
     CameraFunctionality* m_cameraFunctionality;
+    QTimer* m_refreshSpinnerTimer;
+    int m_spinnerAngle;
 };
 
 #endif // SETTINGS_H

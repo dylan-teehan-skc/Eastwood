@@ -12,6 +12,27 @@
 
 using json = nlohmann::json;
 
+bool post_check_user_exists(const std::string& username, const unsigned char* pk_device) {
+    const json body = {
+        {"username", username},
+        {"device_public_key", bin2hex(pk_device, 32) }
+    };
+
+    json response = post_unauth("/isDeviceRegistered", body);
+    std::cout << "Response from server: " << response.dump(4) << std::endl;
+
+    if (!response.contains("data") || !response["data"].is_boolean()) {
+        throw std::runtime_error("Invalid or missing 'data' field in response");
+    }
+    return response["data"].get<bool>();
+}
+
+bool get_user_exists(const std::string& username) {
+    json response = get_unauth("/isUserRegistered/" + username);
+    std::cout << "Response from server: " << response.dump(4) << std::endl;
+    return response["data"].get<bool>();
+}
+
 void post_register_user(
     const std::string &username,
     const unsigned char pk_identity[crypto_sign_PUBLICKEYBYTES],
@@ -31,12 +52,14 @@ void post_register_user(
 void post_register_device(
     const unsigned char pk_id[crypto_sign_PUBLICKEYBYTES],
     const unsigned char pk_device[crypto_sign_PUBLICKEYBYTES],
-    const unsigned char pk_signature[crypto_sign_BYTES]
+    const unsigned char pk_signature[crypto_sign_BYTES],
+    const std::string &device_name
 ) {
     const json body = {
         {"identity_public", bin2hex(pk_id, crypto_sign_PUBLICKEYBYTES)},
         {"device_public", bin2hex(pk_device, crypto_sign_PUBLICKEYBYTES)},
-        {"signature", bin2hex(pk_signature, crypto_sign_BYTES)}
+        {"signature", bin2hex(pk_signature, crypto_sign_BYTES)},
+        {"device_name", device_name}
     };
     post_unauth("/registerDevice", body);
 };
@@ -372,4 +395,9 @@ std::string post_upload_file(std::vector<unsigned char> encrypted_bytes) {
 
     const json response = post("/uploadFile", body);
     return response["data"]["file_id"];
+}
+
+std::vector<std::string> get_devices() {
+    const json response = get("/getDevices");
+    return response["data"];
 }

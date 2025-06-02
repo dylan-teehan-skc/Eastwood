@@ -17,11 +17,16 @@
 #include <QPixmap>
 #include <QLabel>
 #include <QDebug>
+#include <QPainter>
+#include <QIcon>
+#include "src/endpoints/endpoints.h"
 
 Settings::Settings(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Settings)
     , m_cameraFunctionality(new CameraFunctionality(this))
+    , m_refreshSpinnerTimer(new QTimer(this))
+    , m_spinnerAngle(0)
 {
     ui->setupUi(this);
     setupConnections();
@@ -29,6 +34,9 @@ Settings::Settings(QWidget *parent)
     // Connect WindowManager signal to handle navbar highlighting
     connect(&WindowManager::instance(), &WindowManager::windowShown,
             this, &Settings::onWindowShown);
+
+    // Setup refresh spinner timer
+    connect(m_refreshSpinnerTimer, &QTimer::timeout, this, &Settings::handleRefreshSpinner);
 }
 
 Settings::~Settings()
@@ -49,7 +57,8 @@ void Settings::setupConnections()
 
     // Connect auth section buttons
     connect(ui->authCancelButton, &QPushButton::clicked, this, &Settings::onAuthCancelClicked);
-    connect(ui->authSaveButton, &QPushButton::clicked, this, &Settings::onAuthSaveClicked);
+    connect(ui->authSaveButton, &QPushButton::clicked, this, &Settings::onAuthVerifyClicked);
+    connect(ui->refreshDevicesButton, &QPushButton::clicked, this, &Settings::onRefreshDevicesClicked);
 
     // Connect NavBar signals
     NavBar* navbar = findChild<NavBar*>();
@@ -61,6 +70,9 @@ void Settings::setupConnections()
         connect(navbar, &NavBar::settingsClicked, this, &Settings::onSettingsButtonClicked);
     }
     connect(ui->scanQRButton, &QPushButton::clicked, this, &Settings::onScanQRButtonClicked);
+
+    // Initial device list update
+    updateDeviceList();
 }
 
 void Settings::validatePassphrase()
@@ -157,7 +169,7 @@ void Settings::onAuthCancelClicked()
     WindowManager::instance().showReceived();
 }
 
-void Settings::onAuthSaveClicked()
+void Settings::onAuthVerifyClicked()
 {
     QString auth_code = ui->authCodeInput->text().trimmed();
     
@@ -166,8 +178,10 @@ void Settings::onAuthSaveClicked()
         return;
     }
 
-    if (StyledMessageBox::confirmDialog(this, "Connection Request", 
-        "A new device wants to connect.\n\nEnsure you trust this device before accepting.\n\nDo you wish to accept this connection?")) {
+    QString deviceName;
+    if (StyledMessageBox::connectionRequest(this, "Connection Request", 
+        "A new device wants to connect.\n\nEnsure you trust this device before accepting.\n\nDo you wish to accept this connection?",
+        deviceName)) {
         
         std::vector<unsigned char> decoded_key = base642bin(auth_code.toStdString());
         if (decoded_key.size() != crypto_sign_PUBLICKEYBYTES) {
@@ -180,10 +194,10 @@ void Settings::onAuthSaveClicked()
         std::copy(decoded_key.begin(), decoded_key.end(), pk_new_device);
         
         try {
-            add_trusted_device(pk_new_device);
+            add_trusted_device(pk_new_device, deviceName.toStdString());
             StyledMessageBox::success(this, "Connection Accepted", 
-                "Connection request has been accepted.");
-            qDebug() << "Connection accepted with public key:" << auth_code;
+                QString("Connection request has been accepted for device: %1").arg(deviceName));
+            qDebug() << "Connection accepted with public key:" << auth_code << "and device name:" << deviceName;
         } catch (const std::exception& e) {
             StyledMessageBox::error(this, "Connection Failed", 
                 QString("Failed to add trusted device: %1").arg(e.what()));
@@ -203,4 +217,83 @@ void Settings::onLogoutButtonClicked() {
 void Settings::onScanQRButtonClicked()
 {
     m_cameraFunctionality->showScanDialog();
+}
+
+void Settings::createDeviceBox(const std::string& deviceName)
+{
+    QWidget* deviceBox = new QWidget();
+    deviceBox->setStyleSheet(R"(
+        QWidget {
+            background-color: white;
+            border: 1px solid #dfe6e9;
+            border-radius: 6px;
+            padding: 8px;
+        }
+    )");
+
+    QHBoxLayout* layout = new QHBoxLayout(deviceBox);
+    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setSpacing(8);
+
+    QLabel* deviceLabel = new QLabel(QString::fromStdString(deviceName));
+    deviceLabel->setStyleSheet("font-size: 14px; color: #2d3436;");
+    layout->addWidget(deviceLabel);
+
+    ui->deviceListWidgetLayout->addWidget(deviceBox);
+}
+
+void Settings::updateDeviceList()
+{
+    // Clear existing device boxes
+    QLayoutItem* item;
+    while ((item = ui->deviceListWidgetLayout->takeAt(0)) != nullptr) {
+        delete item->widget();
+        delete item;
+    }
+
+    // Get and display devices
+    std::vector<std::string> devices = get_devices();
+    qDebug() << "Number of devices received:" << devices.size();
+    qDebug() << "Devices:";
+    for (const auto& device : devices) {
+        qDebug() << "Device:" << QString::fromStdString(device);
+        createDeviceBox(device);
+    }
+
+    // Add a spacer at the bottom
+    ui->deviceListWidgetLayout->addStretch();
+}
+
+void Settings::handleRefreshSpinner()
+{
+    m_spinnerAngle = (m_spinnerAngle + 30) % 360;
+    
+    // Update the button's icon with the new angle
+    QPixmap pixmap(16, 16);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.translate(8, 8);
+    painter.rotate(m_spinnerAngle);
+    painter.setPen(QPen(QColor("#6c5ce7"), 2));
+    painter.drawLine(0, -6, 0, 6);
+    painter.drawLine(-6, 0, 6, 0);
+    ui->refreshDevicesButton->setIcon(QIcon(pixmap));
+    ui->refreshDevicesButton->setIconSize(QSize(16, 16));
+}
+
+void Settings::onRefreshDevicesClicked()
+{
+    // Start the spinner animation
+    m_spinnerAngle = 0;
+    m_refreshSpinnerTimer->start(50); // Update every 50ms
+    
+    // Update the device list
+    updateDeviceList();
+    
+    // Stop the spinner after 1 second
+    QTimer::singleShot(1000, [this]() {
+        m_refreshSpinnerTimer->stop();
+        ui->refreshDevicesButton->setIcon(QIcon());
+    });
 }

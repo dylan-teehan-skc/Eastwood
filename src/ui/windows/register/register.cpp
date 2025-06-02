@@ -38,7 +38,6 @@ void Register::setupConnections() {
     connect(ui->loginButton, &QPushButton::clicked, this, &Register::onLoginButtonClicked);
     connect(ui->togglePassphraseButton, &QPushButton::clicked, this, &Register::onTogglePassphraseClicked);
     connect(ui->registerButton, &QPushButton::clicked, this, &Register::onRegisterButtonClicked);
-    connect(ui->deviceRegisterButton, &QPushButton::clicked, this, &Register::onDeviceRegisterButtonClicked);
 
     connect(this, &Register::registrationSuccess, this, &Register::onRegistrationSuccess);
     connect(this, &Register::registrationError, this, &Register::onRegistrationError);
@@ -133,8 +132,6 @@ void Register::onRegisterButtonClicked() {
 
 void Register::onLoginButtonClicked() {
     WindowManager::instance().showLogin();
-
-
 }
 
 void Register::onTogglePassphraseClicked() {
@@ -142,30 +139,4 @@ void Register::onTogglePassphraseClicked() {
     ui->passphraseEdit->setEchoMode(m_passphraseVisible ? QLineEdit::Normal : QLineEdit::Password);
     ui->confirmPassphraseEdit->setEchoMode(m_passphraseVisible ? QLineEdit::Normal : QLineEdit::Password);
     ui->togglePassphraseButton->setText(m_passphraseVisible ? "Hide" : "Show");
-}
-
-void Register::onDeviceRegisterButtonClicked()
-{
-    if (sodium_init() < 0) {
-        throw std::runtime_error("Libsodium initialization failed");
-    }
-
-    unsigned char pk_device[crypto_sign_PUBLICKEYBYTES];
-    auto sk_device = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
-
-    crypto_sign_keypair(pk_device, sk_device->data());
-    std::string auth_code = bin2base64(pk_device, crypto_sign_PUBLICKEYBYTES);
-    QImage qr_code = getQRCodeForMyDevicePublicKey(auth_code);
-
-    if (auth_code.empty()) {
-        StyledMessageBox::error(this, "Device Registration Failed", "Failed to generate authentication code");
-        return;
-    }
-
-    if (qr_code.isNull()) {
-        StyledMessageBox::error(this, "Device Registration Failed", "Failed to generate QR code");
-        return;
-    }
-
-    WindowManager::instance().showDeviceRegister(auth_code, qr_code);
 }

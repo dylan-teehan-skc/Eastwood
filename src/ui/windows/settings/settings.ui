@@ -481,19 +481,145 @@ QPushButton:pressed {
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="qrCodeLabel">
+           <widget class="QWidget" name="deviceListContainer" native="true">
             <property name="minimumSize">
              <size>
-              <width>200</width>
-              <height>200</height>
+              <width>0</width>
+              <height>150</height>
              </size>
             </property>
             <property name="styleSheet">
-             <string notr="true">background-color: #f8f9fa; border-radius: 6px;</string>
+             <string notr="true">QWidget#deviceListContainer {
+  background-color: #f8f9fa;
+  border: 1px solid #dfe6e9;
+  border-radius: 6px;
+}</string>
             </property>
-            <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignCenter</set>
-            </property>
+            <layout class="QVBoxLayout" name="deviceListLayout">
+             <property name="spacing">
+              <number>10</number>
+             </property>
+             <property name="leftMargin">
+              <number>10</number>
+             </property>
+             <property name="topMargin">
+              <number>10</number>
+             </property>
+             <property name="rightMargin">
+              <number>10</number>
+             </property>
+             <property name="bottomMargin">
+              <number>10</number>
+             </property>
+             <item>
+              <layout class="QHBoxLayout" name="deviceListHeaderLayout">
+               <item>
+                <widget class="QLabel" name="deviceListTitle">
+                 <property name="styleSheet">
+                  <string notr="true">font-size: 14px; font-weight: bold; color: #2d3436;</string>
+                 </property>
+                 <property name="text">
+                  <string>Connected Devices</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="deviceListSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Orientation::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QPushButton" name="refreshDevicesButton">
+                 <property name="minimumSize">
+                  <size>
+                   <width>100</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">QPushButton {
+  font-size: 12px;
+  font-weight: bold;
+  color: #6c5ce7;
+  background-color: white;
+  border: 2px solid #6c5ce7;
+  border-radius: 6px;
+}
+QPushButton:hover {
+  background-color: #f5f3ff;
+}
+QPushButton:pressed {
+  background-color: #eeeaff;
+}</string>
+                 </property>
+                 <property name="text">
+                  <string>Refresh</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QScrollArea" name="deviceScrollArea">
+               <property name="widgetResizable">
+                <bool>true</bool>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QScrollArea {
+  border: none;
+  background-color: transparent;
+}
+QScrollArea > QWidget > QWidget {
+  background-color: transparent;
+}
+QScrollBar:vertical {
+  border: none;
+  background: #f8f9fa;
+  width: 8px;
+  margin: 0px;
+}
+QScrollBar::handle:vertical {
+  background: #b2bec3;
+  min-height: 20px;
+  border-radius: 4px;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+  height: 0px;
+}</string>
+               </property>
+               <widget class="QWidget" name="deviceListWidget" native="true">
+                <property name="styleSheet">
+                 <string notr="true">background-color: transparent;</string>
+                </property>
+                <layout class="QVBoxLayout" name="deviceListWidgetLayout">
+                 <property name="spacing">
+                  <number>8</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                </layout>
+               </widget>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
           <item>

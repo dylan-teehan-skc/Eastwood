@@ -26,7 +26,6 @@ private slots:
     void onRegisterButtonClicked();
     void onLoginButtonClicked();
     void onTogglePassphraseClicked();
-    void onDeviceRegisterButtonClicked();
     void onRegistrationSuccess();
     void onRegistrationError(const QString& title, const QString& message);
 

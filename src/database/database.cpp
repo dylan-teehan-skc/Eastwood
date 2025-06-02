@@ -170,3 +170,12 @@ void Database::rotate_master_password(const std::unique_ptr<SecureMemoryBuffer> 
         throw std::runtime_error("Password rotation verification failed: " + err);
     }
 }
+
+bool Database::user_has_database(std::string username) {
+    const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    const QString dbPathEncrypted = dataPath + "/" + QString::fromStdString(username) + "-encrypted.db";
+    const QString dbPath = dataPath + "/" + QString::fromStdString(username) + "-db.db";
+
+    return QFile::exists(dbPath) || QFile::exists(dbPathEncrypted);
+}
+

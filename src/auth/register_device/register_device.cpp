@@ -10,7 +10,7 @@
 #include "src/utils/ConversionUtils.h"
 #include "src/database/database.h"
 
-void add_trusted_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES]) {
+void add_trusted_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES], const std::string &device_name) {
     qDebug() << "Registering device";
     if (sodium_init() < 0) {
         throw std::runtime_error("Libsodium initialization failed");
@@ -34,7 +34,7 @@ void add_trusted_device(unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES])
     crypto_sign_detached(pk_signature, nullptr, pk_new_device, crypto_sign_PUBLICKEYBYTES, sk_identity->data());
 
     try {
-        post_register_device(q_byte_array_to_chars(pk_identity), pk_new_device, pk_signature);
+        post_register_device(q_byte_array_to_chars(pk_identity), pk_new_device, pk_signature, device_name);
     } catch (const std::exception& e) {
         qDebug() << "Failed to register device:" << e.what();
         throw std::runtime_error("Failed to register device with server");
@@ -52,5 +52,5 @@ void register_first_device() {
 
     const auto esk_device = encrypt_secret_key(sk_device, nonce);
     save_encrypted_keypair("device", pk_device, esk_device, nonce);
-    add_trusted_device(pk_device);
+    add_trusted_device(pk_device, "Primary Device");
 }
