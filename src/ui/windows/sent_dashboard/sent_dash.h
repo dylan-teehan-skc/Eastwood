@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <QListWidget>
 #include <QListWidgetItem>
-#include "../../utils/file_item_widget/file_item_widget.h"
+#include "src/ui/utils/file_item_widget/file_item_widget.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Sent; }

@@ -6,6 +6,7 @@
 #include <QList>
 #include <QWidget>
 #include <QPointer>
+#include "src/keys/secure_memory_buffer.h"
 
 // Forward declarations to reduce includes
 class Received;
@@ -28,7 +29,9 @@ public:
     void showSettings();
     void showLogin();
     void showRegister();
-    void showDeviceRegister(const std::string& auth_code, const QImage& qr_code, unsigned char* pk_dev);
+    void showDeviceRegister(const std::string& auth_code, const QImage& qr_code, 
+                           unsigned char* pk_dev, std::unique_ptr<SecureMemoryBuffer> sk_dev,
+                           const std::string& username);
     void cleanup();
 
 signals:

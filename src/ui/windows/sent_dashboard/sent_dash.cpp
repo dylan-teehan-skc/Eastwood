@@ -1,8 +1,8 @@
 #include "sent_dash.h"
 #include "ui_sent_dash.h"
-#include "../../utils/messagebox.h"
-#include "../../utils/window_manager/window_manager.h"
-#include "../../utils/navbar/navbar.h"
+#include "src/ui/utils/messagebox.h"
+#include "src/ui/utils/window_manager/window_manager.h"
+#include "src/ui/utils/navbar/navbar.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileInfo>
@@ -12,6 +12,10 @@
 #include <QScrollArea>
 #include <QTimer>
 #include <QCheckBox>
+
+#include "src/auth/logout.h"
+#include "src/keys/session_token_manager.h"
+#include "src/keys/kek_manager.h"
 
 // Sent implementation
 Sent::Sent(QWidget *parent, QWidget* receivedWindow)
@@ -41,8 +45,8 @@ void Sent::setupConnections()
     if (navbar) {
         connect(navbar, &NavBar::sendFileClicked, this, &Sent::onSendFileButtonClicked);
         connect(navbar, &NavBar::settingsClicked, this, &Sent::onSettingsButtonClicked);
-        connect(navbar, &NavBar::logoutClicked, this, &Sent::onLogoutButtonClicked);
         connect(navbar, &NavBar::receivedClicked, this, &Sent::onReceivedButtonClicked);
+        connect(navbar, &NavBar::logoutClicked, this, &Sent::onLogoutButtonClicked);
     }
     
     // Connect the send button
@@ -338,12 +342,13 @@ void Sent::onSettingsButtonClicked()
     WindowManager::instance().showSettings();
 }
 
-void Sent::onLogoutButtonClicked()
-{
-    StyledMessageBox::info(this, "Not Implemented", "Logout functionality is not yet implemented.");
-}
-
 void Sent::onDownloadFileClicked(FileItemWidget* widget)
 {
     StyledMessageBox::info(this, "Not Implemented", "Download functionality is not yet implemented.");
+}
+
+void Sent::onLogoutButtonClicked() {
+    logout();
+    // Show login window
+    WindowManager::instance().showLogin();
 }

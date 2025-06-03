@@ -23,7 +23,6 @@ private slots:
     void onReceivedButtonClicked();
     void onSentButtonClicked();
     void onSendFileButtonClicked();
-    void onLogoutButtonClicked();
     void validatePassphrase();
     void onPassphraseCancelClicked();
     void onPassphraseSaveClicked();
@@ -33,6 +32,7 @@ private slots:
     void onScanQRButtonClicked();
     void onRefreshDevicesClicked();
     void updateDeviceList();
+    void onLogoutButtonClicked();
 
 private:
     void setupConnections();

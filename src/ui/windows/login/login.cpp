@@ -11,6 +11,8 @@
 #include <sodium.h>
 #include <QDebug>
 #include "src/database/database.h"
+#include "src/auth/set_up_client.h"
+#include <QInputDialog>
 
 Login::Login(QWidget *parent)
     : QWidget(parent)
@@ -37,17 +39,99 @@ void Login::setupConnections()
     connect(ui->togglePassphraseButton, &QPushButton::clicked, this, &Login::onTogglePassphraseClicked);
 }
 
-void Login::onContinueButtonClicked()
-{
-    QString username = ui->usernameEdit->text();
-    
+bool Login::validateUsername(const QString& username) {
     if (username.isEmpty()) {
         StyledMessageBox::warning(this, "Error", "Please enter a username");
-        return;
+        return false;
     }
 
     if (username.length() < 3) {
         StyledMessageBox::warning(this, "Error", "Username must be at least 3 characters long");
+        return false;
+    }
+
+    return true;
+}
+
+QString Login::getAndValidatePassword() {
+    bool passwordAccepted;
+    QString password = QInputDialog::getText(this, "Set Password", 
+        "Enter a password (20-64 characters):", 
+        QLineEdit::Password, "", &passwordAccepted);
+    
+    if (!passwordAccepted || password.isEmpty()) {
+        StyledMessageBox::error(this, "Error", "Password is required");
+        return QString();
+    }
+
+    if (password.length() < 20) {
+        StyledMessageBox::error(this, "Error", "Password must be at least 20 characters long");
+        return QString();
+    }
+
+    if (password.length() > 64) {
+        StyledMessageBox::error(this, "Error", "Password cannot be longer than 64 characters");
+        return QString();
+    }
+
+    QString verifyPassword = QInputDialog::getText(this, "Verify Password", 
+        "Enter the password again:", 
+        QLineEdit::Password, "", &passwordAccepted);
+    
+    if (!passwordAccepted || verifyPassword.isEmpty()) {
+        StyledMessageBox::error(this, "Error", "Password verification is required");
+        return QString();
+    }
+
+    if (password != verifyPassword) {
+        StyledMessageBox::error(this, "Error", "Passwords do not match");
+        return QString();
+    }
+
+    return password;
+}
+
+std::tuple<std::string, QImage, std::array<unsigned char, crypto_sign_PUBLICKEYBYTES>, std::unique_ptr<SecureMemoryBuffer>> Login::setupDeviceRegistration() {
+    if (sodium_init() < 0) {
+        throw std::runtime_error("Libsodium initialization failed");
+    }
+
+    std::array<unsigned char, crypto_sign_PUBLICKEYBYTES> pk_device;
+    auto sk_device = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
+
+    crypto_sign_keypair(pk_device.data(), sk_device->data());
+    std::string auth_code = bin2base64(pk_device.data(), crypto_sign_PUBLICKEYBYTES);
+    QImage qr_code = getQRCodeForMyDevicePublicKey(bin2base64(pk_device.data(), 32));
+
+    if (auth_code.empty()) {
+        throw std::runtime_error("Failed to generate authentication code");
+    }
+
+    if (qr_code.isNull()) {
+        throw std::runtime_error("Failed to generate QR code");
+    }
+
+    return std::make_tuple(std::move(auth_code), std::move(qr_code), std::move(pk_device), std::move(sk_device));
+}
+
+void Login::initializeDatabase(const std::string& username, const QString& password, 
+                             std::array<unsigned char, crypto_sign_PUBLICKEYBYTES>& pk_device, 
+                             std::unique_ptr<SecureMemoryBuffer>& sk_device) {
+    auto master_password = std::make_unique<std::string>(password.toStdString());
+    set_up_client_for_user(username, std::move(master_password));
+
+    // Save the device keypair to the database
+    unsigned char nonce[CHA_CHA_NONCE_LEN];
+    randombytes_buf(nonce, CHA_CHA_NONCE_LEN);
+    const auto esk_device = encrypt_secret_key(sk_device, nonce);
+    save_encrypted_keypair("device", pk_device.data(), esk_device, nonce);
+}
+
+void Login::onContinueButtonClicked()
+{
+    QString username = ui->usernameEdit->text();
+    
+    if (!validateUsername(username)) {
         return;
     }
 
@@ -60,29 +144,10 @@ void Login::onContinueButtonClicked()
             showPassphraseStage();
         } else if (existsOnServer) {
             qDebug() << "User exists on server but no local database - register new device";
-            // User exists on server but no local database - register new device
-            if (sodium_init() < 0) {
-                throw std::runtime_error("Libsodium initialization failed");
-            }
-
-            unsigned char pk_device[crypto_sign_PUBLICKEYBYTES];
-            const auto sk_device = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
-
-            crypto_sign_keypair(pk_device, sk_device->data());
-            std::string auth_code = bin2base64(pk_device, crypto_sign_PUBLICKEYBYTES);
-            QImage qr_code = getQRCodeForMyDevicePublicKey(bin2base64(pk_device, 32));
-
-            if (auth_code.empty()) {
-                StyledMessageBox::error(this, "Device Registration Failed", "Failed to generate authentication code");
-                return;
-            }
-
-            if (qr_code.isNull()) {
-                StyledMessageBox::error(this, "Device Registration Failed", "Failed to generate QR code");
-                return;
-            }
-
-            WindowManager::instance().showDeviceRegister(auth_code, qr_code, pk_device);
+            
+            auto [auth_code, qr_code, pk_device, sk_device] = setupDeviceRegistration();
+            
+            WindowManager::instance().showDeviceRegister(auth_code, qr_code, pk_device.data(), std::move(sk_device), username.toStdString());
         } else {
             qDebug() << "User doesn't exist - go straight to register";
             WindowManager::instance().showRegister();

@@ -9,7 +9,6 @@ public:
     void setKEK(std::unique_ptr<SecureMemoryBuffer> kek);
     SecureMemoryBuffer* getKEK() const;
     bool isLoaded() const;
-
     void unload();
 
     // Non-copyable
