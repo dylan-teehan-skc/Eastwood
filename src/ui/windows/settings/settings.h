@@ -17,6 +17,7 @@ class Settings : public QWidget {
 public:
     explicit Settings(QWidget *parent = nullptr);
     ~Settings() override;
+    bool handleDeviceConnection(const QString& publicKey);
 
 private slots:
     void onWindowShown(const QString& windowName) const;

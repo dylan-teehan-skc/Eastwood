@@ -17,6 +17,10 @@
 
 #include <QtConcurrent>
 
+#include "src/algorithms/algorithms.h"
+#include "src/endpoints/endpoints.h"
+#include "src/sql/queries.h"
+
 Register::Register(QWidget *parent)
     : QWidget(parent)
       , ui(new Ui::Register) {
@@ -111,7 +115,14 @@ void Register::onRegisterButtonClicked() {
         try {
             register_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
             register_first_device();
-            login_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
+            login_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()), false);
+
+            auto signed_prekey = generate_signed_prekey();
+            post_new_keybundles(
+                get_decrypted_keypair("device"),
+                &signed_prekey,
+                generate_onetime_keys(50)
+                );
             emit registrationSuccess();
 
         } catch (const webwood::HttpError &e) {

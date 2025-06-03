@@ -5,6 +5,7 @@
 #include <iostream>
 #include "src/key_exchange/utils.h"
 #include <sodium.h>
+#include "src/ui/windows/settings/settings.h"
 
 CameraFunctionality::CameraFunctionality(QWidget* parent)
     : QObject(parent)
@@ -173,46 +174,9 @@ void CameraFunctionality::processFrame()
                 }
                 
                 if (!safeDecodedInfo.isEmpty()) {
-                    QString deviceName;
-                    if (StyledMessageBox::connectionRequest(m_parent, "Connection Request", 
-                        "A new device wants to connect.\n\nEnsure you trust this device before accepting.\n\nDo you wish to accept this connection?",
-                        deviceName)) {
-                        
-                        try {                            
-                            qDebug() << "safe decoded info" << safeDecodedInfo;
-                            unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES];
-                            size_t bin_len;
-                            if (sodium_base642bin(pk_new_device, crypto_sign_PUBLICKEYBYTES,
-                                                safeDecodedInfo.toStdString().c_str(), safeDecodedInfo.length(),
-                                                nullptr, &bin_len, nullptr,
-                                                sodium_base64_VARIANT_ORIGINAL) != 0) {
-                                StyledMessageBox::error(m_parent, "Invalid Key", 
-                                    "The scanned QR code contains an invalid public key.");
-                                return;
-                            }
-                            if (bin_len != crypto_sign_PUBLICKEYBYTES) {
-                                StyledMessageBox::error(m_parent, "Invalid Key", 
-                                    "The scanned QR code contains an invalid public key.");
-                                return;
-                            }
-
-                            add_trusted_device(pk_new_device, deviceName.toStdString());
-                            StyledMessageBox::success(m_parent, "Connection Accepted", 
-                                QString("Connection request has been accepted for device: %1").arg(deviceName));
-                            qDebug() << "Connection accepted with public key:" << safeDecodedInfo << "and device name:" << deviceName;
-                        } catch (const std::runtime_error& e) {
-                            StyledMessageBox::error(m_parent, "Connection Failed", 
-                                QString("Failed to add trusted device: %1").arg(e.what()));
-                            qDebug() << "Connection failed:" << e.what();
-                        } catch (const std::exception& e) {
-                            StyledMessageBox::error(m_parent, "Connection Failed", 
-                                QString("An unexpected error occurred: %1").arg(e.what()));
-                            qDebug() << "Unexpected error:" << e.what();
-                        }
-                    } else {
-                        StyledMessageBox::info(m_parent, "Connection Denied", 
-                            "Connection request has been denied.");
-                        qDebug() << "Connection denied";
+                    Settings* settings = qobject_cast<Settings*>(m_parent);
+                    if (settings) {
+                        settings->handleDeviceConnection(safeDecodedInfo);
                     }
                 } else {
                     StyledMessageBox::error(m_parent, "QR Code Error", 

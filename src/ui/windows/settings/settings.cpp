@@ -183,6 +183,11 @@ void Settings::onAuthVerifyClicked()
         return;
     }
 
+    handleDeviceConnection(auth_code);
+}
+
+bool Settings::handleDeviceConnection(const QString& publicKey)
+{
     QString deviceName;
     if (StyledMessageBox::connectionRequest(this, "Connection Request",
         "A new device wants to connect.\n\nEnsure you trust this device before accepting.\n\nDo you wish to accept this connection?",
@@ -192,23 +197,24 @@ void Settings::onAuthVerifyClicked()
             unsigned char pk_new_device[crypto_sign_PUBLICKEYBYTES];
             size_t bin_len;
             if (sodium_base642bin(pk_new_device, crypto_sign_PUBLICKEYBYTES,
-                                auth_code.toStdString().c_str(), auth_code.length(),
+                                publicKey.toStdString().c_str(), publicKey.length(),
                                 nullptr, &bin_len, nullptr,
                                 sodium_base64_VARIANT_ORIGINAL) != 0) {
                 StyledMessageBox::error(this, "Invalid Key",
                     "The authentication code contains an invalid public key.");
-                return;
+                return false;
             }
             if (bin_len != crypto_sign_PUBLICKEYBYTES) {
                 StyledMessageBox::error(this, "Invalid Key",
                     "The authentication code contains an invalid public key.");
-                return;
+                return false;
             }
 
             add_trusted_device(pk_new_device, deviceName.toStdString());
             StyledMessageBox::success(this, "Connection Accepted",
                 QString("Connection request has been accepted for device: %1").arg(deviceName));
-            qDebug() << "Connection accepted with public key:" << auth_code << "and device name:" << deviceName;
+            qDebug() << "Connection accepted with public key:" << publicKey << "and device name:" << deviceName;
+            return true;
         } catch (const std::runtime_error& e) {
             StyledMessageBox::error(this, "Connection Failed",
                 QString("Failed to add trusted device: %1").arg(e.what()));
@@ -223,6 +229,7 @@ void Settings::onAuthVerifyClicked()
             "Connection request has been denied.");
         qDebug() << "Connection denied";
     }
+    return false;
 }
 
 void Settings::onScanQRButtonClicked()

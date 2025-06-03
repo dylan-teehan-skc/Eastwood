@@ -391,30 +391,56 @@ std::vector<std::tuple<std::string, KeyBundle *> > get_handshake_backlog() {
 // Version with signed prekey (original behavior)
 void post_new_keybundles(
     std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
-    std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > signed_prekeypair,
+    std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > *signed_prekeypair,
     const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &otks
 ) {
-    auto [pk_signed, sk_signed] = std::move(signed_prekeypair);
     auto [pk_device_q, sk_device] = std::move(device_keypair);
 
-    //sign the public key with device key
-    unsigned char signature[crypto_sign_BYTES];
-    crypto_sign_detached(signature, nullptr, pk_signed, crypto_sign_PUBLICKEYBYTES, sk_device->data());
-
-    // Convert signature to hex string
-    std::string signature_hex = bin2hex(signature, crypto_sign_BYTES);
-    std::string signed_prekey_pub_hex = bin2hex(pk_signed, crypto_box_PUBLICKEYBYTES);
-
-    // Create JSON payload
+    // Create JSON payload with one-time keys
     json body = {
-        {"signedpre_key", signed_prekey_pub_hex},
-        {"signedpk_signature", signature_hex},
         {"one_time_keys", json::array()}
     };
+
+    std::cout << "DEBUG: post_new_keybundles called" << std::endl;
+    std::cout << "DEBUG: signed_prekeypair pointer = " << (signed_prekeypair ? "NOT NULL" : "NULL") << std::endl;
+
+    // Only include signed prekey if pointer is not nullptr
+    if (signed_prekeypair != nullptr) {
+        auto [pk_signed, sk_signed] = std::move(*signed_prekeypair);
+        
+        std::cout << "DEBUG: pk_signed pointer = " << (pk_signed ? "NOT NULL" : "NULL") << std::endl;
+        if (pk_signed) {
+            std::cout << "DEBUG: pk_signed value = " << bin2hex(pk_signed, 32) << std::endl;
+        }
+        
+        // Only sign if pk_signed is not nullptr
+        if (pk_signed != nullptr) {
+            std::cout << "DEBUG: Adding signed prekey to JSON body" << std::endl;
+            
+            //sign the public key with device key
+            unsigned char signature[crypto_sign_BYTES];
+            crypto_sign_detached(signature, nullptr, pk_signed, crypto_sign_PUBLICKEYBYTES, sk_device->data());
+
+            // Convert signature to hex string
+            std::string signature_hex = bin2hex(signature, crypto_sign_BYTES);
+            std::string signed_prekey_pub_hex = bin2hex(pk_signed, crypto_box_PUBLICKEYBYTES);
+
+            body["signedpre_key"] = signed_prekey_pub_hex;
+            body["signedpk_signature"] = signature_hex;
+            
+            std::cout << "DEBUG: signed_prekey_pub_hex = " << signed_prekey_pub_hex << std::endl;
+        } else {
+            std::cout << "DEBUG: pk_signed is NULL, not adding to body" << std::endl;
+        }
+    } else {
+        std::cout << "DEBUG: signed_prekeypair is NULL, not adding to body" << std::endl;
+    }
 
     for (const auto &[pk, sk, nonce]: otks) {
         body["one_time_keys"].push_back(bin2hex(pk, crypto_box_PUBLICKEYBYTES));
     }
+    
+    std::cout << "DEBUG: Final JSON body = " << body.dump() << std::endl;
     post("/updateKeybundle", body);
 }
 
