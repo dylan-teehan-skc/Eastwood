@@ -205,6 +205,7 @@ void Login::showPassphraseStage() const {
     ui->togglePassphraseButton->show();
     ui->loginButton->show();
     ui->continueButton->hide();
+    ui->logoLabel->hide();
     ui->passphraseEdit->setFocus();
 }
 
@@ -213,5 +214,6 @@ void Login::showUsernameStage() const {
     ui->togglePassphraseButton->hide();
     ui->loginButton->hide();
     ui->continueButton->show();
+    ui->logoLabel->show();
     ui->usernameEdit->setFocus();
 } 

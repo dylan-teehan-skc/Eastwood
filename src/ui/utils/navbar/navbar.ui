@@ -45,19 +45,27 @@
       <widget class="QLabel" name="logoLabel">
        <property name="minimumSize">
         <size>
-         <width>30</width>
-         <height>30</height>
+         <width>40</width>
+         <height>40</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>30</width>
-         <height>30</height>
+         <width>40</width>
+         <height>40</height>
         </size>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: #6c5ce7;
-border-radius: 6px;</string>
+        <string notr="true">border-radius: 6px;</string>
+       </property>
+       <property name="pixmap">
+        <pixmap resource="../../../resources.qrc">:/icons/logos/LogoNightwood.png</pixmap>
+       </property>
+       <property name="scaledContents">
+        <bool>true</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
        </property>
        <property name="text">
         <string/>
