@@ -605,7 +605,6 @@ inline std::vector<std::tuple<std::string, std::string, std::array<unsigned char
                 q_byte_array_to_chars(encrypted_key),
                 q_byte_array_to_chars(key_nonce)
             );
-            
             auto decrypted_message = decrypt_bytes(
                 encrypted_message,
                 decrypted_key,
@@ -620,6 +619,73 @@ inline std::vector<std::tuple<std::string, std::string, std::array<unsigned char
         }
     }
     
+    return result;
+}
+
+// Function to get all ratchets from database
+inline std::vector<std::tuple<std::string, std::array<unsigned char, 32>, std::vector<unsigned char>>> get_all_decrypted_ratchets() {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+
+    // Get all ratchets
+    db.prepare_or_throw(
+        "SELECT username, device_id, encrypted_data, nonce FROM ratchets;", &stmt
+    );
+
+    auto rows = db.query(stmt);
+    std::vector<std::tuple<std::string, std::array<unsigned char, 32>, std::vector<unsigned char>>> result;
+
+    for (const auto& row : rows) {
+        std::string username = row["username"].toString().toStdString();
+        QByteArray device_id_bytes = row["device_id"].toByteArray();
+        QByteArray encrypted_data = row["encrypted_data"].toByteArray();
+        QByteArray ratchet_nonce = row["nonce"].toByteArray();
+
+        // Convert device_id to array
+        std::array<unsigned char, 32> device_id;
+        if (device_id_bytes.size() == 32) {
+            std::memcpy(device_id.data(), device_id_bytes.constData(), 32);
+        } else {
+            continue; // Skip invalid device_id
+        }
+
+        // Get the corresponding key - create a fresh statement for each query
+        sqlite3_stmt *key_stmt;
+        try {
+            db.prepare_or_throw(
+                "SELECT encrypted_key, nonce FROM ratchet_keys WHERE username = ? AND device_id = ?;", &key_stmt
+            );
+            sqlite3_bind_text(key_stmt, 1, username.c_str(), static_cast<int>(username.length()), SQLITE_TRANSIENT);
+            sqlite3_bind_blob(key_stmt, 2, device_id.data(), 32, SQLITE_TRANSIENT);
+
+            auto key_rows = db.query(key_stmt);
+            if (key_rows.empty()) {
+                continue; // Skip if no key found
+            }
+
+            const auto &key_row = key_rows[0];
+            QByteArray encrypted_key = key_row["encrypted_key"].toByteArray();
+            QByteArray key_nonce = key_row["nonce"].toByteArray();
+
+            auto decrypted_key = decrypt_symmetric_key(
+                q_byte_array_to_chars(encrypted_key),
+                q_byte_array_to_chars(key_nonce)
+            );
+
+            auto decrypted_ratchet = decrypt_bytes(
+                encrypted_data,
+                decrypted_key,
+                std::vector<unsigned char>(ratchet_nonce.begin(), ratchet_nonce.end())
+            );
+
+            result.emplace_back(username, device_id, decrypted_ratchet);
+        } catch (const std::exception& e) {
+            // Skip this ratchet if decryption fails
+            std::cerr << "Failed to decrypt ratchet for user " << username << ": " << e.what() << std::endl;
+            continue;
+        }
+    }
+
     return result;
 }
 

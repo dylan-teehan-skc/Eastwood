@@ -10,6 +10,7 @@
 #include "src/key_exchange/utils.h"
 #include <sodium.h>
 #include <memory>
+#include <iostream>
 
 // other key is initiator ephemeral for recipient
 // other key is receiver signed prekey for initiator
@@ -339,6 +340,7 @@ void NewRatchet::deserialise(std::istream &in) {
 
     uint32_t skipped_count;
     in.read((char*)&skipped_count, sizeof(skipped_count));
+    
     skipped_keys.clear();
     for (uint32_t i = 0; i < skipped_count; ++i) {
         int key;
