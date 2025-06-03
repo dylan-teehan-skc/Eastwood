@@ -103,6 +103,40 @@ inline void init_schema() {
     BEGIN
         UPDATE ratchet_keys SET last_modified = CURRENT_TIMESTAMP WHERE label = OLD.label;
     END;
+
+CREATE TABLE IF NOT EXISTS received_messages (
+        username       TEXT,
+        from_device_id BLOB,
+        nonce         BLOB UNIQUE,
+        encrypted_message         BLOB UNIQUE,
+        file_uuid TEXT PRIMARY KEY,
+        created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_modified DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TRIGGER IF NOT EXISTS received_messages_last_modified_trigger
+    AFTER UPDATE ON received_messages
+    FOR EACH ROW
+    BEGIN
+        UPDATE received_messages SET last_modified = CURRENT_TIMESTAMP WHERE label = OLD.label;
+    END;
+
+    CREATE TABLE IF NOT EXISTS received_message_keys (
+        username TEXT,
+        device_id       BLOB,
+        nonce         BLOB UNIQUE,
+        encrypted_key         BLOB UNIQUE,
+        file_uuid TEXT PRIMARY KEY
+        created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_modified DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TRIGGER IF NOT EXISTS received_message_keys_last_modified_trigger
+    AFTER UPDATE ON receive_message_keys
+    FOR EACH ROW
+    BEGIN
+        UPDATE receive_message_keys SET last_modified = CURRENT_TIMESTAMP WHERE label = OLD.label;
+    END;
 )sql";
 
     const auto &db = Database::get();
