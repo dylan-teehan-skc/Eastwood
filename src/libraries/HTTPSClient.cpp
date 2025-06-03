@@ -69,6 +69,7 @@ std::string HTTPSClient::formatHeaders(const std::string &headers) {
 
 std::string HTTPSClient::get(const std::string &host, const std::string &path, std::string &port,
                              const std::string &headers) {
+    enforceRateLimit(host);
     int sock_fd = create_socket(host.c_str(), port.c_str());
     if (sock_fd < 0) {
         return "Socket connection closed / lost";
@@ -168,6 +169,7 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, c
 
 std::string HTTPSClient::post(const std::string &host, const std::string &path, const std::string &headers,
                               const std::string &body) {
+    enforceRateLimit(host);
     int sock_fd = create_socket(host.c_str(), defaultPort(true).c_str());
     if (sock_fd < 0) {
         return "Socket connection failed";
@@ -223,6 +225,7 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
 std::string HTTPSClient::post(const std::string &host, const std::string &path, const std::string &headers,
                               const std::string &body, const std::string &port) {
+    enforceRateLimit(host);
     int sock_fd = create_socket(host.c_str(), port.c_str());
     if (sock_fd < 0) {
         return "Socket connection failed";
