@@ -77,7 +77,7 @@ int main() {
     qDebug() << "Registering second user's device";
     register_first_device();
     qDebug() << "Logging in second user";
-    login_user(username_1, password_1);
+    login_user(username_1, password_1, false);
     qDebug() << "Logging out second user";
     logout();
 
@@ -99,7 +99,7 @@ int main() {
 
     qDebug() << "Logging in first user with new password";
     const auto new_password_ptr = std::make_unique<const std::string>(new_password);
-    login_user(username, new_password_ptr);
+    login_user(username, new_password_ptr, false);
 
     qDebug() << "Registering second device for first user";
     const std::string new_device_name = "device 2";

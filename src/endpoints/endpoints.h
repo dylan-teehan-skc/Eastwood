@@ -65,12 +65,6 @@ void post_new_keybundles(
     const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &otks
 );
 
-// Overloaded versions - without signed prekey (new version)
-void post_new_keybundles(
-    std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
-    const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &otks
-);
-
 std::string post_upload_file(std::vector<unsigned char> encrypted_bytes);
 
 bool post_check_user_exists(

@@ -9,5 +9,4 @@
 #include <memory>
 
 void login_user(const std::string &username, const std::unique_ptr<const std::string> &master_password, bool post_new_keys = true);
-
 #endif //AUTH_LOGIN_H
