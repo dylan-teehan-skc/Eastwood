@@ -38,7 +38,8 @@ std::string post_authenticate(
 );
 
 void post_ratchet_message(
-    const std::vector<DeviceMessage*>
+    std::vector<std::tuple<std::array<unsigned char,32>, DeviceMessage*>>,
+    std::string username
 );
 
 void post_handshake_device(
@@ -46,7 +47,6 @@ void post_handshake_device(
     const unsigned char *recipient_signed_prekey_public,
     const unsigned char *recipient_signed_prekey_signature,
     const unsigned char *recipient_onetime_prekey_public,
-    const unsigned char *my_device_key_public,
     const unsigned char *my_ephemeral_key_public
 );
 
@@ -56,11 +56,18 @@ std::vector<std::tuple<std::string, KeyBundle*>> get_handshake_backlog();
 // [ <username, message (includes device id) > ]
 std::vector<std::tuple<std::string, DeviceMessage*>> get_messages();
 
-std::vector<KeyBundle*> get_keybundles(const std::string &username);
+std::vector<KeyBundle*> get_keybundles(const std::string &username, std::vector<std::array<unsigned char,32>> existing_device_ids);
 
+// Overloaded versions - with signed prekey (original signature)
 void post_new_keybundles(
     std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
     std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > signed_prekeypair,
+    const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &otks
+);
+
+// Overloaded versions - without signed prekey (new version)
+void post_new_keybundles(
+    std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
     const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &otks
 );
 

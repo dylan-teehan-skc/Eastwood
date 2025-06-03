@@ -6,7 +6,7 @@
 #include "src/algorithms/algorithms.h"
 #include "src/endpoints/endpoints.h"
 
-void upload_file(const std::string &file_path) {
+std::string upload_file(const std::string &file_path) {
     QFile file(file_path.c_str());
 
     if (!file.open(QIODevice::ReadOnly)) {
@@ -32,4 +32,6 @@ void upload_file(const std::string &file_path) {
 
     const auto encrypted_file_key = encrypt_symmetric_key(file_key, file_key_nonce);
     save_encrypted_file_key(file_uuid, encrypted_file_key, file_key_nonce);
+
+    return file_uuid;
 }

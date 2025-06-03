@@ -6,6 +6,8 @@
 #include <sstream>
 #include <cstring>
 
+#include "src/sql/queries.h"
+
 static std::string bin2hex(const unsigned char *bin, size_t len) {
     std::ostringstream oss;
     for (size_t i = 0; i < len; ++i)
@@ -20,8 +22,6 @@ unsigned char *x3dh_initiator(
     const unsigned char *recipient_signed_prekey_public,
     const unsigned char *recipient_onetime_prekey_public
 ) {
-    std::cout << "\n===== INITIATOR X3DH =====" << std::endl;
-
     constexpr size_t KEY_LEN = crypto_scalarmult_BYTES;
 
     unsigned char dh1[KEY_LEN], dh2[KEY_LEN], dh3[KEY_LEN], dh4[KEY_LEN];
@@ -30,6 +30,7 @@ unsigned char *x3dh_initiator(
     unsigned char my_id_x25519_sk[KEY_LEN];
     if (crypto_sign_ed25519_sk_to_curve25519(my_id_x25519_sk, my_identity_key_private->data()) != 0)
         throw std::runtime_error("Failed to convert my identity private key to X25519");
+    
     if (crypto_scalarmult(dh1, my_id_x25519_sk, recipient_signed_prekey_public) != 0)
         throw std::runtime_error("DH1 failed");
 
@@ -37,6 +38,7 @@ unsigned char *x3dh_initiator(
     unsigned char their_id_x25519_pk[KEY_LEN];
     if (crypto_sign_ed25519_pk_to_curve25519(their_id_x25519_pk, recipient_identity_key_public) != 0)
         throw std::runtime_error("Failed to convert recipient identity public key to X25519");
+    
     if (crypto_scalarmult(dh2, my_ephemeral_key_private.get()->data(), their_id_x25519_pk) != 0)
         throw std::runtime_error("DH2 failed");
 
@@ -61,8 +63,6 @@ unsigned char *x3dh_initiator(
     unsigned char *shared_secret = new unsigned char[KEY_LEN];
     crypto_generichash(shared_secret, KEY_LEN, ikm, sizeof(ikm), nullptr, 0);
 
-    std::cout << "\nFinal X3DH Shared Secret (Root Key): " << bin2hex(shared_secret, KEY_LEN) << std::endl;
-
     return shared_secret;
 }
 
@@ -73,8 +73,6 @@ unsigned char *x3dh_responder(
     std::unique_ptr<SecureMemoryBuffer> my_signed_prekey_private,
     std::unique_ptr<SecureMemoryBuffer> my_onetime_prekey_private
     ) {
-    std::cout << "\n===== RESPONDER X3DH =====" << std::endl;
-
     constexpr size_t KEY_LEN = crypto_scalarmult_BYTES;
 
     unsigned char dh1[KEY_LEN], dh2[KEY_LEN], dh3[KEY_LEN], dh4[KEY_LEN];
@@ -83,6 +81,7 @@ unsigned char *x3dh_responder(
     unsigned char their_id_x25519_pk[KEY_LEN];
     if (crypto_sign_ed25519_pk_to_curve25519(their_id_x25519_pk, initiator_identity_key_public) != 0)
         throw std::runtime_error("Failed to convert initiator identity public key to X25519");
+    
     if (crypto_scalarmult(dh1, my_signed_prekey_private->data(), their_id_x25519_pk) != 0)
         throw std::runtime_error("DH1 failed");
 
@@ -90,6 +89,7 @@ unsigned char *x3dh_responder(
     unsigned char my_id_x25519_sk[KEY_LEN];
     if (crypto_sign_ed25519_sk_to_curve25519(my_id_x25519_sk, my_identity_key_private->data()) != 0)
         throw std::runtime_error("Failed to convert my identity private key to X25519");
+    
     if (crypto_scalarmult(dh2, my_id_x25519_sk, initiator_ephemeral_key_public) != 0)
         throw std::runtime_error("DH2 failed");
 
@@ -113,8 +113,6 @@ unsigned char *x3dh_responder(
 
     unsigned char *shared_secret = new unsigned char[KEY_LEN];
     crypto_generichash(shared_secret, KEY_LEN, ikm, sizeof(ikm), nullptr, 0);
-
-    std::cout << "\nFinal X3DH Shared Secret (Root Key): " << bin2hex(shared_secret, KEY_LEN) << std::endl;
 
     return shared_secret;
 }

@@ -6,12 +6,20 @@
 
 #include "sodium.h"
 #include <cstring>
+#include <array>
+#include <string>
 
 struct MessageHeader {
-    unsigned char dh_public[crypto_kx_PUBLICKEYBYTES]; // Sender's current ratchet public key
-    int prev_chain_length;                             // Length of previous sending chain
-    int message_index;                                 // Message number in the chain
-    unsigned char device_id[crypto_box_PUBLICKEYBYTES]; // Fixed-size array for device ID
+    // Constructor to ensure proper initialization
+    MessageHeader() : dh_public{}, prev_chain_length(0), message_index(0), device_id{} {
+        memset(file_uuid, 0, sizeof(file_uuid));
+    }
+    
+    std::array<unsigned char, crypto_kx_PUBLICKEYBYTES> dh_public; // Sender's current ratchet public key
+    int prev_chain_length;                                         // Length of previous sending chain
+    int message_index;                                             // Message number in the chain
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> device_id; // Fixed-size array for device ID
+    char file_uuid[64]; // Fixed-size array instead of std::string
 };
 
 struct Message {
@@ -33,9 +41,12 @@ public:
     DeviceMessage(const DeviceMessage& other) {
         if (other.header) {
             header = new MessageHeader();
-            memcpy(header->dh_public, other.header->dh_public, crypto_kx_PUBLICKEYBYTES);
+            header->dh_public = other.header->dh_public;
             header->prev_chain_length = other.header->prev_chain_length;
             header->message_index = other.header->message_index;
+            header->device_id = other.header->device_id;
+            strncpy(header->file_uuid, other.header->file_uuid, sizeof(header->file_uuid) - 1);
+            header->file_uuid[sizeof(header->file_uuid) - 1] = '\0';
         } else {
             header = nullptr;
         }
@@ -66,9 +77,12 @@ public:
 
             if (other.header) {
                 header = new MessageHeader();
-                memcpy(header->dh_public, other.header->dh_public, crypto_kx_PUBLICKEYBYTES);
+                header->dh_public = other.header->dh_public;
                 header->prev_chain_length = other.header->prev_chain_length;
                 header->message_index = other.header->message_index;
+                header->device_id = other.header->device_id;
+                strncpy(header->file_uuid, other.header->file_uuid, sizeof(header->file_uuid) - 1);
+                header->file_uuid[sizeof(header->file_uuid) - 1] = '\0';
             } else {
                 header = nullptr;
             }

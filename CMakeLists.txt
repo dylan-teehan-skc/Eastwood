@@ -156,6 +156,7 @@ set(AUTH_SOURCES
         src/key_exchange/MessageStructs.h
         src/auth/set_up_client.cpp
         src/auth/rotate_master_key/rotate_master_key.cpp
+        src/sessions/RatchetSessionManager.cpp
 )
 
 # Create main executable

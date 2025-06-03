@@ -208,7 +208,7 @@ std::tuple<std::array<unsigned char,32>, MessageHeader*> NewRatchet::advance_sen
 unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
 
     // if new dh public
-    if (memcmp(remote_dh_public, header->dh_public, 32) != 0) {
+    if (memcmp(remote_dh_public, header->dh_public.data(), 32) != 0) {
         int skipped_count = receive_chain.index;
         // if we need to forward cache keys due to prev chain length being longer than expected
         for (int i = header->prev_chain_length; i < skipped_count; ++i) {
@@ -218,7 +218,7 @@ unsigned char* NewRatchet::advance_receive(const MessageHeader* header) {
             }
             skipped_keys[i] = key;
         }
-        memcpy(remote_dh_public, header->dh_public, 32);
+        memcpy(remote_dh_public, header->dh_public.data(), 32);
         dh_ratchet_step(true); // true as we received the new dh
         due_to_send_new_dh = true; // Next send should use new DH keys
     }
@@ -271,7 +271,7 @@ std::tuple<unsigned char*, MessageHeader*> NewRatchet::progress_sending_ratchet(
     const char *ctx = "DRSndKey"; // Use same context as in advance_send
 
     auto header = new MessageHeader();
-    memcpy(header->dh_public, local_dh_public, 32);
+    memcpy(header->dh_public.data(), local_dh_public, 32);
     header->message_index = send_chain.index;
     header->prev_chain_length = receive_chain.index; // Set previous chain length
 

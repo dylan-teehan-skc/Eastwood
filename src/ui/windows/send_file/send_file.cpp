@@ -14,8 +14,13 @@
 #include <QTimer>
 #include <QCheckBox>
 
+#include "src/endpoints/endpoints.h"
 #include "src/auth/logout.h"
 #include "src/files/upload_file.h"
+#include "src/keys/session_token_manager.h"
+#include "src/key_exchange/utils.h"
+#include "src/key_exchange/XChaCha20-Poly1305.h"
+#include "src/sessions/RatchetSessionManager.h"
 #include "src/sql/queries.h"
 #include "src/keys/session_token_manager.h"
 #include "src/keys/kek_manager.h"
@@ -96,7 +101,37 @@ void SendFile::onSendClicked() {
         return;
     }
 
-    upload_file(filePath.toStdString());
+    std::string uuid = upload_file(filePath.toStdString());
+    std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>, MessageHeader *>> keys_to_send_key = RatchetSessionManager::instance().get_keys_for_identity(ui->usernameInput->text().toStdString());
+
+    if (keys_to_send_key.size() > 0) {
+        std::vector<std::tuple<std::array<unsigned char,32>, DeviceMessage*>> messages;
+        for (const auto& pair : keys_to_send_key) {
+            const auto device_id = pair.first;
+            const auto& [key, message_header] = pair.second;
+
+            auto file_key = get_decrypted_file_key(uuid);
+            std::cout << "key used to encrypt file "<< bin2hex(file_key->data(),32) << std::endl;
+            auto message = new DeviceMessage();
+            message->header = message_header;
+            strncpy(message->header->file_uuid, uuid.c_str(), sizeof(message->header->file_uuid) - 1);
+            message->header->file_uuid[sizeof(message->header->file_uuid) - 1] = '\0';
+
+            // Encrypt the file key using the message key
+            std::vector<unsigned char> encrypted_data = encrypt_message_given_key(file_key->data(), file_key->size(), key.data());
+            message->length = encrypted_data.size();
+            message->ciphertext = new unsigned char[message->length];
+            memcpy(message->ciphertext, encrypted_data.data(), message->length);
+
+            messages.push_back(std::make_tuple(device_id, message));
+        }
+        post_ratchet_message(messages, SessionTokenManager::instance().getUsername());
+
+        // Clean up DeviceMessage objects after posting
+        for (auto [device_id, msg] : messages) {
+            delete msg;  // DeviceMessage destructor handles header and ciphertext cleanup
+        }
+    }
 
     StyledMessageBox::info(this, "File Sent", "File has been sent successfully!");
 }

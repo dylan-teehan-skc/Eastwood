@@ -7,7 +7,6 @@
 #include <QFileDialog>
 #include <QTimer>
 #include <QCheckBox>
-
 #include "src/auth/logout.h"
 
 Received::Received(QWidget *parent, QWidget* sendFileWindow)

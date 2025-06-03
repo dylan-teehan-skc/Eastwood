@@ -123,9 +123,11 @@ std::vector<std::tuple<std::string, DeviceMessage *> > get_messages() {
     for (const auto &message: response["data"]) {
         int ciphertext_length = message["ciphertext_length"].get<int>();
 
-        auto initator_dev_key = new unsigned char[crypto_box_PUBLICKEYBYTES];
-        auto new_dh_public = new unsigned char[crypto_box_PUBLICKEYBYTES];
-        auto ciphertext = new unsigned char[ciphertext_length];
+        // Validate ciphertext length
+        if (ciphertext_length <= 0 || ciphertext_length > 1024 * 1024) { // Max 1MB
+            std::cerr << "Invalid ciphertext length: " << ciphertext_length << std::endl;
+            continue;
+        }
 
         std::string username = message["username"].get<std::string>();
         std::string dev_key_str = message["initiator_device_public_key"].get<std::string>();
@@ -135,27 +137,42 @@ std::vector<std::tuple<std::string, DeviceMessage *> > get_messages() {
         int prev_chain_length = message["prev_chain_length"].get<int>();
         int message_index = message["message_index"].get<int>();
 
-        bool success = hex_to_bin(dev_key_str, initator_dev_key, crypto_box_PUBLICKEYBYTES) &&
-                       hex_to_bin(dh_pub_str, new_dh_public, crypto_box_PUBLICKEYBYTES) &&
-                       hex_to_bin(ciphertext_str, ciphertext, ciphertext_length);
+        // Validate hex string lengths before allocation
+        if (dev_key_str.length() != 64 || dh_pub_str.length() != 64) { // 32 bytes = 64 hex chars
+            std::cerr << "Invalid key hex string lengths" << std::endl;
+            continue;
+        }
+
+        if (ciphertext_str.length() != ciphertext_length * 2) { // Each byte = 2 hex chars
+            std::cerr << "Ciphertext length mismatch" << std::endl;
+            continue;
+        }
+
+        // Use fixed-size arrays instead of dynamic allocation
+        unsigned char initator_dev_key[32];
+        unsigned char new_dh_public[32];
+        auto ciphertext = std::make_unique<unsigned char[]>(ciphertext_length);
+
+        bool success = hex_to_bin(dev_key_str, initator_dev_key, 32) &&
+                       hex_to_bin(dh_pub_str, new_dh_public, 32) &&
+                       hex_to_bin(ciphertext_str, ciphertext.get(), ciphertext_length);
 
         if (!success) {
-            delete[] initator_dev_key;
-            delete[] new_dh_public;
-            delete[] ciphertext;
-            throw std::runtime_error("Failed to decode message data");
+            std::cerr << "Failed to decode message data" << std::endl;
+            continue;
         }
 
         DeviceMessage *msg = new DeviceMessage();
         MessageHeader *header = new MessageHeader();
 
-        memcpy(header->dh_public, new_dh_public, crypto_box_PUBLICKEYBYTES);
+        // Safe copy with correct size (both arrays are 32 bytes)
+        memcpy(header->dh_public.data(), new_dh_public, 32);
         header->message_index = message_index;
         header->prev_chain_length = prev_chain_length;
-        memcpy(header->device_id, initator_dev_key, crypto_box_PUBLICKEYBYTES);
+        memcpy(header->device_id.data(), initator_dev_key, 32);
 
         msg->header = header;
-        msg->ciphertext = ciphertext;
+        msg->ciphertext = ciphertext.release(); // Transfer ownership
         msg->length = ciphertext_length;
 
         messages.push_back(std::make_tuple(username, msg));
@@ -163,20 +180,21 @@ std::vector<std::tuple<std::string, DeviceMessage *> > get_messages() {
     return messages;
 }
 
-void post_ratchet_message(std::vector<DeviceMessage*> messages) {
+void post_ratchet_message(std::vector<std::tuple<std::array<unsigned char,32>, DeviceMessage*>> messages, std::string username) {
     json data = json::object();
     data["messages"] = json::array();
 
-    for (auto msg : messages) {
+    for (auto [recipient_dev_pub, msg] : messages) {
         const auto dev_pub = new unsigned char[crypto_box_PUBLICKEYBYTES];
         QByteArray dev_pub_byte = get_public_key("device");
         memcpy(dev_pub, dev_pub_byte.constData(), crypto_box_PUBLICKEYBYTES);
 
         json body = json::object();
-        body["file_id"] = 0; // update
-        body["initiator_device_public_key"] = bin2hex(dev_pub, crypto_box_PUBLICKEYBYTES);
-        body["recipient_device_public_key"] = bin2hex(msg->header->device_id, crypto_box_PUBLICKEYBYTES);
-        body["dh_public"] = bin2hex(msg->header->dh_public, crypto_box_PUBLICKEYBYTES);
+        body["file_id"] = std::string(msg->header->file_uuid);
+        body["username"] = SessionTokenManager::instance().getUsername();
+        body["initiator_device_public_key"] = bin2hex(dev_pub, 32);
+        body["recipient_device_public_key"] = bin2hex(recipient_dev_pub.data(), 32);
+        body["dh_public"] = bin2hex(msg->header->dh_public.data(), 32);
         body["prev_chain_length"] = msg->header->prev_chain_length;
         body["message_index"] = msg->header->message_index;
         body["ciphertext"] = bin2hex(msg->ciphertext, msg->length);
@@ -189,8 +207,18 @@ void post_ratchet_message(std::vector<DeviceMessage*> messages) {
     post("/sendMessage", data);
 }
 
-std::vector<KeyBundle*> get_keybundles(const std::string &username) {
-    json response = get("/keybundle/" + username);
+std::vector<KeyBundle*> get_keybundles(const std::string &username, std::vector<std::array<unsigned char,32>> existing_device_ids) {
+    json array_of_device_ids = json::array();
+
+    for (auto device_id : existing_device_ids) {
+        array_of_device_ids.push_back(bin2hex(device_id.data(), device_id.size()));
+    }
+
+    json body = {
+        {"existing_device_ids", array_of_device_ids}
+    };
+
+    json response = post("/keybundle/" + username, body);
 
     // Get my identity public key
     std::string my_identity_public_hex = response["data"]["identity_public_key"];
@@ -250,7 +278,7 @@ std::vector<KeyBundle*> get_keybundles(const std::string &username) {
             throw std::runtime_error("Failed to decode key bundle data");
         }
 
-        auto pk_eph = new unsigned char[crypto_sign_BYTES];
+        auto pk_eph = new unsigned char[crypto_box_PUBLICKEYBYTES];
         auto sk_buffer_eph = SecureMemoryBuffer::create(ENC_SECRET_KEY_LEN);
         crypto_box_keypair(pk_eph, sk_buffer_eph->data());
 
@@ -283,18 +311,19 @@ void post_handshake_device(
     const unsigned char *recipient_signed_prekey_public,
     const unsigned char *recipient_signed_prekey_signature,
     const unsigned char *recipient_onetime_prekey_public,
-    const unsigned char *my_device_key_public,
     const unsigned char *my_ephemeral_key_public
 ) {
+    auto my_device_key_public = get_public_key("device");
     json body = {
+        {"username", SessionTokenManager::instance().getUsername()},
         {"recipient_device_key", bin2hex(recipient_device_key_public, crypto_box_PUBLICKEYBYTES)},
         {"recipient_signed_public_prekey", bin2hex(recipient_signed_prekey_public, crypto_box_PUBLICKEYBYTES)},
         {
             "recipient_signed_public_prekey_signature",
-            bin2hex(recipient_signed_prekey_signature, crypto_box_PUBLICKEYBYTES)
+            bin2hex(recipient_signed_prekey_signature, crypto_sign_BYTES)
         },
         {"initiator_ephemeral_public_key", bin2hex(my_ephemeral_key_public, crypto_box_PUBLICKEYBYTES)},
-        {"initiator_device_public_key", bin2hex(my_device_key_public, crypto_box_PUBLICKEYBYTES)},
+        {"initiator_device_public_key", bin2hex(reinterpret_cast<const unsigned char *>(my_device_key_public.constData()), crypto_box_PUBLICKEYBYTES)},
     };
 
     // Only add one-time prekey if it exists
@@ -359,6 +388,7 @@ std::vector<std::tuple<std::string, KeyBundle *> > get_handshake_backlog() {
     return bundles;
 }
 
+// Version with signed prekey (original behavior)
 void post_new_keybundles(
     std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
     std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer> > signed_prekeypair,
@@ -379,6 +409,24 @@ void post_new_keybundles(
     json body = {
         {"signedpre_key", signed_prekey_pub_hex},
         {"signedpk_signature", signature_hex},
+        {"one_time_keys", json::array()}
+    };
+
+    for (const auto &[pk, sk, nonce]: otks) {
+        body["one_time_keys"].push_back(bin2hex(pk, crypto_box_PUBLICKEYBYTES));
+    }
+    post("/updateKeybundle", body);
+}
+
+// Version without signed prekey (new behavior)
+void post_new_keybundles(
+    std::tuple<QByteArray, std::unique_ptr<SecureMemoryBuffer> > device_keypair,
+    const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &otks
+) {
+    auto [pk_device_q, sk_device] = std::move(device_keypair);
+
+    // Create JSON payload with only one-time keys
+    json body = {
         {"one_time_keys", json::array()}
     };
 

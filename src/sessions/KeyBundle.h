@@ -7,10 +7,12 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
+#include <sstream>
 
 #include "src/key_exchange/NewRatchet.h"
 #include "src/key_exchange/x3dh.h"
 #include "src/sql/queries.h"
+#include "src/key_exchange/utils.h"
 
 enum Role {
     Initiator,
@@ -61,12 +63,36 @@ public:
     Role get_role() const override { return Role::Initiator; }
 
     unsigned char *get_shared_secret() override {
+        std::cout << "\n===== SENDING KEY BUNDLE DEBUG =====" << std::endl;
+        
+        // Get keys from database and show them
+        auto my_device_private_key = get_my_device_private();
+        auto my_device_public_key = get_public_key("device");
+        
+        std::cout << "INITIATOR KEYS FROM DATABASE:" << std::endl;
+        std::cout << "  my_device_public: " << bin2hex(reinterpret_cast<const unsigned char*>(my_device_public_key.constData()), 32) << std::endl;
+        std::cout << "  my_device_private: " << bin2hex(my_device_private_key->data(), 32) << std::endl;
+        std::cout << "  my_ephemeral_public: " << bin2hex(my_ephemeral_public, 32) << std::endl;
+        std::cout << "  my_ephemeral_private: " << bin2hex(my_ephemeral_private->data(), 32) << std::endl;
+        
+        std::cout << "RECIPIENT KEYS RECEIVED:" << std::endl;
+        std::cout << "  their_device_public: " << bin2hex(their_device_public, 32) << std::endl;
+        std::cout << "  their_signed_public: " << bin2hex(their_signed_public, 32) << std::endl;
+        std::cout << "  their_signed_signature: " << bin2hex(their_signed_signature, 64) << std::endl;
+        if (their_onetime_public) {
+            std::cout << "  their_onetime_public: " << bin2hex(their_onetime_public, 32) << std::endl;
+        } else {
+            std::cout << "  their_onetime_public: NULL" << std::endl;
+        }
+        
         // Verify the signature
         int result = crypto_sign_verify_detached(
                 their_signed_signature,
                 their_signed_public,
                 crypto_box_PUBLICKEYBYTES,
                 their_device_public);
+        
+        std::cout << "Signature verification result: " << (result == 0 ? "VALID" : "INVALID") << std::endl;
         
         if (result != 0) {
             throw std::runtime_error("Invalid signature on signed prekey");
@@ -122,6 +148,33 @@ public:
     Role get_role() const override { return Role::Responder; }
 
     unsigned char *get_shared_secret() override {
+        std::cout << "\n===== RECEIVING KEY BUNDLE DEBUG =====" << std::endl;
+        
+        // Get keys from database and show them
+        auto my_device_private_key = get_my_device_private();
+        auto my_device_public_key = get_public_key("device");
+        auto my_signed_private_key = get_my_signed_private();
+        auto my_signed_public_key = get_public_key("signed");
+        
+        std::cout << "RESPONDER KEYS FROM DATABASE:" << std::endl;
+        std::cout << "  my_device_public: " << bin2hex(reinterpret_cast<const unsigned char*>(my_device_public_key.constData()), 32) << std::endl;
+        std::cout << "  my_device_private: " << bin2hex(my_device_private_key->data(), 32) << std::endl;
+        std::cout << "  my_signed_public: " << bin2hex(reinterpret_cast<const unsigned char*>(my_signed_public_key.constData()), 32) << std::endl;
+        std::cout << "  my_signed_private: " << bin2hex(my_signed_private_key->data(), 32) << std::endl;
+        
+        if (my_onetime_public) {
+            auto my_onetime_private_key = get_my_onetime_private(my_onetime_public);
+            std::cout << "  my_onetime_public: " << bin2hex(my_onetime_public, 32) << std::endl;
+            std::cout << "  my_onetime_private: " << bin2hex(my_onetime_private_key->data(), 32) << std::endl;
+        } else {
+            std::cout << "  my_onetime_public: NULL" << std::endl;
+            std::cout << "  my_onetime_private: NULL" << std::endl;
+        }
+        
+        std::cout << "INITIATOR KEYS RECEIVED:" << std::endl;
+        std::cout << "  their_device_public: " << bin2hex(their_device_public, 32) << std::endl;
+        std::cout << "  their_ephemeral_public: " << bin2hex(their_ephemeral_public, 32) << std::endl;
+        
         return x3dh_responder(
                 their_device_public,
                 their_ephemeral_public,
