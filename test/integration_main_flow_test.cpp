@@ -47,9 +47,15 @@ int main() {
     register_first_device();
     qDebug() << "Logging in";
     login_user(username, password, false);
-    const std::string new_password = "even_stronger_password";
+    const auto new_password = std::make_unique<const std::string>("even_stronger_password");
+    qDebug() << "Trying to rotate password without current master key";
+    const auto fake_password = SecureMemoryBuffer::create(MASTER_KEY_LEN);
+    randombytes_buf(fake_password->data(), MASTER_KEY_LEN);
+    if (Database::get().verify_master_key(fake_password)) {
+        throw std::logic_error("Random password used to rotate database key");
+    };
     qDebug() << "Rotating password";
-    rotate_master_password(username, new_password);
+    rotate_master_password(username, *password.get(), *new_password.get());
     qDebug() << "Posting keybundles";
     auto signed_prekey = generate_signed_prekey();
     post_new_keybundles(
@@ -98,8 +104,7 @@ int main() {
     }
 
     qDebug() << "Logging in first user with new password";
-    const auto new_password_ptr = std::make_unique<const std::string>(new_password);
-    login_user(username, new_password_ptr, false);
+    login_user(username, new_password, false);
 
     qDebug() << "Registering second device for first user";
     const std::string new_device_name = "device 2";

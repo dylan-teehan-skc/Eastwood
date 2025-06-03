@@ -8,16 +8,21 @@
 #include "src/keys/kek_manager.h"
 #include "src/sql/queries.h"
 
-void rotate_master_password(const std::string &username, const std::string &new_password) {
+void rotate_master_password(const std::string &username, const std::string &old_password,
+                            const std::string &new_password) {
     if (!KekManager::instance().isLoaded()) {
         throw std::runtime_error("Unable to rotate master password - KEK has not been loaded");
     }
+
+    unsigned char old_salt[crypto_pwhash_SALTBYTES];
+    get_salt_from_file(username, old_salt);
+    const auto old_key = derive_master_key(std::make_unique<std::string>(old_password), old_salt);
 
     unsigned char new_salt[crypto_pwhash_SALTBYTES];
     randombytes_buf(new_salt, crypto_pwhash_SALTBYTES);
 
     const auto new_key = derive_master_key(std::make_unique<std::string>(new_password), new_salt);
-    Database::get().rotate_master_password(new_key);
+    Database::get().rotate_master_key(old_key, new_key);
     save_salt_to_file(username, new_salt);
 
     const auto kek = KekManager::instance().getKEK();

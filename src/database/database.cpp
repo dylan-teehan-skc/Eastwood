@@ -3,9 +3,11 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <iostream>
+#include <sodium.h>
 
 #include "src/algorithms/constants.h"
 #include "src/keys/secure_memory_buffer.h"
+#include "src/key_exchange/utils.h"
 #include "src/utils/utils.h"
 
 Database &Database::get() {
@@ -52,6 +54,7 @@ void Database::initialize(
         }
     }
 
+
     // Verify the database is accessible by running a test query
     char *errMsg = nullptr;
     rc = sqlite3_exec(db, "SELECT 1 FROM sqlite_master;", nullptr, nullptr, &errMsg);
@@ -65,6 +68,7 @@ void Database::initialize(
         throw std::runtime_error("Database verification failed: " + err);
     }
     initialized = true;
+    this->username = username;
     qDebug() << "Database loaded successfully";
 }
 
@@ -149,7 +153,10 @@ QVector<QVariantMap> Database::query(sqlite3_stmt *stmt) const {
     return results;
 }
 
-void Database::rotate_master_password(const std::unique_ptr<SecureMemoryBuffer> &new_master_key) const {
+void Database::rotate_master_key(
+    const std::unique_ptr<SecureMemoryBuffer> &old_master_key,
+    const std::unique_ptr<SecureMemoryBuffer> &new_master_key
+)  {
     if (!initialized || !db) {
         throw std::runtime_error("Database not initialized");
     }
@@ -157,12 +164,15 @@ void Database::rotate_master_password(const std::unique_ptr<SecureMemoryBuffer> 
         throw std::runtime_error("Invalid size for new master key");
     }
 
+    if (!verify_master_key(old_master_key)) {
+        throw std::runtime_error("Incorrect master key. Cannot rotate keys.");
+    }
+
     int rc = sqlite3_rekey(db, new_master_key->data(), new_master_key->size());
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Failed to rotate master password: " + std::string(sqlite3_errmsg(db)));
     }
 
-    // Verify the new key works by running a test query
     char *errMsg = nullptr;
     rc = sqlite3_exec(db, "SELECT 1 FROM sqlite_master;", nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
@@ -180,3 +190,36 @@ bool Database::user_has_database(std::string username) {
     return QFile::exists(dbPath) || QFile::exists(dbPathEncrypted);
 }
 
+bool Database::verify_master_key(const std::unique_ptr<SecureMemoryBuffer> &master_key) {
+    if (!initialized || !db) {
+        return false;
+    }
+
+    const char* dbPath = sqlite3_db_filename(db, "main");
+    if (!dbPath) {
+        return false;
+    }
+
+    sqlite3* tempDb = nullptr;
+    int rc = sqlite3_open(dbPath, &tempDb);
+    if (rc != SQLITE_OK) {
+        return false;
+    }
+
+    rc = sqlite3_key(tempDb, master_key->data(), master_key->size());
+    if (rc != SQLITE_OK) {
+        sqlite3_close(tempDb);
+        return false;
+    }
+
+    char* errMsg = nullptr;
+    rc = sqlite3_exec(tempDb, "SELECT 1 FROM sqlite_master;", nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        sqlite3_free(errMsg);
+        sqlite3_close(tempDb);
+        return false;
+    }
+
+    sqlite3_close(tempDb);
+    return true;
+}

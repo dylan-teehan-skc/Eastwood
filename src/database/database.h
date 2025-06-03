@@ -30,9 +30,16 @@ public:
     // Throws std::runtime_error on error or if statement is not a SELECT
     QVector<QVariantMap> query(sqlite3_stmt *stmt) const;
 
-    void rotate_master_password(const std::unique_ptr<SecureMemoryBuffer> &new_master_key) const;
+    void rotate_master_key(const std::unique_ptr<SecureMemoryBuffer> &old_master_key,
+                           const std::unique_ptr<SecureMemoryBuffer> &new_master_key);
 
     static bool user_has_database(std::string username);
+
+    bool verify_master_key(const std::unique_ptr<SecureMemoryBuffer> &master_key);
+
+    [[nodiscard]] std::string get_username() const {
+        return username;
+    }
 
 private:
     Database();
@@ -44,6 +51,8 @@ private:
 
     sqlite3 *db = nullptr;
     bool initialized = false;
+    std::string username;
+    std::unique_ptr<SecureMemoryBuffer> password_check;
 };
 
 #endif // DATABASE_INTERFACE_H
