@@ -15,7 +15,7 @@
 #include "src/ui/utils/messagebox.h"
 #include "src/auth/set_up_client.h"
 
-void continuously_ping(std::array<unsigned char, 32> pk_device, QObject* deviceRegister, const std::string& username) {
+void continuously_ping(const std::array<unsigned char, 32> &pk_device, QObject* deviceRegister, const std::string& username) {
     while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(2));
         try {
@@ -33,8 +33,8 @@ void continuously_ping(std::array<unsigned char, 32> pk_device, QObject* deviceR
     }
 }
 
-DeviceRegister::DeviceRegister(const std::string& auth_code, const QImage& qr_code, QWidget *parent, 
-                             unsigned char* pk_device, std::unique_ptr<SecureMemoryBuffer> sk_device,
+DeviceRegister::DeviceRegister(const std::string& auth_code, const QImage& qr_code, QWidget *parent,
+                             const unsigned char* pk_device, std::unique_ptr<SecureMemoryBuffer> sk_device,
                              const std::string& username)
     : QWidget(parent)
     , ui(new Ui::DeviceRegister)
@@ -67,8 +67,7 @@ void DeviceRegister::setupConnections()
     connect(this, &DeviceRegister::userRegistered, this, &DeviceRegister::onUserRegistered);
 }
 
-void DeviceRegister::displayQRCode(const QImage& qr_code)
-{
+void DeviceRegister::displayQRCode(const QImage& qr_code) const {
     if (!qr_code.isNull()) {
         QPixmap pixmap = QPixmap::fromImage(qr_code);
         ui->qrCodeLabel->setPixmap(pixmap.scaled(200, 200, Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -77,8 +76,7 @@ void DeviceRegister::displayQRCode(const QImage& qr_code)
     }
 }
 
-void DeviceRegister::displayAuthCode(const std::string& auth_code)
-{
+void DeviceRegister::displayAuthCode(const std::string& auth_code) const {
     int partLen = auth_code.length() / 4;
     QString code = QString::fromStdString(auth_code);
     ui->codeEdit1->setText(code.mid(0, partLen));
@@ -99,7 +97,7 @@ void DeviceRegister::onCopyButtonClicked()
         clipboard->setText(QString::fromStdString(m_auth_code));
         StyledMessageBox::success(this, "Copied to Clipboard", "All codes have been successfully copied to your clipboard");
     } catch (const std::exception& e) {
-        StyledMessageBox::error(this, "Copy Failed", "Failed to copy codes to clipboard");
+        StyledMessageBox::error(this, "Copy Failed", "Failed to copy codes to clipboard" + QString::fromStdString(e.what()));
     }
 }
 

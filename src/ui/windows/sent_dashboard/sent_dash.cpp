@@ -4,10 +4,6 @@
 #include "src/ui/utils/window_manager/window_manager.h"
 #include "src/ui/utils/navbar/navbar.h"
 #include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QFileInfo>
-#include <QFileDialog>
-#include <QLineEdit>
 #include <QDialog>
 #include <QScrollArea>
 #include <QTimer>
@@ -41,8 +37,7 @@ Sent::~Sent()
 void Sent::setupConnections()
 {
     // Connect NavBar signals
-    NavBar* navbar = findChild<NavBar*>();
-    if (navbar) {
+    if (NavBar* navbar = findChild<NavBar*>()) {
         connect(navbar, &NavBar::sendFileClicked, this, &Sent::onSendFileButtonClicked);
         connect(navbar, &NavBar::settingsClicked, this, &Sent::onSettingsButtonClicked);
         connect(navbar, &NavBar::receivedClicked, this, &Sent::onReceivedButtonClicked);
@@ -53,8 +48,7 @@ void Sent::setupConnections()
     connect(ui->sendButton, &QPushButton::clicked, this, &Sent::onSendFileButtonClicked);
 }
 
-void Sent::setupFileList()
-{
+void Sent::setupFileList() const {
     ui->fileList->setSpacing(2);
     ui->fileList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->fileList->setSelectionMode(QAbstractItemView::NoSelection);
@@ -90,12 +84,12 @@ void Sent::refreshFileList()
     addFileItem("Budget Report.xlsx", "1.2 MB", "2024-03-13 16:45", "Bob Johnson");
 }
 
-void Sent::onFileItemClicked(FileItemWidget* widget)
+void Sent::onFileItemClicked(const FileItemWidget* widget)
 {
     showFileMetadata(widget);
 }
 
-void Sent::onRevokeAccessClicked(FileItemWidget* widget)
+void Sent::onRevokeAccessClicked(const FileItemWidget* widget)
 {
     // Create revoke access dialog
     QDialog* revokeDialog = new QDialog(this);
@@ -283,7 +277,7 @@ void Sent::onRevokeAccessClicked(FileItemWidget* widget)
     delete revokeDialog;
 }
 
-void Sent::onDeleteFileClicked(FileItemWidget* widget)
+void Sent::onDeleteFileClicked(const FileItemWidget* widget)
 {
     if (StyledMessageBox::question(this, "Delete File",
                                  QString("Are you sure you want to delete file: %1?")
@@ -294,7 +288,7 @@ void Sent::onDeleteFileClicked(FileItemWidget* widget)
     }
 }
 
-void Sent::showFileMetadata(FileItemWidget* widget)
+void Sent::showFileMetadata(const FileItemWidget* widget)
 {
     StyledMessageBox::info(this, "File Details",
                        QString("File Details:\n\nName: %1\nSize: %2\nShared to: %3\nTimestamp: %4")
@@ -309,11 +303,9 @@ void Sent::sendFileToUser(const QString& username, const QString& fileId)
     // TODO: Implement file sharing logic
 }
 
-void Sent::onWindowShown(const QString& windowName)
-{
+void Sent::onWindowShown(const QString& windowName) const {
     // Find the navbar and update its active button
-    NavBar* navbar = findChild<NavBar*>();
-    if (navbar) {
+    if (auto navbar = findChild<NavBar*>()) {
         navbar->setActiveButton(windowName);
     }
 }

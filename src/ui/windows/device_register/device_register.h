@@ -18,17 +18,17 @@ class DeviceRegister : public QWidget {
 
 public:
     explicit DeviceRegister(const std::string& auth_code, const QImage& qr_code, QWidget *parent = nullptr, 
-                          unsigned char* pk_device = nullptr, std::unique_ptr<SecureMemoryBuffer> sk_device = nullptr,
+                          const unsigned char* pk_device = nullptr, std::unique_ptr<SecureMemoryBuffer> sk_device = nullptr,
                           const std::string& username = "");
     ~DeviceRegister() override;
-    void displayQRCode(const QImage& qr_code);
-    void displayAuthCode(const std::string& auth_code);
+    void displayQRCode(const QImage& qr_code) const;
+    void displayAuthCode(const std::string& auth_code) const;
 
 signals:
     void userRegistered(); // Signal emitted when background thread detects registration
 
 private slots:
-    void onBackButtonClicked();
+    static void onBackButtonClicked();
     void onCopyButtonClicked();
     void onUserRegistered();
 

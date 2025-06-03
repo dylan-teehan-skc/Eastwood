@@ -1,5 +1,4 @@
 #include "file_item_widget.h"
-#include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFileInfo>
 #include <QStyle>

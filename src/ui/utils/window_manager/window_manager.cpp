@@ -6,7 +6,6 @@
 #include "../../windows/login/login.h"
 #include "../../windows/register/register.h"
 #include "../../windows/device_register/device_register.h"
-#include <QImage>
 
 #include "src/endpoints/endpoints.h"
 #include "src/sql/queries.h"

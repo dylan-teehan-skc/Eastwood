@@ -29,5 +29,6 @@ private slots:
 private:
     Ui::NavBar *ui;
     void setupConnections();
-    void updateButtonStyle(QPushButton* button, bool isActive);
+
+    static void updateButtonStyle(QPushButton* button, bool isActive);
 };

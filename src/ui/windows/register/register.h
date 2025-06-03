@@ -24,9 +24,10 @@ signals:
 
 private slots:
     void onRegisterButtonClicked();
-    void onLoginButtonClicked();
+
+    static void onLoginButtonClicked();
     void onTogglePassphraseClicked();
-    void onRegistrationSuccess();
+    void onRegistrationSuccess() const;
     void onRegistrationError(const QString& title, const QString& message);
 
 private:

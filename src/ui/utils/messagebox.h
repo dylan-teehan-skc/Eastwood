@@ -3,8 +3,6 @@
 
 #include <QMessageBox>
 #include <QPushButton>
-#include <QApplication>
-#include <QStyle>
 #include <QPixmap>
 #include <QInputDialog>
 #include <QString>
@@ -121,8 +119,7 @@ public:
         // Style Yes/No buttons differently
         QList<QAbstractButton*> buttons = msgBox.buttons();
         for (QAbstractButton* button : buttons) {
-            QPushButton* pushButton = dynamic_cast<QPushButton*>(button);
-            if (pushButton) {
+            if (QPushButton* pushButton = dynamic_cast<QPushButton*>(button)) {
                 if (msgBox.buttonRole(pushButton) == QMessageBox::YesRole) {
                     pushButton->setStyleSheet(
                         "background-color: #6c5ce7;"
@@ -149,8 +146,7 @@ public:
         // Style Accept/Deny buttons
         QList<QAbstractButton*> buttons = msgBox.buttons();
         for (QAbstractButton* button : buttons) {
-            QPushButton* pushButton = dynamic_cast<QPushButton*>(button);
-            if (pushButton) {
+            if (QPushButton* pushButton = dynamic_cast<QPushButton*>(button)) {
                 if (msgBox.buttonRole(pushButton) == QMessageBox::YesRole) {
                     pushButton->setText("Accept");
                     pushButton->setStyleSheet(R"(
@@ -186,7 +182,6 @@ public:
         }
         
         if (msgBox.exec() == QMessageBox::Yes) {
-            bool ok;
             QInputDialog inputDialog(parent);
             inputDialog.setWindowTitle("New Device");
             inputDialog.setLabelText("Enter a name for this device:");
@@ -231,8 +226,8 @@ public:
                     background-color: #4040b0;
                 }
             )");
-            
-            ok = inputDialog.exec();
+
+            bool ok = inputDialog.exec();
             deviceName = inputDialog.textValue();
             
             if (ok && !deviceName.isEmpty()) {

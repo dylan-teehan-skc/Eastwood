@@ -5,7 +5,6 @@
 #include "../../utils/messagebox.h"
 #include "../../utils/window_manager/window_manager.h"
 #include "src/sql/queries.h"
-#include "src/auth/register_device/register_device.h"
 #include "src/key_exchange/utils.h"
 #include "src/ui/utils/qr_code_generation/QRCodeGenerator.h"
 #include <sodium.h>
@@ -160,8 +159,8 @@ void Login::onContinueButtonClicked()
 void Login::onLoginButtonClicked()
 {
     // Maximum length as per NIST SP 800-63B (allowing up to 64 characters)
-    const int MAX_PASSPHRASE_LENGTH = 64;
-    const int MIN_PASSPHRASE_LENGTH = 20;
+    constexpr int MAX_PASSPHRASE_LENGTH = 64;
+    constexpr int MIN_PASSPHRASE_LENGTH = 20;
     
     QString username = ui->usernameEdit->text();
     QString passphrase = ui->passphraseEdit->text();
@@ -201,8 +200,7 @@ void Login::onTogglePassphraseClicked()
     ui->togglePassphraseButton->setText(m_passphraseVisible ? "Hide" : "Show");
 }
 
-void Login::showPassphraseStage()
-{
+void Login::showPassphraseStage() const {
     ui->passphraseEdit->show();
     ui->togglePassphraseButton->show();
     ui->loginButton->show();
@@ -210,8 +208,7 @@ void Login::showPassphraseStage()
     ui->passphraseEdit->setFocus();
 }
 
-void Login::showUsernameStage()
-{
+void Login::showUsernameStage() const {
     ui->passphraseEdit->hide();
     ui->togglePassphraseButton->hide();
     ui->loginButton->hide();

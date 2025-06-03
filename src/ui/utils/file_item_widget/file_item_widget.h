@@ -47,7 +47,8 @@ private:
 
     void setupUI();
     void setupConnections();
-    QString getFileTypeAbbreviation(const QString& fileName);
+
+    static QString getFileTypeAbbreviation(const QString& fileName);
 };
 
 #endif // FILE_ITEM_WIDGET_H

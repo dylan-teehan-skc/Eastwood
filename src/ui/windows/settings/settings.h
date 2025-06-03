@@ -21,16 +21,16 @@ public:
 
 private slots:
     void onWindowShown(const QString& windowName) const;
-    void onReceivedButtonClicked();
-    void onSentButtonClicked();
-    void onSendFileButtonClicked();
-    void validatePassphrase();
-    void onPassphraseCancelClicked();
+    void onReceivedButtonClicked() const;
+    void onSentButtonClicked() const;
+    void onSendFileButtonClicked() const;
+    void validatePassphrase() const;
+    void onPassphraseCancelClicked() const;
     void onPassphraseSaveClicked();
-    void onAuthCancelClicked();
+    void onAuthCancelClicked() const;
     void onAuthVerifyClicked();
-    void onSettingsButtonClicked();
-    void onScanQRButtonClicked();
+    void onSettingsButtonClicked() const;
+    void onScanQRButtonClicked() const;
     void onRefreshDevicesClicked();
     void updateDeviceList();
     void onLogoutButtonClicked();
@@ -38,7 +38,7 @@ private slots:
 private:
     void setupConnections();
     void navigateTo(QWidget* newWindow);
-    void createDeviceBox(const std::string& deviceName);
+    void createDeviceBox(const std::string& deviceName) const;
     void handleRefreshSpinner();
 
     Ui::Settings *ui;

@@ -34,8 +34,7 @@ void Received::setupConnections()
     connect(ui->sendButton, &QPushButton::clicked, this, &Received::onSendButtonClicked);
     
     // Connect NavBar signals
-    NavBar* navbar = findChild<NavBar*>();
-    if (navbar) {
+    if (NavBar* navbar = findChild<NavBar*>()) {
         connect(navbar, &NavBar::sentClicked, this, &Received::onSentButtonClicked);
         connect(navbar, &NavBar::sendFileClicked, this, &Received::onSendFileButtonClicked);
         connect(navbar, &NavBar::settingsClicked, this, &Received::onSettingsButtonClicked);
@@ -43,8 +42,7 @@ void Received::setupConnections()
     }
 }
 
-void Received::setupFileList()
-{
+void Received::setupFileList() const {
     ui->fileList->setSpacing(2);
     ui->fileList->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->fileList->setSelectionMode(QAbstractItemView::NoSelection);
@@ -91,7 +89,7 @@ void Received::onSendButtonClicked()
     WindowManager::instance().showSendFile();
 }
 
-void Received::onFileItemClicked(FileItemWidget* widget)
+void Received::onFileItemClicked(const FileItemWidget* widget)
 {
     showFileMetadata(widget);
 }
@@ -106,7 +104,7 @@ void Received::onSettingsButtonClicked()
     WindowManager::instance().showSettings(); 
 }
 
-void Received::showFileMetadata(FileItemWidget* widget)
+void Received::showFileMetadata(const FileItemWidget* widget)
 {
     StyledMessageBox::info(this, "File Details",
                        QString("File Details:\n\nName: %1\nSize: %2\nShared by: %3\nTimestamp: %4")
@@ -127,11 +125,9 @@ void Received::onSendFileButtonClicked()
     WindowManager::instance().showSendFile();
 }
 
-void Received::onWindowShown(const QString& windowName)
-{
+void Received::onWindowShown(const QString& windowName) const {
     // Find the navbar and update its active button
-    NavBar* navbar = findChild<NavBar*>();
-    if (navbar) {
+    if (NavBar* navbar = findChild<NavBar*>()) {
         navbar->setActiveButton(windowName);
     }
 }

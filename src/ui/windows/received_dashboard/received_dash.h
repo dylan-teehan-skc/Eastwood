@@ -18,23 +18,28 @@ public:
     ~Received() override;
 
 private slots:
-    void onSendButtonClicked();
-    void onFileItemClicked(FileItemWidget* widget);
+    static void onSendButtonClicked();
+    void onFileItemClicked(const FileItemWidget* widget);
     void onDownloadFileClicked(FileItemWidget* widget);
-    void onSentButtonClicked();
-    void onSettingsButtonClicked();
+
+    static void onSentButtonClicked();
+
+    static void onSettingsButtonClicked();
     void refreshFileList();
-    void onSendFileButtonClicked();
-    void onWindowShown(const QString& windowName);
-    void onLogoutButtonClicked();
+
+    static void onSendFileButtonClicked();
+
+    static void onLogoutButtonClicked();
+    void onWindowShown(const QString& windowName) const;
 
 private:
     Ui::Received *ui;
     QWidget* m_sendFileWindow;
     void setupConnections();
-    void setupFileList();
-    void showFileMetadata(FileItemWidget* widget);
-    void sendFileToUser(const QString& username, const QString& fileId);
+    void setupFileList() const;
+    void showFileMetadata(const FileItemWidget* widget);
+
+    static void sendFileToUser(const QString& username, const QString& fileId);
     void addFileItem(const QString& fileName, 
                     const QString& fileSize, 
                     const QString& timestamp,

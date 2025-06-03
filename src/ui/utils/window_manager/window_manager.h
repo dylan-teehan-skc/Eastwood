@@ -1,7 +1,6 @@
 #ifndef WINDOW_MANAGER_H
 #define WINDOW_MANAGER_H
 
-#include <QObject>
 #include <QString>
 #include <QList>
 #include <QWidget>
@@ -39,7 +38,8 @@ signals:
 
 protected:
     WindowManager();
-    virtual ~WindowManager();
+
+    ~WindowManager() override;
 
 private:
     // Delete copy constructor and assignment operator
@@ -48,7 +48,7 @@ private:
 
     // Template function to handle different window types
     template<typename T>
-    void deleteWindow(QPointer<T>& window) {
+    static void deleteWindow(QPointer<T>& window) {
         if (!window.isNull()) {
             window->hide();
             window->deleteLater();

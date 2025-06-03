@@ -10,9 +10,6 @@
 #include <QScreen>
 #include <QApplication>
 #include <sodium.h>
-#include <QByteArray>
-#include "src/key_exchange/utils.h"
-#include "src/ui/utils/qr_code_generation/QRCodeGenerator.h"
 #include "src/keys/secure_memory_buffer.h"
 
 #include <QtConcurrent>
@@ -47,7 +44,7 @@ void Register::setupConnections() {
     connect(this, &Register::registrationError, this, &Register::onRegistrationError);
 }
 
-void Register::onRegistrationSuccess() {
+void Register::onRegistrationSuccess() const {
     ui->registerButton->setText("Register");
     ui->registerButton->setEnabled(true);
     WindowManager::instance().showReceived();
@@ -61,9 +58,9 @@ void Register::onRegistrationError(const QString& title, const QString& message)
 
 void Register::onRegisterButtonClicked() {
     // passphrase requirements as per NIST SP 800-63B guidelines
-    const int MAX_PASSPHRASE_LENGTH = 64;
-    const int MIN_PASSPHRASE_LENGTH = 20;
-    const int MAX_INPUT_LENGTH = 64;
+    constexpr int MAX_PASSPHRASE_LENGTH = 64;
+    constexpr int MIN_PASSPHRASE_LENGTH = 20;
+    constexpr int MAX_INPUT_LENGTH = 64;
 
     QString fullName = ui->fullNameEdit->text().left(MAX_INPUT_LENGTH);
     QString username = ui->usernameEdit->text().left(MAX_INPUT_LENGTH);

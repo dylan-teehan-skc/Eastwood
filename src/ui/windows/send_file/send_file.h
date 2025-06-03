@@ -20,11 +20,11 @@ public:
 private slots:
     void onBrowseClicked();
     void onSendClicked();
-    void onWindowShown(const QString& windowName);
-    void onReceivedButtonClicked();
-    void onSentButtonClicked();
-    void onSendFileButtonClicked();
-    void onSettingsButtonClicked();
+    void onWindowShown(const QString& windowName) const;
+    void onReceivedButtonClicked() const;
+    void onSentButtonClicked() const;
+    void onSendFileButtonClicked() const;
+    void onSettingsButtonClicked() const;
     void onLogoutButtonClicked();
 
 private:
