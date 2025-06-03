@@ -115,6 +115,7 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, s
 }
 
 std::string HTTPSClient::get(const std::string &host, const std::string &path, const std::string &headers) {
+    enforceRateLimit(host);
     int sock_fd = create_socket(host.c_str(), defaultPort(true).c_str());
     if (sock_fd < 0) {
         return "Socket connection closed / lost";

@@ -3,6 +3,10 @@
 //
 #include "./BaseClient.h"
 
+#include <iostream>
+#include <stdexcept>
+#include <thread>
+
 int BaseClient::create_socket(const char* hostname, const char* port) {
     addrinfo *res, hints={0}, *p;
     int sock_fd = -1;
@@ -24,4 +28,22 @@ int BaseClient::create_socket(const char* hostname, const char* port) {
     freeaddrinfo(res);
     return sock_fd;
 
+}
+
+void BaseClient::enforceRateLimit(const std::string &host) {
+    std::lock_guard<std::mutex> lock(rateLimitMutex); // prevents other thread from modifying lastRequestTime
+
+    auto now = std::chrono::steady_clock::now(); // system time changes does not affect steady_clock
+
+    auto it = lastRequestTime.find(host);
+    if (it != lastRequestTime.end()) {
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second);
+        if (elapsed < rateLimitDelay) {
+            auto sleepTime = rateLimitDelay - elapsed;
+            std::cout << "Rate limit reached: Too many requests to " + host << std::endl;
+            std::this_thread::sleep_for(sleepTime);
+        }
+    }
+
+    lastRequestTime[host] = std::chrono::steady_clock::now();
 }
