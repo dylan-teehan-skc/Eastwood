@@ -19,6 +19,9 @@ inline std::string bin2hex(const unsigned char* data, size_t len) {
 }
 
 inline std::vector<unsigned char> hex2bin(const std::string &hex) {
+    if (hex.empty()) {
+        throw std::runtime_error("Cannot convert empty string from hex to binary");
+    }
     const size_t bin_len = hex.length() / 2;
     std::vector<unsigned char> bin(bin_len);
     

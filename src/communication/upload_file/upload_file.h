@@ -5,6 +5,9 @@
 
 #include "src/keys/secure_memory_buffer.h"
 
-std::string upload_file(const std::string &file_path, const std::unique_ptr<SecureMemoryBuffer> &file_key);
+std::string upload_file(
+    const std::string &file_path,
+    const std::unique_ptr<SecureMemoryBuffer> &f_kek
+);
 
 #endif //ENCRYPT_FILE_H

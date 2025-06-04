@@ -71,7 +71,8 @@ void post_new_keybundles(
 
 std::string post_upload_file(
     const std::vector<unsigned char>& encrypted_file_data,
-    const std::vector<unsigned char>& encrypted_metadata
+    const std::vector<unsigned char>& encrypted_metadata,
+    const std::vector<unsigned char>& encrypted_file_key
 );
 
 bool post_check_user_exists(
@@ -84,7 +85,21 @@ bool get_user_exists(
 
 std::vector<std::string> get_devices();
 
-std::vector<unsigned char> get_encrypted_file(std::string uuid);
+struct DownloadedFile {
+    std::vector<unsigned char> encrypted_file_data;
+    std::vector<unsigned char> encrypted_file_key;
+};
+
+DownloadedFile get_download_file(const std::string &uuid);
+
+struct EncryptedMetadata {
+    std::string uuid;
+    std::vector<unsigned char> encrypted_metadata;
+    std::vector<unsigned char> encrypted_file_key;
+    std::string owner;
+};
+
+std::vector<EncryptedMetadata> get_encrypted_file_metadata(const std::vector<std::string> &uuids);
 
 std::map<std::string, std::tuple<std::string, std::vector<unsigned char>> > get_encrypted_file_metadata(std::vector<std::tuple<std::string,std::string>> uuids);
 
