@@ -1,7 +1,6 @@
 #include "camera_functionality.h"
 #include <QImage>
 #include <QPixmap>
-#include <QDebug>
 #include <iostream>
 #include "src/key_exchange/utils.h"
 #include <sodium.h>

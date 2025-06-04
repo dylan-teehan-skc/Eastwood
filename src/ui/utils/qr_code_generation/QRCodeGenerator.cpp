@@ -8,7 +8,6 @@
 #include <sstream>
 
 #include "src/sql/queries.h"
-#include "src/key_exchange/utils.h"
 
 std::string toSvgString(const qrcodegen::QrCode &qr, int border) {
     if (border < 0)

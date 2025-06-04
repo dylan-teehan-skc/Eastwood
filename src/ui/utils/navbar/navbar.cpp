@@ -6,22 +6,28 @@
 #include "src/keys/session_token_manager.h"
 #include "src/keys/kek_manager.h"
 #include "src/database/database.h"
+#include "src/ui/windows/received_dashboard/received_dash.h"
+#include <iostream>
 
 NavBar::NavBar(QWidget *parent) : QWidget(parent), ui(new Ui::NavBar) {
     ui->setupUi(this);
     setupConnections();
     // Set initial active button
     setActiveButton("receivedButton");
+
+    // Connect to WindowManager's windowShown signal to keep NavBar in sync
+    connect(&WindowManager::instance(), &WindowManager::windowShown,
+            this, &NavBar::setActiveButton);
 }
 
 NavBar::~NavBar() { delete ui; }
 
 void NavBar::setupConnections() {
-    connect(ui->receivedButton, &QPushButton::clicked, this, &NavBar::receivedClicked);
-    connect(ui->sentButton, &QPushButton::clicked, this, &NavBar::sentClicked);
-    connect(ui->sendFileButton, &QPushButton::clicked, this, &NavBar::sendFileClicked);
-    connect(ui->settingsButton, &QPushButton::clicked, this, &NavBar::settingsClicked);
-    connect(ui->logoutButton, &QPushButton::clicked, this, &NavBar::logoutClicked);
+    connect(ui->receivedButton, &QPushButton::clicked, this, &NavBar::onReceivedButtonClicked);
+    connect(ui->sentButton, &QPushButton::clicked, this, &NavBar::onSentButtonClicked);
+    connect(ui->sendFileButton, &QPushButton::clicked, this, &NavBar::onSendFileButtonClicked);
+    connect(ui->settingsButton, &QPushButton::clicked, this, &NavBar::onSettingsButtonClicked);
+    connect(ui->logoutButton, &QPushButton::clicked, this, &NavBar::onLogoutButtonClicked);
 }
 
 void NavBar::setActiveButton(const QString& buttonName) {
@@ -92,26 +98,21 @@ void NavBar::updateButtonStyle(QPushButton* button, bool isActive) {
 
 void NavBar::onReceivedButtonClicked() {
     WindowManager::instance().showReceived();
-    setActiveButton("receivedButton");
 }
 
 void NavBar::onSentButtonClicked() {
     WindowManager::instance().showSent();
-    setActiveButton("sentButton");
 }
 
 void NavBar::onSendFileButtonClicked() {
     WindowManager::instance().showSendFile();
-    setActiveButton("sendFileButton");
 }
 
 void NavBar::onSettingsButtonClicked() {
     WindowManager::instance().showSettings();
-    setActiveButton("settingsButton");
 }
 
 void NavBar::onLogoutButtonClicked() {
     logout();
-    // Show login window
     WindowManager::instance().showLogin();
 }

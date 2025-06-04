@@ -2,16 +2,11 @@
 #include "ui_sent_dash.h"
 #include "src/ui/utils/messagebox.h"
 #include "src/ui/utils/window_manager/window_manager.h"
-#include "src/ui/utils/navbar/navbar.h"
 #include <QVBoxLayout>
 #include <QDialog>
 #include <QScrollArea>
 #include <QTimer>
 #include <QCheckBox>
-
-#include "src/auth/logout.h"
-#include "src/keys/session_token_manager.h"
-#include "src/keys/kek_manager.h"
 
 // Sent implementation
 Sent::Sent(QWidget *parent, QWidget* receivedWindow)
@@ -24,9 +19,6 @@ Sent::Sent(QWidget *parent, QWidget* receivedWindow)
     setupFileList();
     refreshFileList();
 
-    // Connect WindowManager signal to handle navbar highlighting
-    connect(&WindowManager::instance(), &WindowManager::windowShown,
-            this, &Sent::onWindowShown);
 }
 
 Sent::~Sent()
@@ -36,14 +28,6 @@ Sent::~Sent()
 
 void Sent::setupConnections()
 {
-    // Connect NavBar signals
-    if (NavBar* navbar = findChild<NavBar*>()) {
-        connect(navbar, &NavBar::sendFileClicked, this, &Sent::onSendFileButtonClicked);
-        connect(navbar, &NavBar::settingsClicked, this, &Sent::onSettingsButtonClicked);
-        connect(navbar, &NavBar::receivedClicked, this, &Sent::onReceivedButtonClicked);
-        connect(navbar, &NavBar::logoutClicked, this, &Sent::onLogoutButtonClicked);
-    }
-    
     // Connect the send button
     connect(ui->sendButton, &QPushButton::clicked, this, &Sent::onSendFileButtonClicked);
 }
@@ -303,44 +287,13 @@ void Sent::sendFileToUser(const QString& username, const QString& fileId)
     // TODO: Implement file sharing logic
 }
 
-void Sent::onWindowShown(const QString& windowName) const {
-    // Find the navbar and update its active button
-    if (auto navbar = findChild<NavBar*>()) {
-        navbar->setActiveButton(windowName);
-    }
-}
-
-void Sent::navigateTo(QWidget* newWindow)
-{
-    newWindow->setParent(this->parentWidget());  // Set the same parent
-    newWindow->show();
-    this->setAttribute(Qt::WA_DeleteOnClose);  // Mark for deletion when closed
-    close();  // This will trigger deletion due to WA_DeleteOnClose
-}
-
-void Sent::onReceivedButtonClicked()
-{
-    WindowManager::instance().showReceived();
-}
-
-// navbar button
-void Sent::onSendFileButtonClicked()
-{
-    WindowManager::instance().showSendFile();
-}
-
-void Sent::onSettingsButtonClicked()
-{
-    WindowManager::instance().showSettings();
-}
 
 void Sent::onDownloadFileClicked(FileItemWidget* widget)
 {
     StyledMessageBox::info(this, "Not Implemented", "Download functionality is not yet implemented.");
 }
 
-void Sent::onLogoutButtonClicked() {
-    logout();
-    // Show login window
-    WindowManager::instance().showLogin();
+void Sent::onSendFileButtonClicked()
+{
+    WindowManager::instance().showSendFile();
 }

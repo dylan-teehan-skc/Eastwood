@@ -4,10 +4,9 @@
 #include "src/ui/utils/window_manager/window_manager.h"
 #include "src/ui/utils/navbar/navbar.h"
 #include "src/ui/windows/sent_dashboard/sent_dash.h"
-#include <QFileDialog>
 #include <QTimer>
 #include <QCheckBox>
-#include "src/auth/logout.h"
+#include <iostream>
 
 Received::Received(QWidget *parent, QWidget* sendFileWindow)
     : QWidget(parent)
@@ -18,10 +17,6 @@ Received::Received(QWidget *parent, QWidget* sendFileWindow)
     setupConnections();
     setupFileList();
     refreshFileList();
-
-    // Connect WindowManager signal to handle navbar highlighting
-    connect(&WindowManager::instance(), &WindowManager::windowShown,
-            this, &Received::onWindowShown);
 }
 
 Received::~Received()
@@ -31,15 +26,8 @@ Received::~Received()
 
 void Received::setupConnections()
 {
+    connect(ui->navBar, &NavBar::receivedClicked, this, &Received::onReceivedButtonClicked);
     connect(ui->sendButton, &QPushButton::clicked, this, &Received::onSendButtonClicked);
-    
-    // Connect NavBar signals
-    if (NavBar* navbar = findChild<NavBar*>()) {
-        connect(navbar, &NavBar::sentClicked, this, &Received::onSentButtonClicked);
-        connect(navbar, &NavBar::sendFileClicked, this, &Received::onSendFileButtonClicked);
-        connect(navbar, &NavBar::settingsClicked, this, &Received::onSettingsButtonClicked);
-        connect(navbar, &NavBar::logoutClicked, this, &Received::onLogoutButtonClicked);
-    }
 }
 
 void Received::setupFileList() const {
@@ -76,14 +64,6 @@ void Received::refreshFileList()
     addFileItem("Budget Report.xlsx", "1.2 MB", "2024-03-13 16:45", "Bob Johnson");
 }
 
-void Received::navigateTo(QWidget* newWindow)
-{
-    newWindow->setParent(this->parentWidget());  // Set the same parent
-    newWindow->show();
-    this->setAttribute(Qt::WA_DeleteOnClose);  // Mark for deletion when closed
-    close();  // This will trigger deletion due to WA_DeleteOnClose
-}
-
 void Received::onSendButtonClicked()
 {
     WindowManager::instance().showSendFile();
@@ -92,16 +72,6 @@ void Received::onSendButtonClicked()
 void Received::onFileItemClicked(const FileItemWidget* widget)
 {
     showFileMetadata(widget);
-}
-
-void Received::onSentButtonClicked()
-{
-    WindowManager::instance().showSent();
-}
-
-void Received::onSettingsButtonClicked()
-{
-    WindowManager::instance().showSettings(); 
 }
 
 void Received::showFileMetadata(const FileItemWidget* widget)
@@ -114,31 +84,14 @@ void Received::showFileMetadata(const FileItemWidget* widget)
                        .arg(widget->getTimestamp()));
 }
 
-void Received::sendFileToUser(const QString& username, const QString& fileId)
-{
-    // TODO: Implement file sharing logic
-}
-
-// navbar button
-void Received::onSendFileButtonClicked()
-{
-    WindowManager::instance().showSendFile();
-}
-
-void Received::onWindowShown(const QString& windowName) const {
-    // Find the navbar and update its active button
-    if (NavBar* navbar = findChild<NavBar*>()) {
-        navbar->setActiveButton(windowName);
-    }
-}
-
-void Received::onLogoutButtonClicked()
-{
-    logout();
-    WindowManager::instance().showLogin();
-}
-
 void Received::onDownloadFileClicked(FileItemWidget* widget)
 {
     StyledMessageBox::info(this, "Not Implemented", "Download functionality is not yet implemented.");
 }
+
+void Received::onReceivedButtonClicked()
+{
+    std::cout << "Received button clicked" << std::endl;
+    refreshFileList();
+}
+

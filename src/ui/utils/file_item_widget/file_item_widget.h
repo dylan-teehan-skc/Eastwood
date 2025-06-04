@@ -45,6 +45,13 @@ private:
     QString owner;
     Mode mode;
 
+    QWidget* createFileIconContainer();
+    QLayout* createInfoLayout();
+    QLayout* createButtonLayout();
+    QPushButton* createDownloadButton();
+    QPushButton* createRevokeButton();
+    QPushButton* createDeleteButton();
+
     void setupUI();
     void setupConnections();
 

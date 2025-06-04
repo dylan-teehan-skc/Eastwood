@@ -27,7 +27,15 @@ void FileItemWidget::setupUI()
     mainLayout->setSpacing(16);
     mainLayout->setContentsMargins(20, 16, 20, 16);
 
-    // File icon with file type indicator
+    mainLayout->addWidget(createFileIconContainer());
+    mainLayout->addLayout(createInfoLayout(), 1);
+    mainLayout->addLayout(createButtonLayout());
+
+    setCursor(Qt::PointingHandCursor);
+}
+
+QWidget* FileItemWidget::createFileIconContainer()
+{
     auto* fileIconContainer = new QWidget(this);
     fileIconContainer->setFixedSize(42, 42);
     fileIconContainer->setStyleSheet(R"(
@@ -44,7 +52,11 @@ void FileItemWidget::setupUI()
     )");
     fileTypeLabel->setFixedSize(42, 42);
     
-    // File info section
+    return fileIconContainer;
+}
+
+QLayout* FileItemWidget::createInfoLayout()
+{
     auto* infoLayout = new QVBoxLayout();
     infoLayout->setSpacing(4);
 
@@ -60,12 +72,28 @@ void FileItemWidget::setupUI()
     infoLayout->addWidget(fileNameLabel);
     infoLayout->addWidget(detailsLabel);
 
-    // Action buttons
+    return infoLayout;
+}
+
+QLayout* FileItemWidget::createButtonLayout()
+{
     auto* buttonLayout = new QHBoxLayout();
     buttonLayout->setSpacing(8);
     buttonLayout->addStretch();
 
-    // Add download button
+    buttonLayout->addWidget(createDownloadButton());
+
+    if (mode == Mode::Sent) {
+        buttonLayout->addWidget(createRevokeButton());
+        buttonLayout->addWidget(createDeleteButton());
+    }
+
+    buttonLayout->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    return buttonLayout;
+}
+
+QPushButton* FileItemWidget::createDownloadButton()
+{
     downloadButton = new QPushButton(this);
     downloadButton->setFixedSize(30, 30);
     downloadButton->setCursor(Qt::PointingHandCursor);
@@ -84,63 +112,55 @@ void FileItemWidget::setupUI()
             background-color: #4040b0;
         }
     )");
-    buttonLayout->addWidget(downloadButton);
+    return downloadButton;
+}
 
-    // Only create and show revoke button in Sent mode
-    if (mode == Mode::Sent) {
-        revokeButton = new QPushButton("Revoke", this);
-        revokeButton->setFixedSize(75, 30);
-        revokeButton->setCursor(Qt::PointingHandCursor);
-        revokeButton->setStyleSheet(R"(
-            QPushButton {
-                background-color: #6c5ce7;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #5049c9;
-            }
-            QPushButton:pressed {
-                background-color: #4040b0;
-            }
-        )");
-        buttonLayout->addWidget(revokeButton);
-    }
+QPushButton* FileItemWidget::createRevokeButton()
+{
+    revokeButton = new QPushButton("Revoke", this);
+    revokeButton->setFixedSize(75, 30);
+    revokeButton->setCursor(Qt::PointingHandCursor);
+    revokeButton->setStyleSheet(R"(
+        QPushButton {
+            background-color: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #5049c9;
+        }
+        QPushButton:pressed {
+            background-color: #4040b0;
+        }
+    )");
+    return revokeButton;
+}
 
-    // Only create and show delete button in Sent mode
-    if (mode == Mode::Sent) {
-        deleteButton = new QPushButton("Delete", this);
-        deleteButton->setFixedSize(75, 30);
-        deleteButton->setCursor(Qt::PointingHandCursor);
-        deleteButton->setStyleSheet(R"(
-            QPushButton {
-                background-color: #e74c3c;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #c0392b;
-            }
-            QPushButton:pressed {
-                background-color: #a93226;
-            }
-        )");
-        buttonLayout->addWidget(deleteButton);
-    }
-
-    buttonLayout->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-
-    mainLayout->addWidget(fileIconContainer);
-    mainLayout->addLayout(infoLayout, 1);
-    mainLayout->addLayout(buttonLayout);
-
-    setCursor(Qt::PointingHandCursor);
+QPushButton* FileItemWidget::createDeleteButton()
+{
+    deleteButton = new QPushButton("Delete", this);
+    deleteButton->setFixedSize(75, 30);
+    deleteButton->setCursor(Qt::PointingHandCursor);
+    deleteButton->setStyleSheet(R"(
+        QPushButton {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #c0392b;
+        }
+        QPushButton:pressed {
+            background-color: #a93226;
+        }
+    )");
+    return deleteButton;
 }
 
 void FileItemWidget::setupConnections()

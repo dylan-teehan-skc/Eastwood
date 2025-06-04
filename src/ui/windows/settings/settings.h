@@ -20,7 +20,6 @@ public:
     bool handleDeviceConnection(const QString& publicKey);
 
 private slots:
-    void onWindowShown(const QString& windowName) const;
     void onReceivedButtonClicked() const;
     void onSentButtonClicked() const;
     void onSendFileButtonClicked() const;

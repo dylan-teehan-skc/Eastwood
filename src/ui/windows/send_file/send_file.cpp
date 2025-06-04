@@ -9,27 +9,18 @@
 #include <QCheckBox>
 
 #include "src/endpoints/endpoints.h"
-#include "src/auth/logout.h"
 #include "src/files/upload_file.h"
 #include "src/keys/session_token_manager.h"
 #include "src/key_exchange/utils.h"
 #include "src/key_exchange/XChaCha20-Poly1305.h"
 #include "src/sessions/RatchetSessionManager.h"
 #include "src/sql/queries.h"
-#include "src/keys/session_token_manager.h"
-#include "src/keys/kek_manager.h"
-#include "src/database/database.h"
-#include "src/keys/session_token_manager.h"
 
 SendFile::SendFile(QWidget *parent)
     : QWidget(parent)
       , ui(new Ui::SendFile) {
     ui->setupUi(this);
     setupConnections();
-
-    // Connect WindowManager signal to handle navbar highlighting
-    connect(&WindowManager::instance(), &WindowManager::windowShown,
-            this, &SendFile::onWindowShown);
 }
 
 SendFile::~SendFile() {
@@ -45,7 +36,6 @@ void SendFile::setupConnections() {
         connect(navbar, &NavBar::receivedClicked, this, &SendFile::onReceivedButtonClicked);
         connect(navbar, &NavBar::sentClicked, this, &SendFile::onSentButtonClicked);
         connect(navbar, &NavBar::settingsClicked, this, &SendFile::onSettingsButtonClicked);
-        connect(navbar, &NavBar::logoutClicked, this, &SendFile::onLogoutButtonClicked);
         connect(navbar, &NavBar::sendFileClicked, this, &SendFile::onSendFileButtonClicked);
     }
 }
@@ -151,7 +141,6 @@ void SendFile::onSentButtonClicked() const {
     WindowManager::instance().showSent();
 }
 
-// navbar button
 void SendFile::onSendFileButtonClicked() const {
     ui->usernameInput->clear();
     ui->filePathInput->clear();
@@ -163,18 +152,4 @@ void SendFile::onSettingsButtonClicked() const {
     ui->fileDetailsLabel->clear();
     ui->usernameInput->clear();
     WindowManager::instance().showSettings();
-}
-
-void SendFile::onWindowShown(const QString &windowName) const {
-    // Find the navbar and update its active button
-    if (NavBar *navbar = findChild<NavBar *>()) {
-        navbar->setActiveButton(windowName);
-    }
-}
-
-void SendFile::onLogoutButtonClicked() {
-    logout();
-
-    // Show login window
-    WindowManager::instance().showLogin();
 }
