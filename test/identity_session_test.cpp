@@ -6,6 +6,7 @@
 #include <tuple>
 #include <iostream>
 #include <thread>
+#include <array>
 
 #include "kek_manager.h"
 #include "NewRatchet.h"
@@ -42,20 +43,6 @@ protected:
         drop_all_tables();
         init_schema();
 
-        // Initialize all arrays to zero first
-        memset(alice_device_pub, 0, sizeof(alice_device_pub));
-        memset(alice_to_bob_eph_pub, 0, sizeof(alice_to_bob_eph_pub));
-        memset(alice_to_charlie_eph_pub, 0, sizeof(alice_to_charlie_eph_pub));
-        memset(bob_device_pub, 0, sizeof(bob_device_pub));
-        memset(bob_presign_pub, 0, sizeof(bob_presign_pub));
-        memset(bob_onetime_pub, 0, sizeof(bob_onetime_pub));
-        memset(bob_presign_signature, 0, sizeof(bob_presign_signature));
-        memset(charlie_device_pub, 0, sizeof(charlie_device_pub));
-        memset(charlie_eph_pub, 0, sizeof(charlie_eph_pub));
-        memset(charlie_presign_pub, 0, sizeof(charlie_presign_pub));
-        memset(charlie_onetime_pub, 0, sizeof(charlie_onetime_pub));
-        memset(charlie_presign_signature, 0, sizeof(charlie_presign_signature));
-
         // Initialize SecureMemoryBuffer objects with correct sizes for all users
         // Alice's keys
         alice_device_priv = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
@@ -75,32 +62,32 @@ protected:
 
         // Generate keypairs for all users
         // Alice's keypairs
-        crypto_sign_keypair(alice_device_pub, alice_device_priv->data());
-        crypto_box_keypair(alice_to_bob_eph_pub, alice_to_bob_eph_priv->data());
-        crypto_box_keypair(alice_to_charlie_eph_pub, alice_to_charlie_eph_priv->data());
+        crypto_sign_keypair(alice_device_pub.data(), alice_device_priv->data());
+        crypto_box_keypair(alice_to_bob_eph_pub.data(), alice_to_bob_eph_priv->data());
+        crypto_box_keypair(alice_to_charlie_eph_pub.data(), alice_to_charlie_eph_priv->data());
 
         // Bob's keypairs
-        crypto_sign_keypair(bob_device_pub, bob_device_priv->data());
-        crypto_box_keypair(bob_presign_pub, bob_presign_priv->data());
-        crypto_box_keypair(bob_onetime_pub, bob_onetime_priv->data());
+        crypto_sign_keypair(bob_device_pub.data(), bob_device_priv->data());
+        crypto_box_keypair(bob_presign_pub.data(), bob_presign_priv->data());
+        crypto_box_keypair(bob_onetime_pub.data(), bob_onetime_priv->data());
 
         // Charlie's keypairs
-        crypto_sign_keypair(charlie_device_pub, charlie_device_priv->data());
-        crypto_box_keypair(charlie_eph_pub, charlie_eph_priv->data());
-        crypto_box_keypair(charlie_presign_pub, charlie_presign_priv->data());
-        crypto_box_keypair(charlie_onetime_pub, charlie_onetime_priv->data());
+        crypto_sign_keypair(charlie_device_pub.data(), charlie_device_priv->data());
+        crypto_box_keypair(charlie_eph_pub.data(), charlie_eph_priv->data());
+        crypto_box_keypair(charlie_presign_pub.data(), charlie_presign_priv->data());
+        crypto_box_keypair(charlie_onetime_pub.data(), charlie_onetime_priv->data());
 
         // Generate signatures
-        crypto_sign_detached(bob_presign_signature,
+        crypto_sign_detached(bob_presign_signature.data(),
             nullptr,
-            bob_presign_pub,
+            bob_presign_pub.data(),
             crypto_box_PUBLICKEYBYTES,
             bob_device_priv->data()
         );
 
-        crypto_sign_detached(charlie_presign_signature,
+        crypto_sign_detached(charlie_presign_signature.data(),
             nullptr,
-            charlie_presign_pub,
+            charlie_presign_pub.data(),
             crypto_box_PUBLICKEYBYTES,
             charlie_device_priv->data()
         );
@@ -222,13 +209,13 @@ protected:
     }
 
     // Helper function to create a MessageHeader for testing
-    MessageHeader* create_test_header(const unsigned char* dh_public, const unsigned char* device_id, int message_index, int prev_chain_length) {
-        auto header = new MessageHeader();
-        memcpy(header->dh_public.data(), dh_public, crypto_kx_PUBLICKEYBYTES);
-        memcpy(header->device_id.data(), device_id, crypto_box_PUBLICKEYBYTES);
-        header->message_index = message_index;
-        header->prev_chain_length = prev_chain_length;
-        strcpy(header->file_uuid, "test_file_uuid");
+    MessageHeader create_test_header(const unsigned char* dh_public, const unsigned char* device_id, int message_index, int prev_chain_length) {
+        MessageHeader header;
+        memcpy(header.dh_public.data(), dh_public, crypto_kx_PUBLICKEYBYTES);
+        memcpy(header.device_id.data(), device_id, crypto_box_PUBLICKEYBYTES);
+        header.message_index = message_index;
+        header.prev_chain_length = prev_chain_length;
+        strcpy(header.file_uuid, "test_file_uuid");
         return header;
     }
 
@@ -244,7 +231,7 @@ protected:
         memcpy(alice_device_priv_copy->data(), alice_device_priv->data(), crypto_sign_SECRETKEYBYTES);
 
         std::unique_ptr<SecureMemoryBuffer> encrypted_alice_device_priv = encrypt_secret_key(std::move(alice_device_priv_copy), nonce);
-        save_encrypted_keypair("device", alice_device_pub, encrypted_alice_device_priv, nonce);
+        save_encrypted_keypair("device", alice_device_pub.data(), encrypted_alice_device_priv, nonce);
 
         delete[] nonce;
     }
@@ -261,7 +248,7 @@ protected:
         memcpy(bob_device_priv_copy->data(), bob_device_priv->data(), crypto_sign_SECRETKEYBYTES);
         
         std::unique_ptr<SecureMemoryBuffer> encrypted_bob_device_priv = encrypt_secret_key(std::move(bob_device_priv_copy), nonce);
-        save_encrypted_keypair("device", bob_device_pub, encrypted_bob_device_priv, nonce);
+        save_encrypted_keypair("device", bob_device_pub.data(), encrypted_bob_device_priv, nonce);
 
         auto nonce_2 = new unsigned char[CHA_CHA_NONCE_LEN];
         randombytes_buf(nonce_2, CHA_CHA_NONCE_LEN);
@@ -270,7 +257,7 @@ protected:
         memcpy(bob_presign_priv_copy->data(), bob_presign_priv->data(), crypto_sign_SECRETKEYBYTES);
         
         std::unique_ptr<SecureMemoryBuffer> encrypted_bob_presign_priv = encrypt_secret_key(std::move(bob_presign_priv_copy), nonce_2);
-        save_encrypted_keypair("signed", bob_presign_pub, encrypted_bob_presign_priv, nonce_2);
+        save_encrypted_keypair("signed", bob_presign_pub.data(), encrypted_bob_presign_priv, nonce_2);
 
         auto nonce_3 = new unsigned char[CHA_CHA_NONCE_LEN];
         randombytes_buf(nonce_3, CHA_CHA_NONCE_LEN);
@@ -281,7 +268,7 @@ protected:
         std::unique_ptr<SecureMemoryBuffer> encrypted_bob_onetime_priv = encrypt_secret_key(std::move(bob_onetime_priv_copy), nonce_3);
 
         unsigned char* onetime_pub_copy = new unsigned char[crypto_box_PUBLICKEYBYTES];
-        memcpy(onetime_pub_copy, bob_onetime_pub, crypto_box_PUBLICKEYBYTES);
+        memcpy(onetime_pub_copy, bob_onetime_pub.data(), crypto_box_PUBLICKEYBYTES);
 
         std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>> onetime_keys;
         onetime_keys.emplace_back(onetime_pub_copy, std::move(encrypted_bob_onetime_priv), nonce_3);
@@ -329,32 +316,32 @@ protected:
     ReceivingKeyBundle *charlie_from_bob_bundle = nullptr;
 
     // Alice's keys
-    unsigned char alice_device_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> alice_device_pub = {};
     std::unique_ptr<SecureMemoryBuffer> alice_device_priv;
-    unsigned char alice_to_bob_eph_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> alice_to_bob_eph_pub = {};
     std::unique_ptr<SecureMemoryBuffer> alice_to_bob_eph_priv;
-    unsigned char alice_to_charlie_eph_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> alice_to_charlie_eph_pub = {};
     std::unique_ptr<SecureMemoryBuffer> alice_to_charlie_eph_priv;
 
     // Bob's keys
-    unsigned char bob_device_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> bob_device_pub = {};
     std::unique_ptr<SecureMemoryBuffer> bob_device_priv;
-    unsigned char bob_presign_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> bob_presign_pub = {};
     std::unique_ptr<SecureMemoryBuffer> bob_presign_priv;
-    unsigned char bob_onetime_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> bob_onetime_pub = {};
     std::unique_ptr<SecureMemoryBuffer> bob_onetime_priv;
-    unsigned char bob_presign_signature[crypto_sign_BYTES] = {};
+    std::array<unsigned char, crypto_sign_BYTES> bob_presign_signature = {};
 
     // Charlie's keys
-    unsigned char charlie_device_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> charlie_device_pub = {};
     std::unique_ptr<SecureMemoryBuffer> charlie_device_priv;
-    unsigned char charlie_eph_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> charlie_eph_pub = {};
     std::unique_ptr<SecureMemoryBuffer> charlie_eph_priv;
-    unsigned char charlie_presign_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> charlie_presign_pub = {};
     std::unique_ptr<SecureMemoryBuffer> charlie_presign_priv;
-    unsigned char charlie_onetime_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, crypto_box_PUBLICKEYBYTES> charlie_onetime_pub = {};
     std::unique_ptr<SecureMemoryBuffer> charlie_onetime_priv;
-    unsigned char charlie_presign_signature[crypto_sign_BYTES] = {};
+    std::array<unsigned char, crypto_sign_BYTES> charlie_presign_signature = {};
 };
 
 TEST_F(RatchetSessionManagerTest, RatchetCreationTest) {
@@ -369,7 +356,7 @@ TEST_F(RatchetSessionManagerTest, RatchetCreationTest) {
     
     // Check that the device ID matches bob's device public key
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
     EXPECT_NE(keys.find(bob_device_id), keys.end());
 }
 
@@ -385,8 +372,8 @@ TEST_F(RatchetSessionManagerTest, MultipleDeviceRatchetCreationTest) {
     // Check that both Alice and Bob device IDs are present
     std::array<unsigned char, 32> charlie_device_id;
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(charlie_device_id.data(), charlie_device_pub, 32);
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(charlie_device_id.data(), charlie_device_pub.data(), 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
     
     EXPECT_NE(keys.find(charlie_device_id), keys.end());
     EXPECT_NE(keys.find(bob_device_id), keys.end());
@@ -419,7 +406,7 @@ TEST_F(RatchetSessionManagerTest, KeyGenerationForSendingTest) {
     EXPECT_EQ(keys.size(), 1);
     
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
     
     auto it = keys.find(bob_device_id);
     ASSERT_NE(it, keys.end());
@@ -427,9 +414,8 @@ TEST_F(RatchetSessionManagerTest, KeyGenerationForSendingTest) {
     auto [message_key, header] = it->second;
     
     // Verify header is properly initialized
-    EXPECT_NE(header, nullptr);
-    EXPECT_EQ(header->message_index, 0); // First message should have index 0
-    EXPECT_EQ(header->prev_chain_length, 0);
+    EXPECT_EQ(header.message_index, 0); // First message should have index 0
+    EXPECT_EQ(header.prev_chain_length, 0);
     
     // Verify message key is not all zeros
     bool all_zeros = true;
@@ -440,9 +426,6 @@ TEST_F(RatchetSessionManagerTest, KeyGenerationForSendingTest) {
         }
     }
     EXPECT_FALSE(all_zeros);
-    
-    // Clean up
-    delete header;
 }
 
 TEST_F(RatchetSessionManagerTest, KeyGenerationConsistencyTest) {
@@ -470,14 +453,14 @@ TEST_F(RatchetSessionManagerTest, KeyGenerationConsistencyTest) {
     // Get sending key from Alice's perspective
     auto alice_keys = alice_session_manager->get_keys_for_identity("bob", false);
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
     auto [alice_message_key, alice_header] = alice_keys[bob_device_id];
 
     // Debug print Alice's message key and header
     printf("Alice message key: ");
     for (int i = 0; i < 32; ++i) printf("%02x", alice_message_key[i]);
-    printf("\nHeader: message_index=%d, dh_public=", alice_header->message_index);
-    for (int i = 0; i < 32; ++i) printf("%02x", alice_header->dh_public[i]);
+    printf("\nHeader: message_index=%d, dh_public=", alice_header.message_index);
+    for (int i = 0; i < 32; ++i) printf("%02x", alice_header.dh_public[i]);
     printf("\n");
 
     // Bob's perspective (receiver)
@@ -501,11 +484,7 @@ TEST_F(RatchetSessionManagerTest, KeyGenerationConsistencyTest) {
     printf("\n");
     for (int i = 0; i < 32; ++i) printf("%02x", bob_message_key[i]);
     printf("\n");
-    EXPECT_EQ(memcmp(alice_message_key.data(), bob_message_key, 32), 0);
-
-    // Clean up
-    delete alice_header;
-    delete[] bob_message_key;
+    EXPECT_EQ(memcmp(alice_message_key.data(), bob_message_key.data(), 32), 0);
 }
 
 // ===== EXTENSIVE KEY GENERATION CONSISTENCY TESTS =====
@@ -527,10 +506,10 @@ TEST_F(RatchetSessionManagerTest, MultipleSequentialSendKeyConsistencyTest) {
 
     const int num_messages = 5;
     std::vector<std::array<unsigned char, 32>> alice_keys;
-    std::vector<MessageHeader*> headers;
+    std::vector<MessageHeader> headers;
 
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
 
     // Alice sends multiple messages
     switch_to_alice_db();
@@ -548,11 +527,8 @@ TEST_F(RatchetSessionManagerTest, MultipleSequentialSendKeyConsistencyTest) {
         auto bob_key = bob_session_manager->get_key_for_device("alice", headers[i]);
         print_key("Bob receives key " + std::to_string(i), bob_key);
         
-        ASSERT_EQ(memcmp(alice_keys[i].data(), bob_key, 32), 0) 
+        ASSERT_EQ(memcmp(alice_keys[i].data(), bob_key.data(), 32), 0)
             << "Key mismatch at message " << i;
-        
-        delete[] bob_key;
-        delete headers[i];
     }
 }
 
@@ -572,9 +548,9 @@ TEST_F(RatchetSessionManagerTest, AlternatingKeyGenerationConsistencyTest) {
     bob_session_manager->create_ratchets_if_needed("alice", bob_bundles, false);
 
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
     std::array<unsigned char, 32> alice_device_id;
-    memcpy(alice_device_id.data(), alice_device_pub, 32);
+    memcpy(alice_device_id.data(), alice_device_pub.data(), 32);
 
     const int num_rounds = 3;
     
@@ -591,7 +567,7 @@ TEST_F(RatchetSessionManagerTest, AlternatingKeyGenerationConsistencyTest) {
         auto bob_received_key = bob_session_manager->get_key_for_device("alice", alice_header);
         print_key("Bob receives Alice's key", bob_received_key);
 
-        ASSERT_EQ(memcmp(alice_key.data(), bob_received_key, 32), 0)
+        ASSERT_EQ(memcmp(alice_key.data(), bob_received_key.data(), 32), 0)
             << "Alice->Bob key mismatch in round " << round + 1;
 
         // Bob responds
@@ -603,13 +579,9 @@ TEST_F(RatchetSessionManagerTest, AlternatingKeyGenerationConsistencyTest) {
         auto alice_received_key = alice_session_manager->get_key_for_device("bob", bob_header);
         print_key("Alice receives Bob's key", alice_received_key);
 
-        ASSERT_EQ(memcmp(bob_key.data(), alice_received_key, 32), 0)
+        ASSERT_EQ(memcmp(bob_key.data(), alice_received_key.data(), 32), 0)
             << "Bob->Alice key mismatch in round " << round + 1;
 
-        delete alice_header;
-        delete bob_header;
-        delete[] bob_received_key;
-        delete[] alice_received_key;
     }
 }
 
@@ -629,14 +601,14 @@ TEST_F(RatchetSessionManagerTest, BurstSendKeyConsistencyTest) {
     bob_session_manager->create_ratchets_if_needed("alice", bob_bundles, false);
 
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
     std::array<unsigned char, 32> alice_device_id;
-    memcpy(alice_device_id.data(), alice_device_pub, 32);
+    memcpy(alice_device_id.data(), alice_device_pub.data(), 32);
 
     // Alice sends burst of messages
     const int alice_burst_size = 3;
     std::vector<std::array<unsigned char, 32>> alice_keys;
-    std::vector<MessageHeader*> alice_headers;
+    std::vector<MessageHeader> alice_headers;
 
     switch_to_alice_db();
     for (int i = 0; i < alice_burst_size; i++) {
@@ -653,16 +625,14 @@ TEST_F(RatchetSessionManagerTest, BurstSendKeyConsistencyTest) {
         auto bob_key = bob_session_manager->get_key_for_device("alice", alice_headers[i]);
         print_key("Bob receives Alice burst key " + std::to_string(i), bob_key);
         
-        ASSERT_EQ(memcmp(alice_keys[i].data(), bob_key, 32), 0)
+        ASSERT_EQ(memcmp(alice_keys[i].data(), bob_key.data(), 32), 0)
             << "Alice burst key mismatch at index " << i;
-        
-        delete[] bob_key;
     }
 
     // Bob responds with his own burst
     const int bob_burst_size = 4;
     std::vector<std::array<unsigned char, 32>> bob_keys;
-    std::vector<MessageHeader*> bob_headers;
+    std::vector<MessageHeader> bob_headers;
 
     for (int i = 0; i < bob_burst_size; i++) {
         auto bob_keys_map = bob_session_manager->get_keys_for_identity("alice", false);
@@ -678,15 +648,9 @@ TEST_F(RatchetSessionManagerTest, BurstSendKeyConsistencyTest) {
         auto alice_key = alice_session_manager->get_key_for_device("bob", bob_headers[i]);
         print_key("Alice receives Bob burst key " + std::to_string(i), alice_key);
         
-        ASSERT_EQ(memcmp(bob_keys[i].data(), alice_key, 32), 0)
+        ASSERT_EQ(memcmp(bob_keys[i].data(), alice_key.data(), 32), 0)
             << "Bob burst key mismatch at index " << i;
-        
-        delete[] alice_key;
     }
-
-    // Clean up
-    for (auto header : alice_headers) delete header;
-    for (auto header : bob_headers) delete header;
 }
 
 TEST_F(RatchetSessionManagerTest, KeyUniquenessTest) {
@@ -705,9 +669,9 @@ TEST_F(RatchetSessionManagerTest, KeyUniquenessTest) {
     bob_session_manager->create_ratchets_if_needed("alice", bob_bundles, false);
 
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
     std::array<unsigned char, 32> alice_device_id;
-    memcpy(alice_device_id.data(), alice_device_pub, 32);
+    memcpy(alice_device_id.data(), alice_device_pub.data(), 32);
 
     const int num_keys = 20;
     std::vector<std::array<unsigned char, 32>> all_keys;
@@ -730,11 +694,6 @@ TEST_F(RatchetSessionManagerTest, KeyUniquenessTest) {
         // Alice receives Bob's response
         switch_to_alice_db();
         auto alice_received_key = alice_session_manager->get_key_for_device("bob", bob_header);
-
-        delete alice_header;
-        delete bob_header;
-        delete[] bob_received_key;
-        delete[] alice_received_key;
     }
 
     // Verify all keys are unique
@@ -765,9 +724,9 @@ TEST_F(RatchetSessionManagerTest, CrossRatchetKeyConsistencyTest) {
     bob_session_manager->create_ratchets_if_needed("alice", bob_bundles, false);
 
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
     std::array<unsigned char, 32> alice_device_id;
-    memcpy(alice_device_id.data(), alice_device_pub, 32);
+    memcpy(alice_device_id.data(), alice_device_pub.data(), 32);
 
     // Test pattern: Alice sends, Bob responds, Alice sends more (triggers DH ratchet)
     
@@ -780,7 +739,7 @@ TEST_F(RatchetSessionManagerTest, CrossRatchetKeyConsistencyTest) {
     switch_to_bob_db();
     auto bob_received_key1 = bob_session_manager->get_key_for_device("alice", alice_header1);
     print_key("Bob receives Alice's key 1", bob_received_key1);
-    ASSERT_EQ(memcmp(alice_key1.data(), bob_received_key1, 32), 0);
+    ASSERT_EQ(memcmp(alice_key1.data(), bob_received_key1.data(), 32), 0);
 
     // Bob responds (this should trigger DH ratchet)
     auto bob_keys_map1 = bob_session_manager->get_keys_for_identity("alice", false);
@@ -790,7 +749,7 @@ TEST_F(RatchetSessionManagerTest, CrossRatchetKeyConsistencyTest) {
     switch_to_alice_db();
     auto alice_received_key1 = alice_session_manager->get_key_for_device("bob", bob_header1);
     print_key("Alice receives Bob's key 1", alice_received_key1);
-    ASSERT_EQ(memcmp(bob_key1.data(), alice_received_key1, 32), 0);
+    ASSERT_EQ(memcmp(bob_key1.data(), alice_received_key1.data(), 32), 0);
 
     // Alice sends more messages (new DH ratchet should be in effect)
     auto alice_keys_map2 = alice_session_manager->get_keys_for_identity("bob", false);
@@ -800,7 +759,7 @@ TEST_F(RatchetSessionManagerTest, CrossRatchetKeyConsistencyTest) {
     switch_to_bob_db();
     auto bob_received_key2 = bob_session_manager->get_key_for_device("alice", alice_header2);
     print_key("Bob receives Alice's key 2 (new ratchet)", bob_received_key2);
-    ASSERT_EQ(memcmp(alice_key2.data(), bob_received_key2, 32), 0);
+    ASSERT_EQ(memcmp(alice_key2.data(), bob_received_key2.data(), 32), 0);
 
     // Bob sends another message
     auto bob_keys_map2 = bob_session_manager->get_keys_for_identity("alice", false);
@@ -810,17 +769,7 @@ TEST_F(RatchetSessionManagerTest, CrossRatchetKeyConsistencyTest) {
     switch_to_alice_db();
     auto alice_received_key2 = alice_session_manager->get_key_for_device("bob", bob_header2);
     print_key("Alice receives Bob's key 2", alice_received_key2);
-    ASSERT_EQ(memcmp(bob_key2.data(), alice_received_key2, 32), 0);
-
-    // Clean up
-    delete alice_header1;
-    delete bob_header1;
-    delete alice_header2;
-    delete bob_header2;
-    delete[] bob_received_key1;
-    delete[] alice_received_key1;
-    delete[] bob_received_key2;
-    delete[] alice_received_key2;
+    ASSERT_EQ(memcmp(bob_key2.data(), alice_received_key2.data(), 32), 0);
 }
 
 TEST_F(RatchetSessionManagerTest, LongChainKeyConsistencyTest) {
@@ -839,13 +788,13 @@ TEST_F(RatchetSessionManagerTest, LongChainKeyConsistencyTest) {
     bob_session_manager->create_ratchets_if_needed("alice", bob_bundles, false);
 
     std::array<unsigned char, 32> bob_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
     std::array<unsigned char, 32> alice_device_id;
-    memcpy(alice_device_id.data(), alice_device_pub, 32);
+    memcpy(alice_device_id.data(), alice_device_pub.data(), 32);
 
     const int long_chain_length = 10;
     std::vector<std::array<unsigned char, 32>> alice_keys;
-    std::vector<MessageHeader*> headers;
+    std::vector<MessageHeader> headers;
 
     // Alice sends a long chain of messages
     switch_to_alice_db();
@@ -863,15 +812,13 @@ TEST_F(RatchetSessionManagerTest, LongChainKeyConsistencyTest) {
         auto bob_key = bob_session_manager->get_key_for_device("alice", headers[i]);
         print_key("Bob receives long chain key " + std::to_string(i), bob_key);
         
-        ASSERT_EQ(memcmp(alice_keys[i].data(), bob_key, 32), 0)
+        ASSERT_EQ(memcmp(alice_keys[i].data(), bob_key.data(), 32), 0)
             << "Long chain key mismatch at index " << i;
-        
-        delete[] bob_key;
     }
 
     // Now Bob sends a long chain back
     std::vector<std::array<unsigned char, 32>> bob_keys;
-    std::vector<MessageHeader*> bob_headers;
+    std::vector<MessageHeader> bob_headers;
 
     for (int i = 0; i < long_chain_length; i++) {
         auto bob_keys_map = bob_session_manager->get_keys_for_identity("alice", false);
@@ -887,15 +834,10 @@ TEST_F(RatchetSessionManagerTest, LongChainKeyConsistencyTest) {
         auto alice_key = alice_session_manager->get_key_for_device("bob", bob_headers[i]);
         print_key("Alice receives Bob's long chain key " + std::to_string(i), alice_key);
         
-        ASSERT_EQ(memcmp(bob_keys[i].data(), alice_key, 32), 0)
+        ASSERT_EQ(memcmp(bob_keys[i].data(), alice_key.data(), 32), 0)
             << "Long chain key mismatch at index " << i;
-        
-        delete[] alice_key;
     }
 
-    // Clean up
-    for (auto header : headers) delete header;
-    for (auto header : bob_headers) delete header;
 }
 
 TEST_F(RatchetSessionManagerTest, LoadRatchetsFromDatabaseTest) {
@@ -913,8 +855,8 @@ TEST_F(RatchetSessionManagerTest, LoadRatchetsFromDatabaseTest) {
     // Generate some keys to advance ratchet state
     std::array<unsigned char, 32> bob_device_id;
     std::array<unsigned char, 32> charlie_device_id;
-    memcpy(bob_device_id.data(), bob_device_pub, 32);
-    memcpy(charlie_device_id.data(), charlie_device_pub, 32);
+    memcpy(bob_device_id.data(), bob_device_pub.data(), 32);
+    memcpy(charlie_device_id.data(), charlie_device_pub.data(), 32);
     
     auto alice_keys1 = alice_session_manager1->get_keys_for_identity("contacts", false);
     auto [alice_key_bob1, alice_header_bob1] = alice_keys1[bob_device_id];
@@ -982,11 +924,11 @@ TEST_F(RatchetSessionManagerTest, LoadRatchetsFromDatabaseTest) {
     print_key("Bob received key 3", bob_received_key3);
     
     // Verify the keys match
-    ASSERT_EQ(memcmp(alice_key_bob1.data(), bob_received_key1, 32), 0)
+    ASSERT_EQ(memcmp(alice_key_bob1.data(), bob_received_key1.data(), 32), 0)
         << "Bob should receive correct key 1";
-    ASSERT_EQ(memcmp(alice_key_bob2.data(), bob_received_key2, 32), 0)
+    ASSERT_EQ(memcmp(alice_key_bob2.data(), bob_received_key2.data(), 32), 0)
         << "Bob should receive correct key 2";
-    ASSERT_EQ(memcmp(alice_key_bob3.data(), bob_received_key3, 32), 0)
+    ASSERT_EQ(memcmp(alice_key_bob3.data(), bob_received_key3.data(), 32), 0)
         << "Bob should receive correct key 3 from loaded ratchet";
     
     // Phase 5: Test bidirectional communication with loaded ratchets
@@ -994,7 +936,7 @@ TEST_F(RatchetSessionManagerTest, LoadRatchetsFromDatabaseTest) {
     
     // Bob responds
     std::array<unsigned char, 32> alice_device_id;
-    memcpy(alice_device_id.data(), alice_device_pub, 32);
+    memcpy(alice_device_id.data(), alice_device_pub.data(), 32);
     
     auto bob_keys = bob_session_manager->get_keys_for_identity("alice", false);
     auto [bob_key, bob_header] = bob_keys[alice_device_id];
@@ -1005,23 +947,14 @@ TEST_F(RatchetSessionManagerTest, LoadRatchetsFromDatabaseTest) {
     auto alice_received_key = alice_session_manager2->get_key_for_device("contacts", bob_header);
     print_key("Alice received Bob's response", alice_received_key);
     
-    ASSERT_EQ(memcmp(bob_key.data(), alice_received_key, 32), 0)
+    ASSERT_EQ(memcmp(bob_key.data(), alice_received_key.data(), 32), 0)
         << "Alice should receive Bob's response correctly using loaded ratchet";
     
     std::cout << "Successfully verified ratchet persistence and functionality!" << std::endl;
     
-    // Clean up
-    delete alice_header_bob1;
-    delete alice_header_bob2;
-    delete alice_header_bob3;
-    delete alice_header_charlie1;
-    delete alice_header_charlie2;
-    delete alice_header_charlie3;
-    delete bob_header;
-    delete[] bob_received_key1;
-    delete[] bob_received_key2;
-    delete[] bob_received_key3;
-    delete[] alice_received_key;
+    // Explicit cleanup to prevent segfault during destruction
+    alice_session_manager2.reset();
+    bob_session_manager.reset();
 }
 
 TEST_F(RatchetSessionManagerTest, LoadRatchetsFromEmptyDatabaseTest) {
@@ -1039,5 +972,8 @@ TEST_F(RatchetSessionManagerTest, LoadRatchetsFromEmptyDatabaseTest) {
     EXPECT_EQ(keys.size(), 0) << "Should return empty map for non-existent user";
     
     std::cout << "Successfully handled empty database case" << std::endl;
+    
+    // Explicit cleanup to prevent segfault during destruction
+    alice_session_manager.reset();
 }
 

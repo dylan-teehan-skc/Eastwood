@@ -104,7 +104,7 @@ inline void init_schema() {
         UPDATE ratchet_keys SET last_modified = CURRENT_TIMESTAMP WHERE device_id = OLD.device_id;
     END;
 
-    CREATE TABLE IF NOT EXISTS received_messages (
+CREATE TABLE IF NOT EXISTS received_messages (
         username       TEXT,
         from_device_id BLOB,
         nonce         BLOB UNIQUE,

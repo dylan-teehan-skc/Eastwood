@@ -264,15 +264,15 @@ std::vector<unsigned char> decrypt_bytes(
     decrypted_bytes.resize(encrypted_bytes.size());
     unsigned long long size_out = 0;
 
-    if (crypto_aead_xchacha20poly1305_ietf_encrypt(
+    if (crypto_aead_xchacha20poly1305_ietf_decrypt(
             decrypted_bytes.data(), &size_out,
+            nullptr, // Secret nonce is always null for this algorithm
             reinterpret_cast<const unsigned char *>(encrypted_bytes.constData()),
             encrypted_bytes.size(),
             nullptr, 0, // No associated data
-            nullptr, // Always null for this algorithm
             nonce.data(), key->data()
         ) != 0) {
-        throw std::runtime_error("Failed to encrypt file");
+        throw std::runtime_error("Failed to decrypt file");
     }
     decrypted_bytes.resize(size_out);
     return decrypted_bytes;

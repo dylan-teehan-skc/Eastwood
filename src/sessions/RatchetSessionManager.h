@@ -25,9 +25,9 @@ public:
 
     void create_ratchets_if_needed(const std::string &username, const std::vector<KeyBundle*> &bundles, bool post_to_server = true);
     // device id : <key, message header>
-    std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>, MessageHeader*>> get_keys_for_identity(const std::string &username, bool post_new_ratchets_to_server = true);
+    std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>, MessageHeader>> get_keys_for_identity(const std::string &username, bool post_new_ratchets_to_server = true);
     // essentially receive
-    unsigned char* get_key_for_device(const std::string &username, MessageHeader* header);
+    std::array<unsigned char, 32> get_key_for_device(const std::string &username, MessageHeader header);
 
     void load_ratchets_from_db();
 

@@ -18,11 +18,20 @@ inline std::string bin2hex(const unsigned char* data, size_t len) {
     return ss.str();
 }
 
-inline std::string hex2bin(const unsigned char* hex, const size_t len) {
-    const auto max_len = len * 2 + 1;
-    char bin[max_len];
-    sodium_bin2hex(bin, max_len, hex, len);
-    return std::string(bin);
+inline std::vector<unsigned char> hex2bin(const std::string &hex) {
+    const size_t bin_len = hex.length() / 2;
+    std::vector<unsigned char> bin(bin_len);
+    
+    size_t actual_len;
+    if (sodium_hex2bin(bin.data(), bin_len,
+                      hex.c_str(), hex.length(),
+                      nullptr, &actual_len, nullptr) != 0) {
+        throw std::runtime_error("Failed to convert hex to binary");
+    }
+    
+    // Resize to actual length
+    bin.resize(actual_len);
+    return bin;
 }
 
 inline std::string bin2base64(const unsigned char* data, size_t len) {

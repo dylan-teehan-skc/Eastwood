@@ -5,6 +5,7 @@
 #include <QListWidgetItem>
 #include "src/ui/utils/file_item_widget/file_item_widget.h"
 #include "src/ui/utils/window_manager/window_manager.h"
+#include <QTimer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Received; }
@@ -23,10 +24,14 @@ private slots:
     void onDownloadFileClicked(FileItemWidget* widget);
     void refreshFileList();
     void onReceivedButtonClicked();
+    void onRefreshButtonClicked();
+    void handleRefreshSpinner();
 
 private:
     Ui::Received *ui;
     QWidget* m_sendFileWindow;
+    QTimer* m_refreshSpinnerTimer;
+    int m_spinnerAngle;
     void setupConnections();
     void setupFileList() const;
     void showFileMetadata(const FileItemWidget* widget);

@@ -72,14 +72,60 @@
       <number>35</number>
      </property>
      <item>
-      <widget class="QLabel" name="pageTitle">
-       <property name="styleSheet">
-        <string notr="true">font-size: 24px; font-weight: bold; color: #2d3436;</string>
-       </property>
-       <property name="text">
-        <string>Received Files</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="titleLayout">
+       <item>
+        <widget class="QLabel" name="pageTitle">
+         <property name="styleSheet">
+          <string notr="true">font-size: 24px; font-weight: bold; color: #2d3436;</string>
+         </property>
+         <property name="text">
+          <string>Received Files</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="titleSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="refreshButton">
+         <property name="minimumSize">
+          <size>
+           <width>100</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+  font-size: 12px;
+  font-weight: bold;
+  color: #6c5ce7;
+  background-color: white;
+  border: 2px solid #6c5ce7;
+  border-radius: 6px;
+}
+QPushButton:hover {
+  background-color: #f5f3ff;
+}
+QPushButton:pressed {
+  background-color: #eeeaff;
+}</string>
+         </property>
+         <property name="text">
+          <string>Refresh</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
       <widget class="QListWidget" name="fileList">

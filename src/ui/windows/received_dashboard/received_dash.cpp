@@ -6,17 +6,29 @@
 #include "src/ui/windows/sent_dashboard/sent_dash.h"
 #include <QTimer>
 #include <QCheckBox>
+#include <QTransform>
+#include <QIcon>
+#include <QPixmap>
+#include <QPainter>
+#include <QPen>
+#include <QColor>
 #include <iostream>
+
+#include "src/communication/ReceiveFlow.h"
 
 Received::Received(QWidget *parent, QWidget* sendFileWindow)
     : QWidget(parent)
     , ui(new Ui::Received)
     , m_sendFileWindow(sendFileWindow)
+    , m_spinnerAngle(0)
 {
     ui->setupUi(this);
     setupConnections();
     setupFileList();
     refreshFileList();
+
+    m_refreshSpinnerTimer = new QTimer(this);
+    connect(m_refreshSpinnerTimer, &QTimer::timeout, this, &Received::handleRefreshSpinner);
 }
 
 Received::~Received()
@@ -28,6 +40,7 @@ void Received::setupConnections()
 {
     connect(ui->navBar, &NavBar::receivedClicked, this, &Received::onReceivedButtonClicked);
     connect(ui->sendButton, &QPushButton::clicked, this, &Received::onSendButtonClicked);
+    connect(ui->refreshButton, &QPushButton::clicked, this, &Received::onRefreshButtonClicked);
 }
 
 void Received::setupFileList() const {
@@ -57,11 +70,15 @@ void Received::refreshFileList()
 {
     ui->fileList->clear();
 
-    // TODO: Fetch actual files from server
-    // Example data for demonstration
-    addFileItem("Important Document.pdf", "2.5 MB", "2024-03-15 14:30", "John Doe");
-    addFileItem("Project Presentation.pptx", "5.8 MB", "2024-03-14 09:15", "Alice Smith");
-    addFileItem("Budget Report.xlsx", "1.2 MB", "2024-03-13 16:45", "Bob Johnson");
+    update_handshakes();
+    update_messages();
+
+    auto metadata = get_file_metadata();
+
+    for (const auto& [file_name, file_size, mime_type] : metadata) {
+        std::string file_size_str = std::to_string(file_size);
+        addFileItem(QString::fromStdString(file_name), QString::fromStdString(file_size_str), "sadfa", "asdfadf");
+    }
 }
 
 void Received::onSendButtonClicked()
@@ -93,5 +110,35 @@ void Received::onReceivedButtonClicked()
 {
     std::cout << "Received button clicked" << std::endl;
     refreshFileList();
+}
+
+void Received::onRefreshButtonClicked()
+{
+    m_spinnerAngle = 0;
+    m_refreshSpinnerTimer->start(50);
+
+    refreshFileList();
+
+    //1 second
+    QTimer::singleShot(1000, [this]() {
+        m_refreshSpinnerTimer->stop();
+        ui->refreshButton->setIcon(QIcon());
+    });
+}
+
+void Received::handleRefreshSpinner()
+{
+    m_spinnerAngle = (m_spinnerAngle + 30) % 360;
+    QPixmap pixmap(16, 16);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.translate(8, 8);
+    painter.rotate(m_spinnerAngle);
+    painter.setPen(QPen(QColor("#6c5ce7"), 2));
+    painter.drawLine(0, -6, 0, 6);
+    painter.drawLine(-6, 0, 6, 0);
+    ui->refreshButton->setIcon(QIcon(pixmap));
+    ui->refreshButton->setIconSize(QSize(16, 16));
 }
 

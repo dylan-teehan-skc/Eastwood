@@ -54,7 +54,7 @@ void post_handshake_device(
 std::vector<std::tuple<std::string, KeyBundle*>> get_handshake_backlog();
 
 // [ <username, message (includes device id) > ]
-std::vector<std::tuple<std::string, DeviceMessage*>> get_messages();
+std::vector<std::tuple<std::string, DeviceMessage>> get_messages();
 
 std::vector<KeyBundle*> get_keybundles(const std::string &username, std::vector<std::array<unsigned char,32>> existing_device_ids);
 
@@ -76,5 +76,9 @@ bool get_user_exists(
 );
 
 std::vector<std::string> get_devices();
+
+std::vector<unsigned char> get_encrypted_file(std::string uuid);
+
+std::map<std::string, std::vector<unsigned char>> get_encrypted_file_metadata(std::vector<std::string> uuids);
 
 #endif //ENDPOINTS_H

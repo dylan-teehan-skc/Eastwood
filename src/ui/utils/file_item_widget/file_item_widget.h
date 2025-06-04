@@ -4,6 +4,9 @@
 #include <QWidget>
 #include <QLabel>
 #include <QPushButton>
+#include <QSize>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
 
 class FileItemWidget : public QWidget {
     Q_OBJECT
@@ -27,6 +30,9 @@ public:
     QString getTimestamp() const { return timestamp; }
     QString getOwner() const { return owner; }
 
+    // Override sizeHint to provide a safe default size
+    QSize sizeHint() const override { return QSize(400, 80); }
+
 signals:
     void revokeAccessClicked(FileItemWidget* widget);
     void deleteFileClicked(FileItemWidget* widget);
@@ -36,13 +42,19 @@ signals:
 private:
     QLabel* fileNameLabel;
     QLabel* detailsLabel;
+    QLabel* fileTypeLabel;
+    QWidget* fileIconContainer;
     QPushButton* revokeButton;
     QPushButton* deleteButton;
     QPushButton* downloadButton;
+    QHBoxLayout* mainLayout;
+    QVBoxLayout* infoLayout;
+    QHBoxLayout* buttonLayout;
     QString fileName;
     QString fileSize;
     QString timestamp;
     QString owner;
+    QString uuid;
     Mode mode;
 
     QWidget* createFileIconContainer();

@@ -25,7 +25,7 @@ void RatchetSessionManager::create_ratchets_if_needed(const std::string &usernam
 
     for (KeyBundle* bundle : bundles) {
         std::array<unsigned char, 32> device_id{};
-        std::memcpy(device_id.data(), bundle->get_their_device_public(), 32);
+        std::memcpy(device_id.data(), bundle->get_their_device_public().data(), 32);
 
         if (user_ratchets.find(device_id) == user_ratchets.end()) {
             std::cout << "creating ratchet for " << username << std::endl;
@@ -33,24 +33,28 @@ void RatchetSessionManager::create_ratchets_if_needed(const std::string &usernam
             // Save the newly created ratchet
             user_ratchets[device_id]->save(username, device_id);
 
-            auto sending_bundle = dynamic_cast<SendingKeyBundle*>(bundle);
+            if (bundle->get_role() == Role::Initiator) {
+                auto sending_bundle = dynamic_cast<SendingKeyBundle*>(bundle);
+                if (post_to_server && sending_bundle) {
+                    try {
+                        auto onetime_opt = sending_bundle->get_their_onetime_public();
+                        const unsigned char* onetime_ptr = onetime_opt.has_value() ? onetime_opt.value().data() : nullptr;
 
-            if (post_to_server && sending_bundle) {
-                try {
-                    post_handshake_device(
-                        sending_bundle->get_their_device_public(),
-                        sending_bundle->get_their_signed_public(),
-                        sending_bundle->get_their_signed_signature(),
-                        sending_bundle->get_their_onetime_public(),
-                        sending_bundle->get_my_ephemeral_public()
-                    );
-                    std::cout << "Successfully posted handshake to server for " << username << std::endl;
-                } catch (const webwood::HttpError& e) {
-                    std::cerr << "Server error when posting handshake for " << username << ": " << e.what() << std::endl;
-                    // Continue execution - ratchet is still created locally
-                } catch (const std::exception& e) {
-                    std::cerr << "Error posting handshake for " << username << ": " << e.what() << std::endl;
-                    // Continue execution - ratchet is still created locally
+                        post_handshake_device(
+                            sending_bundle->get_their_device_public().data(),
+                            sending_bundle->get_their_signed_public().data(),
+                            sending_bundle->get_their_signed_signature().data(),
+                            onetime_ptr,
+                            sending_bundle->get_my_ephemeral_public().data()
+                        );
+                        std::cout << "Successfully posted handshake to server for " << username << std::endl;
+                    } catch (const webwood::HttpError& e) {
+                        std::cerr << "Server error when posting handshake for " << username << ": " << e.what() << std::endl;
+                        // Continue execution - ratchet is still created locally
+                    } catch (const std::exception& e) {
+                        std::cerr << "Error posting handshake for " << username << ": " << e.what() << std::endl;
+                        // Continue execution - ratchet is still created locally
+                    }
                 }
             }
         }
@@ -61,7 +65,7 @@ void RatchetSessionManager::create_ratchets_if_needed(const std::string &usernam
 }
 
 
-std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>, MessageHeader *> > RatchetSessionManager::get_keys_for_identity(const std::string &username, bool post_new_ratchets_to_server) {
+std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>, MessageHeader> > RatchetSessionManager::get_keys_for_identity(const std::string &username, bool post_new_ratchets_to_server) {
     if (post_new_ratchets_to_server) {
         const auto new_bundles = get_keybundles(username, get_device_ids_of_existing_handshakes(username));
         create_ratchets_if_needed(username, new_bundles, post_new_ratchets_to_server);
@@ -71,7 +75,7 @@ std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>
         }
     }
 
-    std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>, MessageHeader *> > keys;
+    std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>, MessageHeader> > keys;
     auto& ratchets_for_user = ratchets[username];
 
     // Get my (sender's) device public key from database
@@ -81,7 +85,7 @@ std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>
         auto [message_key_vector, header] = ratchet->advance_send();
         ratchet->save(username, device_id);
         
-        memcpy(header->device_id.data(), my_device_public.data(), 32);
+        memcpy(header.device_id.data(), my_device_public.data(), 32);
         
         std::array<unsigned char, 32> message_key_array{};
         std::copy_n(message_key_vector.begin(), 32, message_key_array.begin());
@@ -93,9 +97,9 @@ std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>
 }
 
 
-unsigned char* RatchetSessionManager::get_key_for_device(const std::string &username, MessageHeader* header) {
+std::array<unsigned char, 32> RatchetSessionManager::get_key_for_device(const std::string &username, MessageHeader header) {
     std::array<unsigned char, 32> device_id{};
-    std::copy(header->device_id.begin(), header->device_id.end(), device_id.begin());
+    std::copy(header.device_id.begin(), header.device_id.end(), device_id.begin());
     
     auto user_it = ratchets.find(username);
     if (user_it == ratchets.end()) {

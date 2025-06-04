@@ -119,6 +119,7 @@ set(FRONTEND_SOURCES
         src/ui/utils/qr_code_generation/QRCodeGenerator.cpp
         src/ui/utils/qr_code_generation/QRCodeGenerator.h
         src/ui/utils/camera_functionality/camera_functionality.cpp
+        src/communication/ReceiveFlow.h
 )
 
 # Define database sources

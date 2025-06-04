@@ -28,6 +28,8 @@ void login_user(const std::string &username, const std::unique_ptr<const std::st
     SessionTokenManager::instance().setToken(token);
     SessionTokenManager::instance().setUsername(username);
 
+    RatchetSessionManager::instance().load_ratchets_from_db();
+
     if (post_new_keys) {
         post_new_keybundles(
             get_decrypted_keypair("device"),

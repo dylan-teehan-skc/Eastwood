@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <tuple>
+#include <array>
 
 #include "kek_manager.h"
 #include "NewRatchet.h"
@@ -50,25 +51,25 @@ protected:
 
         // ALICE device & ephemeral
         // alice device keys
-        crypto_sign_keypair(alice_device_pub, alice_device_priv->data());
+        crypto_sign_keypair(alice_device_pub.data(), alice_device_priv->data());
 
         // alice ephemeral keys
-        crypto_box_keypair(alice_eph_pub, alice_eph_priv->data());
+        crypto_box_keypair(alice_eph_pub.data(), alice_eph_priv->data());
 
         // BOB device, presigned & onetime
         // bob device keys
-        crypto_sign_keypair(bob_device_pub, bob_device_priv->data());
+        crypto_sign_keypair(bob_device_pub.data(), bob_device_priv->data());
 
         // bob presigned keys
-        crypto_box_keypair(bob_presign_pub, bob_presign_priv->data());
+        crypto_box_keypair(bob_presign_pub.data(), bob_presign_priv->data());
 
         // bob onetime keys
-        crypto_box_keypair(bob_onetime_pub, bob_onetime_priv->data());
+        crypto_box_keypair(bob_onetime_pub.data(), bob_onetime_priv->data());
 
         // bob signed signature
-        crypto_sign_detached(bob_presign_signature,
+        crypto_sign_detached(bob_presign_signature.data(),
             nullptr,
-            bob_presign_pub,
+            bob_presign_pub.data(),
             crypto_box_PUBLICKEYBYTES,
             bob_device_priv->data()
         );
@@ -122,7 +123,7 @@ protected:
         randombytes_buf(nonce, CHA_CHA_NONCE_LEN);
 
         std::unique_ptr<SecureMemoryBuffer> encrypted_alice_device_priv = encrypt_secret_key(std::move(alice_device_priv), nonce);
-        save_encrypted_keypair("device", alice_device_pub, encrypted_alice_device_priv, nonce);
+        save_encrypted_keypair("device", alice_device_pub.data(), encrypted_alice_device_priv, nonce);
 
         delete[] nonce;
     }
@@ -135,13 +136,13 @@ protected:
         randombytes_buf(nonce, CHA_CHA_NONCE_LEN);
 
         std::unique_ptr<SecureMemoryBuffer> encrypted_bob_device_priv = encrypt_secret_key(std::move(bob_device_priv), nonce);
-        save_encrypted_keypair("device", bob_device_pub, encrypted_bob_device_priv, nonce);
+        save_encrypted_keypair("device", bob_device_pub.data(), encrypted_bob_device_priv, nonce);
 
         auto nonce_2 = new unsigned char[CHA_CHA_NONCE_LEN];
         randombytes_buf(nonce_2, CHA_CHA_NONCE_LEN);
 
         std::unique_ptr<SecureMemoryBuffer> encrypted_bob_presign_priv = encrypt_secret_key(std::move(bob_presign_priv), nonce_2);
-        save_encrypted_keypair("signed", bob_presign_pub, encrypted_bob_presign_priv, nonce_2);
+        save_encrypted_keypair("signed", bob_presign_pub.data(), encrypted_bob_presign_priv, nonce_2);
 
         auto nonce_3 = new unsigned char[CHA_CHA_NONCE_LEN];
         randombytes_buf(nonce_3, CHA_CHA_NONCE_LEN);
@@ -149,7 +150,7 @@ protected:
         std::unique_ptr<SecureMemoryBuffer> encrypted_bob_onetime_priv = encrypt_secret_key(std::move(bob_onetime_priv), nonce_3);
 
         unsigned char* onetime_pub_copy = new unsigned char[crypto_box_PUBLICKEYBYTES];
-        memcpy(onetime_pub_copy, bob_onetime_pub, crypto_box_PUBLICKEYBYTES);
+        memcpy(onetime_pub_copy, bob_onetime_pub.data(), crypto_box_PUBLICKEYBYTES);
 
         std::vector<std::tuple<unsigned char*, std::unique_ptr<SecureMemoryBuffer>, unsigned char*>> onetime_keys;
         onetime_keys.emplace_back(onetime_pub_copy, std::move(encrypted_bob_onetime_priv), nonce_3);
@@ -159,38 +160,40 @@ protected:
         // Clean up the copy
         delete[] onetime_pub_copy;
         delete[] nonce;
+        delete[] nonce_2;
+        delete[] nonce_3;
     }
 
     SendingKeyBundle *alice_sending_bundle = nullptr;
     ReceivingKeyBundle *bob_receiving_bundle = nullptr;
 
-    unsigned char alice_device_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, 32> alice_device_pub{};
     std::unique_ptr<SecureMemoryBuffer> alice_device_priv;
 
-    unsigned char bob_device_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, 32> bob_device_pub{};
     std::unique_ptr<SecureMemoryBuffer> bob_device_priv;
 
-    unsigned char alice_eph_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, 32> alice_eph_pub{};
     std::unique_ptr<SecureMemoryBuffer> alice_eph_priv;
 
-    unsigned char bob_presign_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, 32> bob_presign_pub{};
     std::unique_ptr<SecureMemoryBuffer> bob_presign_priv;
 
-    unsigned char bob_onetime_pub[crypto_box_PUBLICKEYBYTES] = {};
+    std::array<unsigned char, 32> bob_onetime_pub{};
     std::unique_ptr<SecureMemoryBuffer> bob_onetime_priv;
 
-    unsigned char bob_presign_signature[crypto_sign_BYTES] = {};
+    std::array<unsigned char, 64> bob_presign_signature{};
 };
 
 TEST_F(DoubleRatchetTest, SharedSecretDerivationTest) {
     switch_to_alice_db();
-    unsigned char* shared_secret_alice = alice_sending_bundle->get_shared_secret();
+    std::array<unsigned char, 32> shared_secret_alice = alice_sending_bundle->get_shared_secret();
 
     switch_to_bob_db();
-    unsigned char* shared_secret_bob = bob_receiving_bundle->get_shared_secret();
+    std::array<unsigned char, 32> shared_secret_bob = bob_receiving_bundle->get_shared_secret();
 
     // Compare the actual values of the shared secrets
-    EXPECT_EQ(memcmp(shared_secret_alice, shared_secret_bob, crypto_scalarmult_BYTES), 0);
+    EXPECT_EQ(memcmp(shared_secret_alice.data(), shared_secret_bob.data(), crypto_scalarmult_BYTES), 0);
 }
 
 TEST_F(DoubleRatchetTest, SharedSecretDerivationTestNoOnetime) {
@@ -205,7 +208,7 @@ TEST_F(DoubleRatchetTest, SharedSecretDerivationTestNoOnetime) {
             std::move(shared_alice_eph_priv),
             bob_device_pub,
             bob_presign_pub,
-            nullptr,
+            std::nullopt,
             bob_presign_signature
         );
 
@@ -213,20 +216,18 @@ TEST_F(DoubleRatchetTest, SharedSecretDerivationTestNoOnetime) {
         alice_device_pub,
         alice_eph_pub,
         bob_device_pub,
-        nullptr
+        std::nullopt
     );
 
     switch_to_alice_db();
-    unsigned char* shared_secret_alice = alice_sending_bundle_no_onetime->get_shared_secret();
+    std::array<unsigned char, 32> shared_secret_alice = alice_sending_bundle_no_onetime->get_shared_secret();
 
     switch_to_bob_db();
-    unsigned char* shared_secret_bob = bob_receiving_bundle_no_onetime->get_shared_secret();
+    std::array<unsigned char, 32> shared_secret_bob = bob_receiving_bundle_no_onetime->get_shared_secret();
 
     // Compare the actual values of the shared secrets
-    EXPECT_EQ(memcmp(shared_secret_alice, shared_secret_bob, crypto_scalarmult_BYTES), 0);
+    EXPECT_EQ(memcmp(shared_secret_alice.data(), shared_secret_bob.data(), crypto_scalarmult_BYTES), 0);
 
-    delete[] shared_secret_alice;
-    delete[] shared_secret_bob;
     delete alice_sending_bundle_no_onetime;
     delete bob_receiving_bundle_no_onetime;
 }
@@ -246,19 +247,19 @@ TEST_F(DoubleRatchetTest, RatchetBothSidesTest) {
     auto [alice_key1, header1] = alice->advance_send();
     switch_to_bob_db();
     auto bob_key1 = bob->advance_receive(header1);
-    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1, 32), 0);
+    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.data(), 32), 0);
 
     // Bob responds
     auto [bob_key2, header2] = bob->advance_send();
     switch_to_alice_db();
     auto alice_key2 = alice->advance_receive(header2);
-    ASSERT_EQ(memcmp(bob_key2.data(), alice_key2, 32), 0);
+    ASSERT_EQ(memcmp(bob_key2.data(), alice_key2.data(), 32), 0);
 
     // Alice sends again (should trigger DH ratchet)
     auto [alice_key3, header3] = alice->advance_send();
     switch_to_bob_db();
     auto bob_key3 = bob->advance_receive(header3);
-    ASSERT_EQ(memcmp(alice_key3.data(), bob_key3, 32), 0);
+    ASSERT_EQ(memcmp(alice_key3.data(), bob_key3.data(), 32), 0);
     delete[] ratchet_id;
 }
 
@@ -279,9 +280,9 @@ TEST_F(DoubleRatchetTest, TwoMessageFromOneSideTest) {
     auto [alice_key2, header2] = alice->advance_send();
     auto [alice_key3, header3] = alice->advance_send();
 
-    ASSERT_EQ(header1->message_index, 0);
-    ASSERT_EQ(header2->message_index, 1);
-    ASSERT_EQ(header3->message_index, 2);
+    ASSERT_EQ(header1.message_index, 0);
+    ASSERT_EQ(header2.message_index, 1);
+    ASSERT_EQ(header3.message_index, 2);
 
     switch_to_bob_db();
     auto bob_key1 = bob->advance_receive(header1);
@@ -289,9 +290,9 @@ TEST_F(DoubleRatchetTest, TwoMessageFromOneSideTest) {
     auto bob_key3 = bob->advance_receive(header3);
 
     //keys are the same
-    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1, 32), 0);
-    ASSERT_EQ(memcmp(alice_key2.data(), bob_key2, 32), 0);
-    ASSERT_EQ(memcmp(alice_key3.data(), bob_key3, 32), 0);
+    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.data(), 32), 0);
+    ASSERT_EQ(memcmp(alice_key2.data(), bob_key2.data(), 32), 0);
+    ASSERT_EQ(memcmp(alice_key3.data(), bob_key3.data(), 32), 0);
     delete[] ratchet_id;
 }
 
@@ -307,27 +308,23 @@ TEST_F(DoubleRatchetTest, MessageIndexResetTest) {
 
     // alice sends a few
     auto [alice_key1, header1] = alice->advance_send();
-    auto header1_ptr = std::unique_ptr<MessageHeader>(header1);
-    
     auto [alice_key2, header2] = alice->advance_send();
-    auto header2_ptr = std::unique_ptr<MessageHeader>(header2);
 
     ASSERT_EQ(std::get<0>(alice->get_chain_lengths()), 2);
     ASSERT_EQ(std::get<1>(alice->get_chain_lengths()), 0);
 
-    auto bob_key1 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header1_ptr.get()));
-    auto bob_key2 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header2_ptr.get()));
+    auto bob_key1 = bob->advance_receive(header1);
+    auto bob_key2 = bob->advance_receive(header2);
 
     ASSERT_EQ(std::get<0>(bob->get_chain_lengths()), 0);
     ASSERT_EQ(std::get<1>(bob->get_chain_lengths()), 2);
 
     auto [bob_key3, header3] = bob->advance_send();
-    auto header3_ptr = std::unique_ptr<MessageHeader>(header3);
 
     ASSERT_EQ(std::get<0>(bob->get_chain_lengths()), 1);
     ASSERT_EQ(std::get<1>(bob->get_chain_lengths()), 2);
 
-    auto alice_key3 = std::unique_ptr<unsigned char[]>(alice->advance_receive(header3_ptr.get()));
+    auto alice_key3 = alice->advance_receive(header3);
 
     ASSERT_EQ(std::get<0>(alice->get_chain_lengths()), 2);
     ASSERT_EQ(std::get<1>(alice->get_chain_lengths()), 1);
@@ -344,16 +341,14 @@ TEST_F(DoubleRatchetTest, OneMessageFromEitherSideTest) {
     auto bob = bob_receiving_bundle->create_ratchet();
 
     auto [alice_key1, header1] = alice->advance_send();
-    auto header1_ptr = std::unique_ptr<MessageHeader>(header1);
 
-    auto bob_key1 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header1_ptr.get()));
-    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.get(), 32), 0);
+    auto bob_key1 = bob->advance_receive(header1);
+    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.data(), 32), 0);
 
     auto [bob_key2, header2] = bob->advance_send();
-    auto header2_ptr = std::unique_ptr<MessageHeader>(header2);
 
-    auto alice_key2 = std::unique_ptr<unsigned char[]>(alice->advance_receive(header2_ptr.get()));
-    ASSERT_EQ(memcmp(alice_key2.get(), bob_key2.data(), 32), 0);
+    auto alice_key2 = alice->advance_receive(header2);
+    ASSERT_EQ(memcmp(alice_key2.data(), bob_key2.data(), 32), 0);
 }
 
 TEST_F(DoubleRatchetTest, MultipleMessageFromOneSideThenMultipleSwitchTest) {
@@ -368,30 +363,24 @@ TEST_F(DoubleRatchetTest, MultipleMessageFromOneSideThenMultipleSwitchTest) {
 
     // alice sends a few
     auto [alice_key1, header1] = alice->advance_send();
-    auto header1_ptr = std::unique_ptr<MessageHeader>(header1);
-    
     auto [alice_key2, header2] = alice->advance_send();
-    auto header2_ptr = std::unique_ptr<MessageHeader>(header2);
 
     // bob receives a few
-    auto bob_key1 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header1_ptr.get()));
-    auto bob_key2 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header2_ptr.get()));
+    auto bob_key1 = bob->advance_receive(header1);
+    auto bob_key2 = bob->advance_receive(header2);
 
-    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.get(), 32), 0);
-    ASSERT_EQ(memcmp(alice_key2.data(), bob_key2.get(), 32), 0);
+    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.data(), 32), 0);
+    ASSERT_EQ(memcmp(alice_key2.data(), bob_key2.data(), 32), 0);
 
     // bob sends a few
     auto [bob_key3, header3] = bob->advance_send();
-    auto header3_ptr = std::unique_ptr<MessageHeader>(header3);
-    
     auto [bob_key4, header4] = bob->advance_send();
-    auto header4_ptr = std::unique_ptr<MessageHeader>(header4);
 
-    auto alice_key3 = std::unique_ptr<unsigned char[]>(alice->advance_receive(header3_ptr.get()));
-    auto alice_key4 = std::unique_ptr<unsigned char[]>(alice->advance_receive(header4_ptr.get()));
+    auto alice_key3 = alice->advance_receive(header3);
+    auto alice_key4 = alice->advance_receive(header4);
 
-    ASSERT_EQ(memcmp(bob_key3.data(), alice_key3.get(), 32), 0);
-    ASSERT_EQ(memcmp(alice_key4.get(), bob_key4.data(), 32), 0);
+    ASSERT_EQ(memcmp(bob_key3.data(), alice_key3.data(), 32), 0);
+    ASSERT_EQ(memcmp(alice_key4.data(), bob_key4.data(), 32), 0);
 }
 
 TEST_F(DoubleRatchetTest, OutOfOrderMessageTest) {
@@ -406,22 +395,17 @@ TEST_F(DoubleRatchetTest, OutOfOrderMessageTest) {
 
     // alice sends a few
     auto [alice_key1, header1] = alice->advance_send();
-    auto header1_ptr = std::unique_ptr<MessageHeader>(header1);
-    
     auto [alice_key2, header2] = alice->advance_send();
-    auto header2_ptr = std::unique_ptr<MessageHeader>(header2);
-    
     auto [alice_key3, header3] = alice->advance_send();
-    auto header3_ptr = std::unique_ptr<MessageHeader>(header3);
 
     // bob receives a few
-    auto bob_key3 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header3_ptr.get()));
-    auto bob_key2 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header2_ptr.get()));
-    auto bob_key1 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header1_ptr.get()));
+    auto bob_key3 = bob->advance_receive(header3);
+    auto bob_key2 = bob->advance_receive(header2);
+    auto bob_key1 = bob->advance_receive(header1);
 
-    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.get(), 32), 0);
-    ASSERT_EQ(memcmp(alice_key2.data(), bob_key2.get(), 32), 0);
-    ASSERT_EQ(memcmp(alice_key3.data(), bob_key3.get(), 32), 0);
+    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.data(), 32), 0);
+    ASSERT_EQ(memcmp(alice_key2.data(), bob_key2.data(), 32), 0);
+    ASSERT_EQ(memcmp(alice_key3.data(), bob_key3.data(), 32), 0);
 }
 
 TEST_F(DoubleRatchetTest, SkippedMessagesAcrossRatchetTest) {
@@ -435,26 +419,22 @@ TEST_F(DoubleRatchetTest, SkippedMessagesAcrossRatchetTest) {
 
     // alice sends two messages
     auto [alice_key1, header1] = alice->advance_send();
-    auto header1_ptr = std::unique_ptr<MessageHeader>(header1);
-    
     auto [alice_key2, header2] = alice->advance_send();
-    auto header2_ptr = std::unique_ptr<MessageHeader>(header2);
 
     // bob receives only the second message, skipping first
-    auto bob_key2 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header2_ptr.get()));
-    ASSERT_EQ(memcmp(alice_key2.data(), bob_key2.get(), 32), 0);
+    auto bob_key2 = bob->advance_receive(header2);
+    ASSERT_EQ(memcmp(alice_key2.data(), bob_key2.data(), 32), 0);
 
     // alice dh ratchet
     auto [alice_key3, header3] = alice->advance_send();
-    auto header3_ptr = std::unique_ptr<MessageHeader>(header3);
 
     // bob receives the new ratcheted message
-    auto bob_key3 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header3_ptr.get()));
-    ASSERT_EQ(memcmp(alice_key3.data(), bob_key3.get(), 32), 0);
+    auto bob_key3 = bob->advance_receive(header3);
+    ASSERT_EQ(memcmp(alice_key3.data(), bob_key3.data(), 32), 0);
 
     // bob receives previous ratchet message
-    auto bob_key1 = std::unique_ptr<unsigned char[]>(bob->advance_receive(header1_ptr.get()));
-    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.get(), 32), 0);
+    auto bob_key1 = bob->advance_receive(header1);
+    ASSERT_EQ(memcmp(alice_key1.data(), bob_key1.data(), 32), 0);
 }
 
 TEST_F(DoubleRatchetTest, SavingAndLoadingFromDB) {
@@ -469,10 +449,10 @@ TEST_F(DoubleRatchetTest, SavingAndLoadingFromDB) {
     auto ratchet2 = NewRatchet(decrypted_ratchet);
 
     EXPECT_EQ(0, memcmp(ratchet1->local_dh_priv->data(), ratchet2.local_dh_priv->data(), 32));
-    EXPECT_EQ(0, memcmp(ratchet1->local_dh_public, ratchet2.local_dh_public, 32));
-    EXPECT_EQ(0, memcmp(ratchet1->root_key, ratchet2.root_key, 32));
-    EXPECT_EQ(0, memcmp(ratchet1->send_chain.key, ratchet2.send_chain.key, 32));
+    EXPECT_EQ(0, memcmp(ratchet1->local_dh_public.data(), ratchet2.local_dh_public.data(), 32));
+    EXPECT_EQ(0, memcmp(ratchet1->root_key.data(), ratchet2.root_key.data(), 32));
+    EXPECT_EQ(0, memcmp(ratchet1->send_chain.key.data(), ratchet2.send_chain.key.data(), 32));
     EXPECT_EQ(ratchet1->send_chain.index, ratchet2.send_chain.index);
-    EXPECT_EQ(0, memcmp(ratchet1->receive_chain.key, ratchet2.receive_chain.key, 32));
+    EXPECT_EQ(0, memcmp(ratchet1->receive_chain.key.data(), ratchet2.receive_chain.key.data(), 32));
     EXPECT_EQ(ratchet1->receive_chain.index, ratchet2.receive_chain.index);
 }

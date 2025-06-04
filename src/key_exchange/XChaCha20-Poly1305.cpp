@@ -275,7 +275,7 @@ std::vector<unsigned char> encrypt_message_given_key(const unsigned char* messag
 // Takes in binary key and encrypted data directly
 std::vector<unsigned char> decrypt_message_given_key(const unsigned char* encrypted_data, size_t encrypted_len, const unsigned char* key) {
     if (encrypted_len < crypto_aead_chacha20poly1305_IETF_NPUBBYTES) {
-        return {};
+        throw std::runtime_error("encrypted message (incl nonce) is too short");
     }
 
     unsigned char nonce[crypto_aead_chacha20poly1305_IETF_NPUBBYTES];
@@ -285,7 +285,7 @@ std::vector<unsigned char> decrypt_message_given_key(const unsigned char* encryp
     size_t ciphertext_len = encrypted_len - sizeof(nonce);
     
     if (ciphertext_len < crypto_aead_chacha20poly1305_IETF_ABYTES) {
-        return {};
+        throw std::runtime_error("ciphertext message is too short");
     }
 
     std::vector<unsigned char> plaintext(ciphertext_len - crypto_aead_chacha20poly1305_IETF_ABYTES);
@@ -297,7 +297,7 @@ std::vector<unsigned char> decrypt_message_given_key(const unsigned char* encryp
             ciphertext, ciphertext_len,
             nullptr, 0,
             nonce, key) != 0) {
-        return {};
+        throw std::runtime_error("decryption failed");;
     }
 
     plaintext.resize(plaintext_len);
