@@ -7,18 +7,29 @@
 #include <QScrollArea>
 #include <QTimer>
 #include <QCheckBox>
+#include <QPainter>
+#include <QPen>
+#include <QColor>
+#include <QIcon>
+#include <QPixmap>
+
+#include "src/communication/ReceiveFlow.h"
+#include "src/sql/queries.h"
 
 // Sent implementation
 Sent::Sent(QWidget *parent, QWidget* receivedWindow)
     : QWidget(parent)
     , ui(new Ui::Sent)
     , m_receivedWindow(receivedWindow)
+    , m_spinnerAngle(0)
 {
     ui->setupUi(this);
     setupConnections();
     setupFileList();
     refreshFileList();
 
+    m_refreshSpinnerTimer = new QTimer(this);
+    connect(m_refreshSpinnerTimer, &QTimer::timeout, this, &Sent::handleRefreshSpinner);
 }
 
 Sent::~Sent()
@@ -30,6 +41,7 @@ void Sent::setupConnections()
 {
     // Connect the send button
     connect(ui->sendButton, &QPushButton::clicked, this, &Sent::onSendFileButtonClicked);
+    connect(ui->refreshButton, &QPushButton::clicked, this, &Sent::onRefreshButtonClicked);
 }
 
 void Sent::setupFileList() const {
@@ -39,12 +51,14 @@ void Sent::setupFileList() const {
 }
 
 void Sent::addFileItem(const QString& fileName,
-                     const QString& fileSize,
-                     const QString& timestamp,
-                     const QString& owner)
+                         const QString& fileSize,
+                         const QString& timestamp,
+                         const QString& owner,
+                         std::string uuid,
+                         std::string mime_type)
 {
     auto* item = new QListWidgetItem(ui->fileList);
-    auto* widget = new FileItemWidget(fileName, fileSize, timestamp, owner, " ", " ",
+    auto* widget = new FileItemWidget(fileName, fileSize, timestamp, owner, uuid, mime_type,
                                     FileItemWidget::Mode::Sent, this);
 
     connect(widget, &FileItemWidget::revokeAccessClicked, this, &Sent::onRevokeAccessClicked);
@@ -61,11 +75,14 @@ void Sent::refreshFileList()
 {
     ui->fileList->clear();
 
-    // TODO: Fetch actual files from server
-    // Example data for demonstration
-    addFileItem("Important Document.pdf", "2.5 MB", "2024-03-15 14:30", "John Doe");
-    addFileItem("Project Presentation.pptx", "5.8 MB", "2024-03-14 09:15", "Alice Smith");
-    addFileItem("Budget Report.xlsx", "1.2 MB", "2024-03-13 16:45", "Bob Johnson");
+    auto metadata = get_file_metadata(true);
+
+    ui->noFilesLabel->setVisible(metadata.empty());
+
+    for (const auto& [file_name, file_size, mime_type, uuid, username] : metadata) {
+        std::string file_size_str = std::to_string(file_size);
+        addFileItem(QString::fromStdString(file_name), QString::fromStdString(file_size_str), "sadfa", QString::fromStdString(username), uuid, mime_type);
+    }
 }
 
 void Sent::onFileItemClicked(const FileItemWidget* widget)
@@ -199,11 +216,12 @@ void Sent::onRevokeAccessClicked(const FileItemWidget* widget)
     scrollLayout->setSpacing(2);
     scrollLayout->setContentsMargins(0, 0, 0, 0);
 
-    // TODO: Replace with actual users who have access
-    QStringList users = {"Alice Smith (alice@example.com)", 
-                        "Bob Johnson (bob@example.com)", 
-                        "Carol Williams (carol@example.com)",
-                        "David Brown (david@example.com)"};
+    QStringList users = {};
+    std::vector<std::string> usernames = get_file_recipients(widget->getUuid());
+
+    for (auto username : usernames) {
+        users.emplace_back(QString::fromStdString(username));
+    }
 
     QList<QCheckBox*> checkboxes;
     for (const QString& user : users) {
@@ -266,7 +284,7 @@ void Sent::onDeleteFileClicked(const FileItemWidget* widget)
     if (StyledMessageBox::question(this, "Delete File",
                                  QString("Are you sure you want to delete file: %1?")
                                  .arg(widget->getFileName()))) {
-        // TODO: Implement file deletion
+        delete_file(widget->getUuid());
         StyledMessageBox::info(this, "File Deleted",
                              QString("File deleted: %1").arg(widget->getFileName()));
     }
@@ -290,10 +308,40 @@ void Sent::sendFileToUser(const QString& username, const QString& fileId)
 
 void Sent::onDownloadFileClicked(FileItemWidget* widget)
 {
-    StyledMessageBox::info(this, "Not Implemented", "Download functionality is not yet implemented.");
+    download_file(widget->getUuid(), widget->getMimeType(), widget->getFileName().toStdString());
 }
 
 void Sent::onSendFileButtonClicked()
 {
     WindowManager::instance().showSendFile();
+}
+
+void Sent::onRefreshButtonClicked()
+{
+    m_spinnerAngle = 0;
+    m_refreshSpinnerTimer->start(50);
+
+    refreshFileList();
+
+    //1 second
+    QTimer::singleShot(1000, [this]() {
+        m_refreshSpinnerTimer->stop();
+        ui->refreshButton->setIcon(QIcon());
+    });
+}
+
+void Sent::handleRefreshSpinner()
+{
+    m_spinnerAngle = (m_spinnerAngle + 30) % 360;
+    QPixmap pixmap(16, 16);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.translate(8, 8);
+    painter.rotate(m_spinnerAngle);
+    painter.setPen(QPen(QColor("#6c5ce7"), 2));
+    painter.drawLine(0, -6, 0, 6);
+    painter.drawLine(-6, 0, 6, 0);
+    ui->refreshButton->setIcon(QIcon(pixmap));
+    ui->refreshButton->setIconSize(QSize(16, 16));
 }

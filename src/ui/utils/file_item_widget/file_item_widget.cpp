@@ -67,10 +67,14 @@ QLayout* FileItemWidget::createInfoLayout()
     fileNameLabel = new QLabel(fileName, this);
     fileNameLabel->setStyleSheet("font-size: 15px; font-weight: 500; color: #2d3436;");
 
-    detailsLabel = new QLabel(QString("%1 • %2 • Shared by %3")
+    if (mode ==  Mode::Sent) {
+        detailsLabel = new QLabel(QString("%1")
+                            .arg(fileSize), this);
+    } else {
+        detailsLabel = new QLabel(QString("%1 • Shared by %2")
                             .arg(fileSize)
-                            .arg(timestamp)
                             .arg(owner), this);
+    }
     detailsLabel->setStyleSheet("font-size: 13px; color: #636e72;");
 
     infoLayout->addWidget(fileNameLabel);

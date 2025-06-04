@@ -20,6 +20,7 @@
 #include "src/auth/logout.h"
 #include "src/endpoints/endpoints.h"
 #include "src/keys/session_token_manager.h"
+#include "src/keys/kek_manager.h"
 
 Settings::Settings(QWidget *parent)
     : QWidget(parent)
@@ -33,6 +34,9 @@ Settings::Settings(QWidget *parent)
 
     // Setup refresh spinner timer
     connect(m_refreshSpinnerTimer, &QTimer::timeout, this, &Settings::handleRefreshSpinner);
+
+    // Update username from KEK manager
+    updateUsername();
 }
 
 Settings::~Settings()
@@ -293,4 +297,10 @@ void Settings::onLogoutButtonClicked() {
     logout();
     // Show login window
     WindowManager::instance().showLogin();
+}
+
+void Settings::updateUsername()
+{
+    auto username = SessionTokenManager::instance().getUsername();
+    ui->usernameLabel->setText(QString("Username: %1").arg(QString::fromStdString(username)));
 }

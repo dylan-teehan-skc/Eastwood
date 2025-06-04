@@ -88,8 +88,13 @@ struct FileData {
     std::string owner;
 };
 
-inline std::vector<FileData> get_file_metadata() {
-    auto uuid_to_username = get_all_received_file_uuids();
+inline std::vector<FileData> get_file_metadata(bool is_sending = false) {
+    std::vector<std::tuple<std::string, std::string>> uuid_to_username = get_all_received_file_uuids();
+    if (is_sending) {
+        uuid_to_username = get_all_sent_file_uuids();
+    } else {
+        uuid_to_username = get_all_received_file_uuids();
+    }
     std::vector<std::string> uuids{};
     for (const auto [uuid, _]: uuid_to_username) {
         uuids.push_back(uuid);
@@ -290,6 +295,18 @@ inline void download_file(const std::string &file_uuid, const std::string &mime_
         std::cerr << "Error downloading file: " << e.what() << std::endl;
         QMessageBox::critical(parent, "Download Error",
                               QString("An error occurred while downloading the file:\n%1").arg(e.what()));
+    }
+}
+
+inline void delete_file(std::string uuid) {
+    try {
+        post_delete_file(uuid);
+        delete_file_from_database(uuid);
+
+        std::cout << "Successfully deleted file " << uuid << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to delete file " << uuid << ": " << e.what() << std::endl;
+        throw;
     }
 }
 

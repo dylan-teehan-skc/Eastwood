@@ -132,20 +132,20 @@ QPushButton:pressed {
        <property name="styleSheet">
         <string notr="true">QListWidget {
   background-color: white;
-  border: 1px solid #f8f9fa;
+  border: 1px solid #dfe6e9;
   border-radius: 12px;
   padding: 5px;
 }
 QListWidget::item {
   background-color: white;
-  border-bottom: 1px solid #f8f9fa;
+  border-bottom: 1px solid #f1f2f6;
 }
 QListWidget::item:last-child {
   border-bottom: none;
 }
 QListWidget::item:hover {
-  background-color: #e9ecef;
-  border-bottom: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #f8f9fa;
 }
 QListWidget::item QLabel,
 QListWidget::item QWidget {
@@ -180,6 +180,62 @@ QScrollBar::sub-page:vertical {
        <property name="horizontalScrollMode">
         <enum>QAbstractItemView::ScrollPerPixel</enum>
        </property>
+       <layout class="QVBoxLayout" name="listLayout">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="noFilesLabel">
+          <property name="styleSheet">
+           <string notr="true">color: #b2bec3; font-size: 16px; font-weight: bold;</string>
+          </property>
+          <property name="text">
+           <string>No files received yet</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>

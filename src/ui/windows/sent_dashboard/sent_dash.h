@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QTimer>
 #include "src/ui/utils/file_item_widget/file_item_widget.h"
 #include "src/ui/utils/navbar/navbar.h"
 
@@ -24,15 +25,23 @@ private slots:
     void onDeleteFileClicked(const FileItemWidget* widget);
     void onDownloadFileClicked(FileItemWidget* widget);
     void onSendFileButtonClicked();
+    void onRefreshButtonClicked();
+    void handleRefreshSpinner();
 
 private:
     Ui::Sent *ui;
     QWidget* m_receivedWindow;
+    QTimer* m_refreshSpinnerTimer;
+    int m_spinnerAngle;
     void setupConnections();
     void setupFileList() const;
     void refreshFileList();
-    void addFileItem(const QString& fileName, const QString& fileSize, 
-                    const QString& timestamp, const QString& owner);
+    void addFileItem(const QString& fileName,
+                         const QString& fileSize,
+                         const QString& timestamp,
+                         const QString& owner,
+                         std::string uuid,
+                         std::string mime_type);
     void showFileMetadata(const FileItemWidget* widget);
     void sendFileToUser(const QString& username, const QString& fileId);
 };

@@ -77,6 +77,8 @@ void Received::refreshFileList()
 
     auto metadata = get_file_metadata();
 
+    ui->noFilesLabel->setVisible(metadata.empty());
+
     for (const auto& [file_name, file_size, mime_type, uuid, username] : metadata) {
         std::string file_size_str = std::to_string(file_size);
         addFileItem(QString::fromStdString(file_name), QString::fromStdString(file_size_str), "sadfa", QString::fromStdString(username), uuid, mime_type);
@@ -96,11 +98,10 @@ void Received::onFileItemClicked(const FileItemWidget* widget)
 void Received::showFileMetadata(const FileItemWidget* widget)
 {
     StyledMessageBox::info(this, "File Details",
-                       QString("File Details:\n\nName: %1\nSize: %2\nShared by: %3\nTimestamp: %4")
+                       QString("File Details:\n\nName: %1\nSize: %2\nShared by: %3")
                        .arg(widget->getFileName())
                        .arg(widget->getFileSize())
-                       .arg(widget->getOwner())
-                       .arg(widget->getTimestamp()));
+                       .arg(widget->getOwner()));
 }
 
 void Received::onDownloadFileClicked(FileItemWidget* widget)

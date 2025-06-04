@@ -703,6 +703,39 @@ inline std::vector<std::tuple<std::string,std::string>> get_all_received_file_uu
     return file_uuids;
 }
 
+inline std::vector<std::tuple<std::string,std::string>> get_all_sent_file_uuids() {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+
+    // Get current user's username to exclude their messages
+    std::string current_username = SessionTokenManager::instance().getUsername();
+
+    // Get all messages except those from the current user
+    db.prepare_or_throw(
+        "SELECT file_uuid, username FROM received_messages WHERE username == ?;", &stmt
+    );
+    sqlite3_bind_text(stmt, 1, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
+
+    auto rows = db.query(stmt);
+    std::set<std::string> seen_file_uuids; // Track unique file UUIDs
+    std::vector<std::tuple<std::string, std::string>> file_uuids;
+
+    for (const auto& row : rows) {
+        std::string file_uuid = row["file_uuid"].toString().toStdString();
+        std::string username = row["username"].toString().toStdString();
+
+        // Skip if we've already seen this file_uuid
+        if (seen_file_uuids.find(file_uuid) != seen_file_uuids.end()) {
+            continue;
+        }
+        seen_file_uuids.insert(file_uuid);
+        file_uuids.emplace_back(std::make_tuple(file_uuid, username));
+    }
+
+    return file_uuids;
+}
+
 // Function to get all ratchets from database
 inline std::vector<std::tuple<std::string, std::array<unsigned char, 32>, std::vector<unsigned char>>> get_all_decrypted_ratchets() {
     const auto &db = Database::get();
@@ -847,6 +880,68 @@ inline std::vector<std::tuple<std::string, std::string, std::array<unsigned char
     }
     
     return result;
+}
+
+inline std::vector<std::string> get_file_recipients(const std::string& file_uuid) {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+    
+    std::cout << "DEBUG: Getting recipients for file UUID: " << file_uuid << std::endl;
+    
+    // Get current user's username to exclude them
+    std::string current_username = SessionTokenManager::instance().getUsername();
+    std::cout << "DEBUG: Current user: " << current_username << std::endl;
+    
+    // Get all unique usernames who have received this file, excluding current user
+    db.prepare_or_throw(
+        "SELECT DISTINCT username FROM received_messages WHERE file_uuid = ? AND username != ?;", &stmt
+    );
+    sqlite3_bind_text(stmt, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
+    
+    auto rows = db.query(stmt);
+    std::vector<std::string> recipients;
+    
+    for (const auto& row : rows) {
+        std::string username = row["username"].toString().toStdString();
+        recipients.push_back(username);
+        std::cout << "DEBUG: Found recipient: " << username << std::endl;
+    }
+    
+    std::cout << "DEBUG: Total recipients for file " << file_uuid << " (excluding current user): " << recipients.size() << std::endl;
+    return recipients;
+}
+
+inline void delete_file_from_database(const std::string& file_uuid) {
+    const auto &db = Database::get();
+    
+    std::cout << "DEBUG: Deleting file " << file_uuid << " from database" << std::endl;
+    
+    try {
+        sqlite3_stmt *stmt1;
+        db.prepare_or_throw("DELETE FROM file_keys WHERE file_uuid = ?;", &stmt1);
+        sqlite3_bind_text(stmt1, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
+        db.execute(stmt1);
+        std::cout << "DEBUG: Deleted from file_keys table" << std::endl;
+        
+        sqlite3_stmt *stmt2;
+        db.prepare_or_throw("DELETE FROM received_messages WHERE file_uuid = ?;", &stmt2);
+        sqlite3_bind_text(stmt2, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
+        db.execute(stmt2);
+        std::cout << "DEBUG: Deleted from received_messages table" << std::endl;
+        
+        sqlite3_stmt *stmt3;
+        db.prepare_or_throw("DELETE FROM received_message_keys WHERE file_uuid = ?;", &stmt3);
+        sqlite3_bind_text(stmt3, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
+        db.execute(stmt3);
+        std::cout << "DEBUG: Deleted from received_message_keys table" << std::endl;
+        
+        std::cout << "DEBUG: Successfully deleted file " << file_uuid << " from all database tables" << std::endl;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "ERROR: Failed to delete file " << file_uuid << " from database: " << e.what() << std::endl;
+        throw;
+    }
 }
 
 #endif //QUERIES_H

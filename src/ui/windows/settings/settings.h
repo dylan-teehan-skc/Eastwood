@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include "src/ui/utils/camera_functionality/camera_functionality.h"
 #include <QTimer>
+#include "src/keys/session_token_manager.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Settings; }
@@ -39,6 +40,7 @@ private:
     void navigateTo(QWidget* newWindow);
     void createDeviceBox(const std::string& deviceName) const;
     void handleRefreshSpinner();
+    void updateUsername();
 
     Ui::Settings *ui;
     CameraFunctionality* m_cameraFunctionality;
