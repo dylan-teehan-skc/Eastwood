@@ -13,7 +13,7 @@
 #include "src/keys/secure_memory_buffer.h"
 #include "src/keys/session_token_manager.h"
 #include "src/key_exchange/MessageStructs.h"
-#include "src/key_exchange/XChaCha20-Poly1305.h"
+#include "src/algorithms/algorithms.h"
 #include "src/sessions/RatchetSessionManager.h"
 
 void send_file_to(const std::string &username, const std::string &file_path) {
@@ -57,7 +57,7 @@ void send_file_to(const std::string &username, const std::string &file_path) {
             memcpy(sk_buffer->data(), message_encryption_key->data(), 32);
 
             // Encrypt the file key (which was the original "message" content)
-            auto encrypted_message_again = encrypt_bytes(
+            auto encrypted_message_again = encrypt_message_with_nonce(
                 QByteArray(reinterpret_cast<const char *>(file_key->data()), file_key->size()),
                 std::move(message_encryption_key),
                 message_nonce

@@ -8,8 +8,8 @@
 
 #include "src/client_api_interactions/MakeAuthReq.h"
 #include "src/endpoints/endpoints.h"
-#include "src/key_exchange/XChaCha20-Poly1305.h"
 #include "src/sessions/RatchetSessionManager.h"
+#include "src/algorithms/algorithms.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QFile>
@@ -52,12 +52,12 @@ inline void update_messages() {
 
         // re encrypt with new key
         std::unique_ptr<SecureMemoryBuffer> new_db_message_key = SecureMemoryBuffer::create(32);
-        crypto_stream_xchacha20_keygen(new_db_message_key->data());
+        crypto_aead_xchacha20poly1305_ietf_keygen(new_db_message_key->data());
 
         std::array<unsigned char, CHA_CHA_NONCE_LEN> nonce_for_msg{};
         randombytes_buf(nonce_for_msg.data(), CHA_CHA_NONCE_LEN);
 
-        auto encrypted_message_for_db = encrypt_bytes(q_decrypted_message, new_db_message_key, nonce_for_msg.data());
+        auto encrypted_message_for_db = encrypt_message_with_nonce(q_decrypted_message, new_db_message_key, nonce_for_msg.data());
         
         std::cout << "Re-encrypted message for DB size: " << encrypted_message_for_db.size() << " bytes" << std::endl;
         std::cout << "Re-encrypted message first 16 bytes: ";

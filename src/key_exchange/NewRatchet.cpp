@@ -4,7 +4,7 @@
 
 #include "NewRatchet.h"
 #include <sstream>
-#include "XChaCha20-Poly1305.h"
+#include "src/algorithms/algorithms.h"
 #include "src/keys/kek_manager.h"
 #include "src/sql/queries.h"
 #include "src/key_exchange/utils.h"
@@ -356,7 +356,7 @@ void NewRatchet::save(const std::string& username, const std::array<unsigned cha
     auto copy_encryption_key = SecureMemoryBuffer::create(32);
     memcpy(copy_encryption_key->data(), encryption_key->data(), 32);
 
-    auto encrypted_data = encrypt_bytes(bytes, std::move(copy_encryption_key), nonce_data.get());
+    auto encrypted_data = encrypt_message_with_nonce(bytes, std::move(copy_encryption_key), nonce_data.get());
     auto encrypted_encryption_key = encrypt_symmetric_key(encryption_key, nonce_key.get());
 
     save_ratchet_and_key_by_username_device(username, device_id, encrypted_data, nonce_data.get(), std::move(encrypted_encryption_key), nonce_key.get());

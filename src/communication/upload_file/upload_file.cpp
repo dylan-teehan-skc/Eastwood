@@ -5,7 +5,6 @@
 
 #include "src/algorithms/algorithms.h"
 #include "src/endpoints/endpoints.h"
-#include "src/key_exchange/XChaCha20-Poly1305.h"
 
 std::string upload_file(const std::string &file_path, const std::unique_ptr<SecureMemoryBuffer> &file_key) {
     QFile file(file_path.c_str());

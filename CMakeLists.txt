@@ -120,6 +120,7 @@ set(FRONTEND_SOURCES
         src/ui/utils/qr_code_generation/QRCodeGenerator.h
         src/ui/utils/camera_functionality/camera_functionality.cpp
         src/communication/ReceiveFlow.h
+        src/communication/ReceiveFlow.h
         src/ui/utils/byte_converter/byte_converter.h
         src/ui/utils/byte_converter/byte_convert.cpp
 )
@@ -133,7 +134,6 @@ set(DATABASE_SOURCES
 # Define cryptography sources and headers
 set(CRYPTO_SOURCES
         src/key_exchange/x3dh.cpp
-        src/key_exchange/XChaCha20-Poly1305.cpp
         src/key_exchange/NewRatchet.cpp
         src/key_exchange/NewRatchet.h
         src/utils/ConversionUtils.cpp
