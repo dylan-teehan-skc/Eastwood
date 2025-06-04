@@ -10,6 +10,9 @@
 #include "src/endpoints/endpoints.h"
 #include "src/key_exchange/XChaCha20-Poly1305.h"
 #include "src/sessions/RatchetSessionManager.h"
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QFile>
 
 inline void update_handshakes() {
     auto handshakes = get_handshake_backlog();
@@ -74,19 +77,14 @@ inline void update_messages() {
     }
 }
 
-// vector of file name, file size, mime type
-inline std::vector<std::tuple<std::string, int, std::string>> get_file_metadata() {
+// vector of file name, file size, mime type, uuid, username
+inline std::vector<std::tuple<std::string, int, std::string, std::string, std::string>> get_file_metadata() {
     auto uuids = get_all_received_file_uuids();
-    std::cout << "Found " << uuids.size() << " file UUIDs" << std::endl;
-    for (const auto& uuid : uuids) {
-        std::cout << "UUID in DB: " << uuid << std::endl;
-    }
-    
     auto encrypted_metadata = get_encrypted_file_metadata(uuids);
-    std::cout << "Retrieved encrypted metadata for " << encrypted_metadata.size() << " files" << std::endl;
 
-    std::vector<std::tuple<std::string, int, std::string>> file_metadata;
-    for (auto &[uuid, ciphertext] : encrypted_metadata) {
+    std::vector<std::tuple<std::string, int, std::string, std::string, std::string>> file_metadata;
+    for (auto &[uuid, tuple] : encrypted_metadata) {
+        auto [username, ciphertext] = tuple;
         std::cout << "\n--- Processing UUID: " << uuid << " ---" << std::endl;
         std::cout << "UUID from server: " << uuid << std::endl;
         std::cout << "Encrypted metadata size: " << ciphertext.size() << " bytes" << std::endl;
@@ -157,7 +155,9 @@ inline std::vector<std::tuple<std::string, int, std::string>> get_file_metadata(
             file_metadata.emplace_back(std::make_tuple(
                 metadata["name"].get<std::string>(), 
                 metadata["size"].get<int>(), 
-                metadata["mime_type"].get<std::string>()
+                metadata["mime_type"].get<std::string>(),
+                uuid,
+                username
             ));
         } catch (const std::exception& e) {
             std::cerr << "ERROR processing metadata for UUID " << uuid << ": " << e.what() << std::endl;
@@ -167,6 +167,129 @@ inline std::vector<std::tuple<std::string, int, std::string>> get_file_metadata(
 
     std::cout << "Final result: " << file_metadata.size() << " successfully processed files" << std::endl;
     return file_metadata;
+}
+
+inline QString getFileFilterFromMimeType(const std::string& mime_type) {
+    if (mime_type.empty()) {
+        return "All Files (*.*)";
+    }
+    
+    if (mime_type == "text/plain") {
+        return "Text Files (*.txt);;All Files (*.*)";
+    } else if (mime_type == "application/pdf") {
+        return "PDF Files (*.pdf);;All Files (*.*)";
+    } else if (mime_type == "image/jpeg") {
+        return "JPEG Images (*.jpg *.jpeg);;All Files (*.*)";
+    } else if (mime_type == "image/png") {
+        return "PNG Images (*.png);;All Files (*.*)";
+    } else if (mime_type == "image/gif") {
+        return "GIF Images (*.gif);;All Files (*.*)";
+    } else if (mime_type == "image/webp") {
+        return "WebP Images (*.webp);;All Files (*.*)";
+    } else if (mime_type == "video/mp4") {
+        return "MP4 Videos (*.mp4);;All Files (*.*)";
+    } else if (mime_type == "video/avi") {
+        return "AVI Videos (*.avi);;All Files (*.*)";
+    } else if (mime_type == "audio/mp3" || mime_type == "audio/mpeg") {
+        return "MP3 Audio (*.mp3);;All Files (*.*)";
+    } else if (mime_type == "audio/wav") {
+        return "WAV Audio (*.wav);;All Files (*.*)";
+    } else if (mime_type == "application/zip") {
+        return "ZIP Archives (*.zip);;All Files (*.*)";
+    } else if (mime_type == "application/x-rar-compressed") {
+        return "RAR Archives (*.rar);;All Files (*.*)";
+    } else if (mime_type == "application/msword") {
+        return "Word Documents (*.doc);;All Files (*.*)";
+    } else if (mime_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        return "Word Documents (*.docx);;All Files (*.*)";
+    } else if (mime_type == "application/vnd.ms-excel") {
+        return "Excel Spreadsheets (*.xls);;All Files (*.*)";
+    } else if (mime_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+        return "Excel Spreadsheets (*.xlsx);;All Files (*.*)";
+    } else if (mime_type.substr(0, 5) == "text/") {
+        return "Text Files (*.txt);;All Files (*.*)";
+    } else if (mime_type.substr(0, 6) == "image/") {
+        return "Image Files (*.jpg *.jpeg *.png *.gif *.bmp *.webp);;All Files (*.*)";
+    } else if (mime_type.substr(0, 6) == "video/") {
+        return "Video Files (*.mp4 *.avi *.mov *.mkv *.wmv);;All Files (*.*)";
+    } else if (mime_type.substr(0, 6) == "audio/") {
+        return "Audio Files (*.mp3 *.wav *.ogg *.flac *.aac);;All Files (*.*)";
+    } else {
+        // For unknown mime types, show a generic filter with the mime type info
+        return QString("Files (%1) (*.*);;All Files (*.*)")
+               .arg(QString::fromStdString(mime_type));
+    }
+}
+
+inline void download_file(const std::string& file_uuid, std::string mime_type, std::string file_name, QWidget* parent = nullptr) {
+    try {
+        auto file_key = get_decrypted_message(file_uuid);
+        
+        if (file_key.empty()) {
+            QMessageBox::critical(parent, "Download Error", "File key not found in database. Cannot decrypt file.");
+            return;
+        }
+
+        auto encrypted_file_data = get_encrypted_file(file_uuid);
+        
+        if (encrypted_file_data.empty()) {
+            QMessageBox::critical(parent, "Download Error", "Failed to download file from server or file is empty.");
+            return;
+        }
+
+        QByteArray encrypted_data(reinterpret_cast<const char*>(encrypted_file_data.data()), 
+                                  static_cast<int>(encrypted_file_data.size()));
+        
+
+        auto decrypted_data = decrypt_message_given_key(encrypted_file_data.data(), 
+                                                        encrypted_file_data.size(), 
+                                                        file_key.data());
+        
+        if (decrypted_data.empty()) {
+            QMessageBox::critical(parent, "Download Error", "Failed to decrypt file. The file key may be incorrect.");
+            return;
+        }
+
+        QString fileName = QFileDialog::getSaveFileName(
+            parent,
+            "Save Downloaded File",
+            QString::fromStdString(file_name),
+            getFileFilterFromMimeType(mime_type)
+        );
+        
+        if (fileName.isEmpty()) {
+            std::cout << "User cancelled save dialog" << std::endl;
+            return;
+        }
+        
+        QFile outputFile(fileName);
+        if (!outputFile.open(QIODevice::WriteOnly)) {
+            QMessageBox::critical(parent, "Save Error", 
+                                QString("Failed to open file for writing: %1").arg(fileName));
+            return;
+        }
+        
+        qint64 bytesWritten = outputFile.write(reinterpret_cast<const char*>(decrypted_data.data()), 
+                                              static_cast<qint64>(decrypted_data.size()));
+        outputFile.close();
+        
+        if (bytesWritten != static_cast<qint64>(decrypted_data.size())) {
+            QMessageBox::critical(parent, "Save Error", 
+                                QString("Failed to write complete file. Expected %1 bytes, wrote %2 bytes.")
+                                .arg(decrypted_data.size()).arg(bytesWritten));
+            return;
+        }
+        
+        std::cout << "Successfully saved file to: " << fileName.toStdString() << std::endl;
+        QMessageBox::information(parent, "Download Complete", 
+                               QString("File successfully downloaded and saved to:\n%1\n\nFile size: %2 bytes")
+                               .arg(fileName).arg(decrypted_data.size()));
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error downloading file: " << e.what() << std::endl;
+        QMessageBox::critical(parent, "Download Error", 
+                            QString("An error occurred while downloading the file:\n%1").arg(e.what()));
+    }
 }
 
 #endif //RECEIVEFLOW_H

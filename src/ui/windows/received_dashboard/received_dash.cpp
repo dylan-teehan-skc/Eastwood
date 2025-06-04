@@ -52,10 +52,12 @@ void Received::setupFileList() const {
 void Received::addFileItem(const QString& fileName,
                          const QString& fileSize,
                          const QString& timestamp,
-                         const QString& owner)
+                         const QString& owner,
+                         std::string uuid,
+                         std::string mime_type)
 {
     auto* item = new QListWidgetItem(ui->fileList);
-    auto* widget = new FileItemWidget(fileName, fileSize, timestamp, owner, 
+    auto* widget = new FileItemWidget(fileName, fileSize, timestamp, owner, uuid, mime_type,
                                     FileItemWidget::Mode::Received, this);
 
     connect(widget, &FileItemWidget::fileClicked, this, &Received::onFileItemClicked);
@@ -75,9 +77,9 @@ void Received::refreshFileList()
 
     auto metadata = get_file_metadata();
 
-    for (const auto& [file_name, file_size, mime_type] : metadata) {
+    for (const auto& [file_name, file_size, mime_type, uuid, username] : metadata) {
         std::string file_size_str = std::to_string(file_size);
-        addFileItem(QString::fromStdString(file_name), QString::fromStdString(file_size_str), "sadfa", "asdfadf");
+        addFileItem(QString::fromStdString(file_name), QString::fromStdString(file_size_str), "sadfa", QString::fromStdString(username), uuid, mime_type);
     }
 }
 
@@ -103,7 +105,7 @@ void Received::showFileMetadata(const FileItemWidget* widget)
 
 void Received::onDownloadFileClicked(FileItemWidget* widget)
 {
-    StyledMessageBox::info(this, "Not Implemented", "Download functionality is not yet implemented.");
+    download_file(widget->getUuid(), widget->getMimeType(), widget->getFileName().toStdString());
 }
 
 void Received::onReceivedButtonClicked()

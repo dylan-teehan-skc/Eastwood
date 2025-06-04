@@ -5,17 +5,21 @@
 #include <QIcon>
 
 FileItemWidget::FileItemWidget(const QString& fileName,
-                             const QString& fileSize,
-                             const QString& timestamp,
-                             const QString& owner,
-                             Mode mode,
-                             QWidget* parent)
+                          const QString& fileSize,
+                          const QString& timestamp,
+                          const QString& owner,
+                          const std::string& uuid,
+                          const std::string& mime_type,
+                          Mode mode,
+                          QWidget* parent)
     : QWidget(parent)
     , fileName(fileName)
     , fileSize(fileSize)
     , timestamp(timestamp)
     , owner(owner)
     , mode(mode)
+    , uuid(uuid)
+    , mime_type(mime_type)
 {
     setupUI();
     setupConnections();

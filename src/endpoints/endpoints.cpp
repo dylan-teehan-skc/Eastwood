@@ -557,19 +557,23 @@ std::vector<unsigned char> get_encrypted_file(std::string uuid) {
 }
 
 // file uuid : ciphertext
-std::map<std::string, std::vector<unsigned char> > get_encrypted_file_metadata(std::vector<std::string> uuids) {
+std::map<std::string, std::tuple<std::string, std::vector<unsigned char>> > get_encrypted_file_metadata(std::vector<std::tuple<std::string, std::string>> uuids) {
     json body = {
         {"file_ids", json::array()}
     };
 
-    for (auto uuid: uuids) {
+    std::map<std::string, std::string> usernames;
+
+    for (auto [uuid, username]: uuids) {
         body["file_ids"].push_back(uuid);
+        usernames[uuid] = username;
     }
+
 
     std::cout << "DEBUG: Requesting metadata for " << uuids.size() << " UUIDs" << std::endl;
     json response = post("/getFilesMetadata", body);
 
-    std::map<std::string, std::vector<unsigned char> > files_metadata;
+    std::map<std::string, std::tuple<std::string, std::vector<unsigned char>> > files_metadata;
 
     // Check if response contains data and metadata
     if (!response.contains("data") || !response["data"].contains("metadata")) {
@@ -609,7 +613,7 @@ std::map<std::string, std::vector<unsigned char> > get_encrypted_file_metadata(s
             }
             std::cout << std::endl;
 
-            files_metadata[uuid] = std::move(binary_metadata);
+            files_metadata[uuid] = std::make_tuple(usernames[uuid], std::move(binary_metadata));
         } else {
             std::cerr << "Failed to convert hex metadata to binary for file " << uuid << std::endl;
         }

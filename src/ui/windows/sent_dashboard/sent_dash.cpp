@@ -44,7 +44,7 @@ void Sent::addFileItem(const QString& fileName,
                      const QString& owner)
 {
     auto* item = new QListWidgetItem(ui->fileList);
-    auto* widget = new FileItemWidget(fileName, fileSize, timestamp, owner, 
+    auto* widget = new FileItemWidget(fileName, fileSize, timestamp, owner, " ", " ",
                                     FileItemWidget::Mode::Sent, this);
 
     connect(widget, &FileItemWidget::revokeAccessClicked, this, &Sent::onRevokeAccessClicked);

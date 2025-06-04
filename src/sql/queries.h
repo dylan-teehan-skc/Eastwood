@@ -670,7 +670,7 @@ inline std::vector<std::tuple<std::string, std::string, std::array<unsigned char
     return result;
 }
 
-inline std::vector<std::string> get_all_received_file_uuids() {
+inline std::vector<std::tuple<std::string,std::string>> get_all_received_file_uuids() {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
 
@@ -679,23 +679,25 @@ inline std::vector<std::string> get_all_received_file_uuids() {
 
     // Get all messages except those from the current user
     db.prepare_or_throw(
-        "SELECT file_uuid FROM received_messages WHERE username != ?;", &stmt
+        "SELECT file_uuid, username FROM received_messages WHERE username != ?;", &stmt
     );
     sqlite3_bind_text(stmt, 1, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
 
     auto rows = db.query(stmt);
     std::set<std::string> seen_file_uuids; // Track unique file UUIDs
-    std::vector<std::string> file_uuids;
+    std::vector<std::tuple<std::string, std::string>> file_uuids;
 
     for (const auto& row : rows) {
         std::string file_uuid = row["file_uuid"].toString().toStdString();
+        std::string username = row["username"].toString().toStdString();
 
         // Skip if we've already seen this file_uuid
         if (seen_file_uuids.find(file_uuid) != seen_file_uuids.end()) {
             continue;
         }
         seen_file_uuids.insert(file_uuid);
-        file_uuids.emplace_back(file_uuid);
+        file_uuids.emplace_back(std::make_tuple(file_uuid, username));
     }
 
     return file_uuids;

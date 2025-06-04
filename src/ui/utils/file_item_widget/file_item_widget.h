@@ -17,10 +17,12 @@ public:
         Sent
     };
 
-    explicit FileItemWidget(const QString& fileName, 
-                          const QString& fileSize, 
+    explicit FileItemWidget(const QString& fileName,
+                          const QString& fileSize,
                           const QString& timestamp,
                           const QString& owner,
+                          const std::string& uuid,
+                          const std::string& mimetype,
                           Mode mode = Mode::Received,
                           QWidget* parent = nullptr);
 
@@ -29,6 +31,8 @@ public:
     QString getFileSize() const { return fileSize; }
     QString getTimestamp() const { return timestamp; }
     QString getOwner() const { return owner; }
+    std::string getUuid() const { return uuid; }
+    std::string getMimeType() const { return mime_type; }
 
     // Override sizeHint to provide a safe default size
     QSize sizeHint() const override { return QSize(400, 80); }
@@ -54,8 +58,10 @@ private:
     QString fileSize;
     QString timestamp;
     QString owner;
-    QString uuid;
     Mode mode;
+
+    std::string uuid;
+    std::string mime_type;
 
     QWidget* createFileIconContainer();
     QLayout* createInfoLayout();

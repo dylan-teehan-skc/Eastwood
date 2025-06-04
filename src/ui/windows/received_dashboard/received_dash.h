@@ -39,7 +39,9 @@ private:
     void addFileItem(const QString& fileName, 
                     const QString& fileSize, 
                     const QString& timestamp,
-                    const QString& owner);
+                    const QString& owner,
+                    std::string uuid,
+                    std::string mime_type);
 };
 
 #endif // RECEIVED_DASH_H
