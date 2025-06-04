@@ -130,7 +130,14 @@ void DeviceRegister::onUserRegistered()
         const auto esk_device = encrypt_secret_key(m_sk_device, m_nonce);
         save_encrypted_keypair("device", m_pk_device.data(), esk_device, m_nonce);
 
-        login_user(m_username, std::make_unique<std::string>(passphrase.toStdString()));
+        login_user(m_username, std::make_unique<std::string>(passphrase.toStdString()), false);
+        auto signed_prekey = generate_signed_prekey();
+        post_new_keybundles(
+            get_decrypted_keypair("device"),
+            &signed_prekey,
+            generate_onetime_keys(100)
+        );
+
         WindowManager::instance().showReceived();
     } catch (const std::exception& e) {
         qDebug() << "Login failed:" << e.what();
