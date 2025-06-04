@@ -100,7 +100,7 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, s
 
     SSL_write(ssl, req.c_str(), req.length());
 
-    char buf[4096];
+    char buf[BUFFER_SIZE];
     std::string response;
     int bytes;
 
@@ -150,7 +150,7 @@ std::string HTTPSClient::get(const std::string &host, const std::string &path, c
 
     SSL_write(ssl, req.c_str(), req.length());
 
-    char buf[4096];
+    char buf[BUFFER_SIZE];
     std::string response;
     int bytes;
 
@@ -177,7 +177,7 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
     SSL *ssl = SSL_new(ctx.get());
     SSL_set_fd(ssl, sock_fd);
-    SSL_set_tlsext_host_name(ssl, host.c_str());
+    SSL_set_tlsext_host_name(ssl, host.c_str()); // enables SNI (server name indication)
     SSL_set1_host(ssl, host.c_str());
 
     if (SSL_connect(ssl) <= 0) {
@@ -206,7 +206,7 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
     SSL_write(ssl, request.c_str(), request.length());
 
-    char buf[4096];
+    char buf[BUFFER_SIZE];
     std::string response;
     int bytes;
 
@@ -259,7 +259,7 @@ std::string HTTPSClient::post(const std::string &host, const std::string &path, 
 
     SSL_write(ssl, request.c_str(), request.length());
 
-    char buf[4096];
+    char buf[BUFFER_SIZE];
     std::string response;
     int bytes;
 

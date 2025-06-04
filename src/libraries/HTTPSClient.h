@@ -13,6 +13,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <stdexcept>
+#define BUFFER_SIZE 8192 // 8KB
 
 namespace webwood {
 
