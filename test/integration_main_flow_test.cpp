@@ -15,6 +15,7 @@
 
 #include "auth/logout.h"
 #include "communication/send_file_to/send_file_to.h"
+#include "communication/upload_file/upload_file.h"
 #include "src/auth/rotate_master_key/rotate_master_key.h"
 
 std::string generateRandomString(int length) {
@@ -118,19 +119,24 @@ int main() {
     logout();
     login_user(username_1, password_1, false);
     generate_signed_prekey();
-    
+
     // Create a temporary file
     const std::string temp_file_path = "/tmp/test_file.txt";
     std::ofstream temp_file(temp_file_path);
     temp_file << "This is a test file content";
     temp_file.close();
 
-    // Send the file to username_1
+    qDebug() << "Uploading file";
+    const auto file_key = SecureMemoryBuffer::create(SYM_KEY_LEN);
+    randombytes_buf(file_key->data(), SYM_KEY_LEN);
+    const std::string uuid = upload_file(temp_file_path, file_key);
+
     qDebug() << "Sending file to second user";
     send_file_to(username, temp_file_path);
-
-    // Clean up the temporary file
     std::remove(temp_file_path.c_str());
+
+    qDebug() << "Deleting file";
+    post_delete_file(uuid);
 
     std::cout << "Integration main flow test completed successfully." << std::endl;
 }

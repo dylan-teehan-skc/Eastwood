@@ -88,4 +88,6 @@ std::vector<unsigned char> get_encrypted_file(std::string uuid);
 
 std::map<std::string, std::vector<unsigned char>> get_encrypted_file_metadata(std::vector<std::string> uuids);
 
+void post_delete_file(const std::string &uuid);
+
 #endif //ENDPOINTS_H

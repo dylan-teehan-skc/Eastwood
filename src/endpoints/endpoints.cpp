@@ -618,3 +618,10 @@ std::map<std::string, std::vector<unsigned char> > get_encrypted_file_metadata(s
     std::cout << "DEBUG: Returning metadata for " << files_metadata.size() << " files" << std::endl;
     return files_metadata;
 }
+
+void post_delete_file(const std::string &uuid) {
+    const json body = {
+      {"file_id", uuid}
+    };
+    post("/deleteFile", body);
+}
