@@ -473,9 +473,13 @@ void post_new_keybundles(
     post("/updateKeybundle", body);
 }
 
-std::string post_upload_file(std::vector<unsigned char> encrypted_bytes) {
+std::string post_upload_file(
+    const std::vector<unsigned char>& encrypted_file_data,
+    const std::vector<unsigned char>& encrypted_metadata
+) {
     const json body = {
-        {"encrypted_bytes", encrypted_bytes}
+        {"encrypted_file", bin2hex(encrypted_file_data.data(), encrypted_file_data.size())},
+        {"encrypted_metadata", bin2hex(encrypted_metadata.data(), encrypted_metadata.size())}
     };
 
     const json response = post("/uploadFile", body);
@@ -604,7 +608,7 @@ std::map<std::string, std::vector<unsigned char> > get_encrypted_file_metadata(s
                 printf("%02x ", binary_metadata[i]);
             }
             std::cout << std::endl;
-            
+
             files_metadata[uuid] = std::move(binary_metadata);
         } else {
             std::cerr << "Failed to convert hex metadata to binary for file " << uuid << std::endl;

@@ -2,18 +2,19 @@
 #include "./libraries/HTTPSClient.h"
 #include <iostream>
 #define SQLITE_HAS_CODEC 1
+#include <fstream>
 #include <random>
 
 #include "auth/login/login.h"
 #include "auth/register_device/register_device.h"
 #include "auth/register_user/register_user.h"
-#include "client_api_interactions/MakeAuthReq.h"
 #include "database/database.h"
 #include "endpoints/endpoints.h"
 #include "sql/queries.h"
 #include <memory>
 
 #include "auth/logout.h"
+#include "communication/send_file_to/send_file_to.h"
 #include "src/auth/rotate_master_key/rotate_master_key.h"
 
 std::string generateRandomString(int length) {
@@ -47,6 +48,7 @@ int main() {
     register_first_device();
     qDebug() << "Logging in";
     login_user(username, password, false);
+
     const auto new_password = std::make_unique<const std::string>("even_stronger_password");
     qDebug() << "Trying to rotate password without current master key";
     const auto fake_password = SecureMemoryBuffer::create(MASTER_KEY_LEN);
@@ -111,9 +113,24 @@ int main() {
     unsigned char pk_device[crypto_sign_PUBLICKEYBYTES];
     const auto sk_device = SecureMemoryBuffer::create(crypto_sign_SECRETKEYBYTES);
     crypto_sign_keypair(pk_device, sk_device->data());
-
     add_trusted_device(pk_device, new_device_name);
 
+    logout();
+    login_user(username_1, password_1, false);
+    generate_signed_prekey();
+    
+    // Create a temporary file
+    const std::string temp_file_path = "/tmp/test_file.txt";
+    std::ofstream temp_file(temp_file_path);
+    temp_file << "This is a test file content";
+    temp_file.close();
+
+    // Send the file to username_1
+    qDebug() << "Sending file to second user";
+    send_file_to(username, temp_file_path);
+
+    // Clean up the temporary file
+    std::remove(temp_file_path.c_str());
 
     std::cout << "Integration main flow test completed successfully." << std::endl;
 }

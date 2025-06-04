@@ -7,6 +7,10 @@
 #include "src/keys/secure_memory_buffer.h"
 #include "src/key_exchange/MessageStructs.h"
 #include "src/sessions/KeyBundle.h"
+#include <vector>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 bool post_check_user_exists(const std::string& username, const unsigned char* pk_device);
 
@@ -65,7 +69,10 @@ void post_new_keybundles(
     const std::vector<std::tuple<unsigned char *, std::unique_ptr<SecureMemoryBuffer>, unsigned char *> > &otks
 );
 
-std::string post_upload_file(std::vector<unsigned char> encrypted_bytes);
+std::string post_upload_file(
+    const std::vector<unsigned char>& encrypted_file_data,
+    const std::vector<unsigned char>& encrypted_metadata
+);
 
 bool post_check_user_exists(
     const std::string& username
