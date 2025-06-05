@@ -228,9 +228,8 @@ void Sent::onRevokeAccessClicked(const FileItemWidget* widget)
 
     auto* ptr = usernames.data();
     while (ptr < usernames.data() + usernames.size()) {
-    	++ptr;
         users.emplace_back(QString::fromStdString(*ptr));
-
+        ++ptr;
     }
 
     QList<QCheckBox*> checkboxes;
