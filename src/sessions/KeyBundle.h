@@ -21,7 +21,9 @@ enum Role {
 
 class KeyBundle {
     public:
-    virtual ~KeyBundle() = default;
+    virtual ~KeyBundle() {
+        std::cout << "Removing base key bundle class" << std::endl;
+    };
 
     KeyBundle(std::array<unsigned char, 32> my_device_public_in,
         std::array<unsigned char, 32> their_device_public_in){
@@ -44,6 +46,9 @@ protected:
 
 class SendingKeyBundle: public KeyBundle {
 public:
+    ~SendingKeyBundle() {
+        std::cout << "Removing sending key bundle sub-class" << std::endl;
+    }
     SendingKeyBundle(
                 std::array<unsigned char, 32> my_device_public_in,
                 std::array<unsigned char, 32> my_ephemeral_public_in,
@@ -119,6 +124,9 @@ private:
 
 class ReceivingKeyBundle: public KeyBundle {
 public:
+    ~ReceivingKeyBundle() {
+        std::cout << "Removing receiving key bundle sub-class" << std::endl;
+    }
     ReceivingKeyBundle(
                 std::array<unsigned char, 32> their_device_public_in,
                 std::array<unsigned char, 32> their_ephemeral_public_in,

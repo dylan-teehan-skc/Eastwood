@@ -90,7 +90,6 @@ struct FileData {
 };
 
 inline std::vector<std::tuple<std::string, std::string> > (*get_uuid_to_username(bool is_sending))() {
-    std::vector<std::tuple<std::string, std::string> > (*get_uuid_to_username)();
     if (is_sending) {
         return &get_all_sent_file_uuids;
     } else {

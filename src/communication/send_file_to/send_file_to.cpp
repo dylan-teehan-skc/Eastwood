@@ -19,13 +19,14 @@
 void allow_access_to_file(
     const std::string &username,
     const std::string &uuid,
-    const std::unique_ptr<SecureMemoryBuffer> &f_kek
+    const std::unique_ptr<SecureMemoryBuffer> &f_kek,
+    bool get_keybundles
 ) {
     const auto file_key = SecureMemoryBuffer::create(SYM_KEY_LEN);
     randombytes_buf(file_key->data(), SYM_KEY_LEN);
 
     std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>, MessageHeader> > keys_to_send_key
-            = RatchetSessionManager::instance().get_keys_for_identity(username);
+            = RatchetSessionManager::instance().get_keys_for_identity(username, get_keybundles);
 
     if (keys_to_send_key.size() > 0) {
         std::vector<std::tuple<std::array<unsigned char, 32>, DeviceMessage *> > messages;
@@ -86,10 +87,10 @@ void allow_access_to_file(
     }
 }
 
-void send_file_to(const std::string &username, const std::string &file_path) {
+void send_file_to(const std::string &username, const std::string &file_path, bool get_keybundles) {
     const auto f_kek = SecureMemoryBuffer::create(SYM_KEY_LEN);
     randombytes_buf(f_kek->data(), f_kek->size());
 
     const std::string uuid = upload_file(file_path, f_kek);
-    allow_access_to_file(username, uuid, f_kek);
+    allow_access_to_file(username, uuid, f_kek, get_keybundles);
 }

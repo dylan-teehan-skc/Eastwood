@@ -30,6 +30,8 @@ private:
     Ui::SendFile *ui;
     void setupConnections();
     void navigateTo(QWidget* newWindow);
+
+    bool already_fetched_bundles = false;
 };
 
 #endif // SEND_FILE_H

@@ -151,7 +151,7 @@ int main() {
     const std::string uuid = upload_file(temp_file_path, file_key);
 
     qDebug() << "Sending file to second user";
-    send_file_to(username, temp_file_path);
+    send_file_to(username, temp_file_path, true);
     std::remove(temp_file_path.c_str());
 
     qDebug() << "Deleting file";

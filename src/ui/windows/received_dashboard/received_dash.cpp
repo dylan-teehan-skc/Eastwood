@@ -156,17 +156,27 @@ void Received::onShowAuthCodeButtonClicked()
 {
     QString errorMessage;
     QString username = StyledMessageBox::getUsername(this, errorMessage);
-    
+
     if (!username.isEmpty()) {
         if (NameValidator::validateUsername(username, errorMessage)) {
-            QString authCode = "123456";
-            StyledMessageBox::displayCode(this, "Authentication Code", 
-                QString("Authentication code for user %1:").arg(username), authCode);
-        } else {
-            StyledMessageBox::warning(this, "Error", errorMessage);
-        }
+            update_handshakes();
+
+              auto their_device_ids = RatchetSessionManager::instance().get_device_ids_of_existing_handshakes(username.toStdString());
+              auto bundles = get_keybundles(username.toStdString(), their_device_ids);
+              RatchetSessionManager::instance().create_ratchets_if_needed(username.toStdString(), bundles);
+              auto my_device_pub = get_public_key("device");
+              their_device_ids = RatchetSessionManager::instance().get_device_ids_of_existing_handshakes(username.toStdString()); // update with  new
+
+              auto code = concat_ordered(reinterpret_cast<const unsigned char *>(my_device_pub.data()),my_device_pub.size(), their_device_ids[0].data(), their_device_ids[0].size());
+              auto base_code = bin2base64(code.data(), code.size());
+
+              QString authCode = QString::fromStdString(base_code);
+              StyledMessageBox::displayCode(this, "Authentication Code",
+              QString("Authentication code for user %1:").arg(username), authCode);
+          } else {
+              StyledMessageBox::warning(this, "Error", errorMessage);
+          }
     } else if (!errorMessage.isEmpty()) {
         StyledMessageBox::warning(this, "Error", errorMessage);
     }
 }
-
