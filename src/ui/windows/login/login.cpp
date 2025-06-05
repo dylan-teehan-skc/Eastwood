@@ -43,7 +43,7 @@ void Login::setupConnections()
 QString Login::getAndValidatePassword() {
     bool passwordAccepted;
     QString password = QInputDialog::getText(this, "Set Password", 
-        "Enter a password (20-64 characters):", 
+        "Enter a password (15-64 characters):", 
         QLineEdit::Password, "", &passwordAccepted);
     
     if (!passwordAccepted || password.isEmpty()) {

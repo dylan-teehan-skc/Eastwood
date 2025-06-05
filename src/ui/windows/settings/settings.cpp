@@ -19,6 +19,7 @@
 #include <cstring>
 
 #include "src/auth/logout.h"
+#include "src/ui/utils/input_validation/passphrase_validator.h"
 #include "src/auth/rotate_master_key/rotate_master_key.h"
 #include "src/endpoints/endpoints.h"
 #include "src/keys/session_token_manager.h"
@@ -55,7 +56,7 @@ void Settings::setupConnections()
 {
     // Connect passphrase fields to validation
     connect(ui->currentPassphrase, &QLineEdit::textChanged, this, &Settings::validatePassphrase);
-    connect(ui->currentPassphrase, &QLineEdit::textChanged, this, &Settings::validatePassphrase);
+    connect(ui->newPassphrase, &QLineEdit::textChanged, this, &Settings::validatePassphrase);
     connect(ui->confirmPassphrase, &QLineEdit::textChanged, this, &Settings::validatePassphrase);
 
     // Connect passphrase section buttons
@@ -84,18 +85,13 @@ void Settings::setupConnections()
 void Settings::validatePassphrase() const {
     QString newPassphrase = ui->newPassphrase->text();
     QString confirmPassphrase = ui->confirmPassphrase->text();
+    QString errorMessage;
 
-    if (newPassphrase.isEmpty() && confirmPassphrase.isEmpty()) {
-        ui->passphraseRequirements->setText("Passphrase must be between 20 and 64 characters");
-        ui->passphraseRequirements->setStyleSheet("font-size: 12px; color: #636e72; margin-top: 5px;");
-        return;
-    }
-
-    if (newPassphrase == confirmPassphrase) {
+    if (PassphraseValidator::validate(newPassphrase, confirmPassphrase, errorMessage)) {
         ui->passphraseRequirements->setText("Passphrases match");
         ui->passphraseRequirements->setStyleSheet("font-size: 12px; color: #27ae60; margin-top: 5px;");
     } else {
-        ui->passphraseRequirements->setText("Passphrases do not match");
+        ui->passphraseRequirements->setText(errorMessage);
         ui->passphraseRequirements->setStyleSheet("font-size: 12px; color: #e74c3c; margin-top: 5px;");
     }
 }
@@ -146,9 +142,18 @@ void Settings::onPassphraseCancelClicked() const {
 }
 
 void Settings::onPassphraseSaveClicked() {
-    validatePassphrase();
+    QString newPassphrase = ui->newPassphrase->text();
+    QString confirmPassphrase = ui->confirmPassphrase->text();
+    QString errorMessage;
+
+    if (!PassphraseValidator::validate(newPassphrase, confirmPassphrase, errorMessage)) {
+        StyledMessageBox::error(this, "Invalid Passphrase", errorMessage);
+        return;
+    }
+
     const auto old_password = ui->currentPassphrase->text().toStdString();
-    const auto new_password = ui->newPassphrase->text().toStdString();
+    const auto new_password = newPassphrase.toStdString();
+
     try {
         auto old_password_buffer = SecureMemoryBuffer::create(old_password.size());
         auto new_password_buffer = SecureMemoryBuffer::create(new_password.size());

@@ -263,7 +263,7 @@ QLineEdit:focus {
         <string notr="true">color: #636e72; font-size: 10px; margin-left: 5px; margin-top: 1px;</string>
        </property>
        <property name="text">
-        <string>Passphrase must be at least 20 characters long</string>
+        <string>Passphrase must be at least 15 characters long</string>
        </property>
        <property name="wordWrap">
         <bool>false</bool>

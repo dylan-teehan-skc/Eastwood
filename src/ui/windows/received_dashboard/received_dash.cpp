@@ -16,6 +16,7 @@
 #include <iostream>
 
 #include "src/communication/ReceiveFlow.h"
+#include "src/ui/utils/input_validation/name_validator.h"
 
 Received::Received(QWidget *parent, QWidget* sendFileWindow)
     : QWidget(parent)
@@ -157,9 +158,13 @@ void Received::onShowAuthCodeButtonClicked()
     QString username = StyledMessageBox::getUsername(this, errorMessage);
     
     if (!username.isEmpty()) {
-        QString authCode = "123456";
-        StyledMessageBox::displayCode(this, "Authentication Code", 
-            QString("Authentication code for user %1:").arg(username), authCode);
+        if (NameValidator::validateUsername(username, errorMessage)) {
+            QString authCode = "123456";
+            StyledMessageBox::displayCode(this, "Authentication Code", 
+                QString("Authentication code for user %1:").arg(username), authCode);
+        } else {
+            StyledMessageBox::warning(this, "Error", errorMessage);
+        }
     } else if (!errorMessage.isEmpty()) {
         StyledMessageBox::warning(this, "Error", errorMessage);
     }

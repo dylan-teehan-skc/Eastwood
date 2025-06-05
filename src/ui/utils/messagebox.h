@@ -390,7 +390,7 @@ public:
         QVBoxLayout* layout = new QVBoxLayout(&dialog);
         
         // Passphrase input
-        QLabel* passphraseLabel = new QLabel("Enter a passphrase (20-64 characters):", &dialog);
+        QLabel* passphraseLabel = new QLabel("Enter a passphrase (15-64 characters):", &dialog);
         passphraseLabel->setStyleSheet("color: #2d3436; font-size: 14px; margin-top: 10px;");
         layout->addWidget(passphraseLabel);
         

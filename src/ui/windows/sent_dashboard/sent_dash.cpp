@@ -17,6 +17,7 @@
 #include "src/communication/ReceiveFlow.h"
 #include "src/communication/revoke_file/revoke_file.h"
 #include "src/sql/queries.h"
+#include "src/ui/utils/input_validation/name_validator.h"
 
 // Sent implementation
 Sent::Sent(QWidget *parent, QWidget* receivedWindow)
@@ -368,10 +369,13 @@ void Sent::onShowAuthCodeButtonClicked()
     QString username = StyledMessageBox::getUsername(this, errorMessage);
     
     if (!username.isEmpty()) {
-        // TODO: Replace this with actual auth code generation
-        QString authCode = "123456";
-        StyledMessageBox::displayCode(this, "Authentication Code", 
-            QString("Authentication code for user %1:").arg(username), authCode);
+        if (NameValidator::validateUsername(username, errorMessage)) {
+            QString authCode = "123456";
+            StyledMessageBox::displayCode(this, "Authentication Code", 
+                QString("Authentication code for user %1:").arg(username), authCode);
+        } else {
+            StyledMessageBox::warning(this, "Error", errorMessage);
+        }
     } else if (!errorMessage.isEmpty()) {
         StyledMessageBox::warning(this, "Error", errorMessage);
     }

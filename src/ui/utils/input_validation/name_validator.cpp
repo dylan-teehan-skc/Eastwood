@@ -19,12 +19,19 @@ namespace NameValidator {
             return false;
         }
 
-        // (all printable ASCII allowed)
-        for (const QChar& c : trimmedUsername) {
-            if (c.unicode() < 32 || c.unicode() > 126) {
-                errorMessage = "Username can only contain printable characters";
-                return false;
+        // Check for spaces at start/end
+        if (username.startsWith(' ') || username.endsWith(' ')) {
+            errorMessage = "Username cannot start or end with spaces";
+            return false;
+        }
+
+        // (all printable ASCII allowed, including spaces)
+        for (const QChar& c : username) {
+            if (c.unicode() == 32 || (c.unicode() >= 33 && c.unicode() <= 126)) {
+                continue;
             }
+            errorMessage = "Username can only contain ASCII characters";
+            return false;
         }
 
         return true;

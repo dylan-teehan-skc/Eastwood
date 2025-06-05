@@ -24,7 +24,6 @@ private slots:
     void onReceivedButtonClicked() const;
     void onSentButtonClicked() const;
     void onSendFileButtonClicked() const;
-    void validatePassphrase() const;
     void onPassphraseCancelClicked() const;
     void onPassphraseSaveClicked();
     void onAuthCancelClicked() const;
@@ -41,6 +40,7 @@ private:
     void createDeviceBox(const std::string& deviceName) const;
     void handleRefreshSpinner();
     void updateUsername();
+    void validatePassphrase() const;
 
     Ui::Settings *ui;
     CameraFunctionality* m_cameraFunctionality;
