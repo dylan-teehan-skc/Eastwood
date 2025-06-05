@@ -10,9 +10,10 @@
 #include "src/endpoints/endpoints.h"
 #include "src/sql/queries.h"
 #include "src/utils/ConversionUtils.h"
+#include "src/keys/secure_memory_buffer.h"
 
 
-void register_user(const std::string &username, const std::unique_ptr<const std::string> &master_password,
+void register_user(const std::string &username, std::unique_ptr<SecureMemoryBuffer>&& master_password,
                   const bool DEBUG_REFRESH_TABLES = false) {
     qDebug() << "Registering user";
 

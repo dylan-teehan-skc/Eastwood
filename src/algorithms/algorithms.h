@@ -12,7 +12,7 @@
 #include <vector>
 
 std::unique_ptr<SecureMemoryBuffer> derive_master_key(
-    const std::unique_ptr<const std::string> &master_password,
+    std::unique_ptr<SecureMemoryBuffer>&& master_password,
     unsigned char salt[crypto_pwhash_SALTBYTES]
 );
 

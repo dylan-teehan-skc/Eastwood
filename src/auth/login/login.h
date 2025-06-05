@@ -7,6 +7,12 @@
 #define AUTH_LOGIN_H
 #include <string>
 #include <memory>
+#include "src/keys/secure_memory_buffer.h"
 
-void login_user(const std::string &username, const std::unique_ptr<const std::string> &master_password, bool post_new_keys = true);
-#endif //AUTH_LOGIN_H
+void login_user(
+    const std::string &username, 
+    std::unique_ptr<SecureMemoryBuffer>&& master_password, 
+    bool is_new_device = false
+);
+
+#endif // AUTH_LOGIN_H

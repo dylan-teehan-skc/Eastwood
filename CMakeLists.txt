@@ -94,6 +94,10 @@ set(FRONTEND_SOURCES
         src/ui/windows/device_register/device_register.h
         src/ui/windows/device_register/device_register.ui
         src/ui/utils/messagebox.h
+        src/ui/utils/input_validation/name_validator.cpp
+        src/ui/utils/input_validation/name_validator.h
+        src/ui/utils/input_validation/passphrase_validator.cpp
+        src/ui/utils/input_validation/passphrase_validator.h
         src/ui/windows/received_dashboard/received_dash.cpp
         src/ui/windows/received_dashboard/received_dash.h
         src/ui/windows/received_dashboard/received_dash.ui
@@ -192,6 +196,7 @@ target_include_directories(Eastwood PRIVATE
         ${SODIUM_INCLUDE_DIR}
         ${SQLCIPHER_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${Qt6Core_INCLUDE_DIRS}
         ${Qt6Gui_INCLUDE_DIRS}
         ${Qt6Widgets_INCLUDE_DIRS}

@@ -10,13 +10,13 @@
 #include "src/utils/ConversionUtils.h"
 
 std::unique_ptr<SecureMemoryBuffer> derive_master_key(
-    const std::unique_ptr<const std::string> &master_password,
+    std::unique_ptr<SecureMemoryBuffer>&& master_password,
     unsigned char salt[crypto_pwhash_SALTBYTES]
 ) {
     auto master_key = SecureMemoryBuffer::create(MASTER_KEY_LEN);
     if (crypto_pwhash(
             master_key->data(), master_key->size(),
-            master_password->c_str(), master_password->length(),
+            reinterpret_cast<const char*>(master_password->data()), master_password->size(),
             salt,
             crypto_pwhash_argon2id_OPSLIMIT_MODERATE,
             crypto_pwhash_argon2id_MEMLIMIT_MODERATE,

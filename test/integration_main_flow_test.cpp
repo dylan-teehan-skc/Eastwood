@@ -1,22 +1,24 @@
+#include <gtest/gtest.h>
+#include "src/keys/secure_memory_buffer.h"
+#include "src/auth/login/login.h"
+#include "src/auth/register_user/register_user.h"
+#include "src/sql/queries.h"
+#include "src/database/database.h"
+#include "src/endpoints/endpoints.h"
+#include <sodium.h>
+#include <memory>
+#include <stdexcept>
 #include "ui/windows/login/login.h"
 #include "./libraries/HTTPSClient.h"
 #include <iostream>
 #define SQLITE_HAS_CODEC 1
 #include <fstream>
 #include <random>
-
-#include "auth/login/login.h"
 #include "auth/register_device/register_device.h"
-#include "auth/register_user/register_user.h"
-#include "database/database.h"
-#include "endpoints/endpoints.h"
-#include "sql/queries.h"
-#include <memory>
-
-#include "auth/logout.h"
 #include "communication/send_file_to/send_file_to.h"
 #include "communication/upload_file/upload_file.h"
 #include "src/auth/rotate_master_key/rotate_master_key.h"
+#include "auth/logout.h"
 
 std::string generateRandomString(int length) {
     const std::string characters =
@@ -41,16 +43,20 @@ int main() {
     }
 
     const std::string username = generateRandomString(8);
-    auto password = std::make_unique<const std::string>("password1234");
+    auto password = SecureMemoryBuffer::create(32);
+    memcpy(password->data(), "password1234", 11);
 
     qDebug() << "Registering user";
-    register_user(username, password);
+    register_user(username, std::move(password));
     qDebug() << "Registering device";
     register_first_device();
     qDebug() << "Logging in";
-    login_user(username, password, false);
+    auto loginPassword = SecureMemoryBuffer::create(32);
+    memcpy(loginPassword->data(), "password1234", 11);
+    login_user(username, std::move(loginPassword), false);
 
-    const auto new_password = std::make_unique<const std::string>("even_stronger_password");
+    auto new_password = SecureMemoryBuffer::create(32);
+    memcpy(new_password->data(), "even_stronger_password", 21);
     qDebug() << "Trying to rotate password without current master key";
     const auto fake_password = SecureMemoryBuffer::create(MASTER_KEY_LEN);
     randombytes_buf(fake_password->data(), MASTER_KEY_LEN);
@@ -58,7 +64,9 @@ int main() {
         throw std::logic_error("Random password used to rotate database key");
     };
     qDebug() << "Rotating password";
-    rotate_master_password(username, *password.get(), *new_password.get());
+    auto currentPassword = SecureMemoryBuffer::create(32);
+    memcpy(currentPassword->data(), "password1234", 11);
+    rotate_master_password(username, std::move(currentPassword), std::move(new_password));
     qDebug() << "Posting keybundles";
     auto signed_prekey = generate_signed_prekey();
     post_new_keybundles(
@@ -80,19 +88,24 @@ int main() {
     }
 
     const std::string username_1 = generateRandomString(8);
-    const auto password_1 = std::make_unique<const std::string>("correct horse staple battery");
+    auto password_1 = SecureMemoryBuffer::create(32);
+    memcpy(password_1->data(), "correct horse staple battery", 28);
     qDebug() << "Registering second user";
-    register_user(username_1, password_1);
+    register_user(username_1, std::move(password_1));
     qDebug() << "Registering second user's device";
     register_first_device();
     qDebug() << "Logging in second user";
-    login_user(username_1, password_1, false);
+    auto loginPassword1 = SecureMemoryBuffer::create(32);
+    memcpy(loginPassword1->data(), "correct horse staple battery", 28);
+    login_user(username_1, std::move(loginPassword1), false);
     qDebug() << "Logging out second user";
     logout();
 
     qDebug() << "Attempting login with first user's original password";
     try {
-        login_user(username, password);
+        auto oldPassword = SecureMemoryBuffer::create(32);
+        memcpy(oldPassword->data(), "password1234", 11);
+        login_user(username, std::move(oldPassword));
         throw std::logic_error("Login succeeded with old password");
     } catch (std::runtime_error &) {
         // All good
@@ -100,14 +113,18 @@ int main() {
 
     qDebug() << "Attempting login with second user's password";
     try {
-        login_user(username, password_1);
+        auto otherPassword = SecureMemoryBuffer::create(32);
+        memcpy(otherPassword->data(), "correct horse staple battery", 28);
+        login_user(username, std::move(otherPassword));
         throw std::logic_error("Login succeeded with other user's password");
     } catch (std::runtime_error &) {
         // All good
     }
 
     qDebug() << "Logging in first user with new password";
-    login_user(username, new_password, false);
+    auto newLoginPassword = SecureMemoryBuffer::create(32);
+    memcpy(newLoginPassword->data(), "even_stronger_password", 21);
+    login_user(username, std::move(newLoginPassword), false);
 
     qDebug() << "Registering second device for first user";
     const std::string new_device_name = "device 2";
@@ -117,7 +134,9 @@ int main() {
     add_trusted_device(pk_device, new_device_name);
 
     logout();
-    login_user(username_1, password_1, false);
+    auto password1_copy = SecureMemoryBuffer::create(32);
+    memcpy(password1_copy->data(), "correct horse staple battery", 28);
+    login_user(username_1, std::move(password1_copy), false);
     generate_signed_prekey();
 
     // Create a temporary file

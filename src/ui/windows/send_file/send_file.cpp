@@ -38,12 +38,28 @@ void SendFile::setupConnections() {
 void SendFile::onBrowseClicked() {
     QString filePath = QFileDialog::getOpenFileName(this, "Select File", "", "All Files (*.*)");
     if (!filePath.isEmpty()) {
-        ui->filePathInput->setText(filePath);
+        // Sanitize the file path
+        QFileInfo fileInfo(filePath);
+        QString canonicalPath = fileInfo.canonicalFilePath();
+        
+        // use canonical path to avoid path traversal attacks
+        if (canonicalPath.isEmpty() || !fileInfo.exists()) {
+            StyledMessageBox::error(this, "Invalid File", 
+                "The selected file path is invalid or does not exist.");
+            return;
+        }
 
         // Get file information
-        QFileInfo fileInfo(filePath);
-        QString fileName = fileInfo.fileName();
         qint64 size = fileInfo.size();
+        
+        if (size > 250 * 1024) {  // 250KB in bytes
+            StyledMessageBox::error(this, "File Too Large", 
+                "The selected file is too large. Maximum file size is 250KB.");
+            return;
+        }
+
+        ui->filePathInput->setText(canonicalPath);
+        QString fileName = fileInfo.fileName();
         QString sizeStr;
 
         // Convert size to human-readable format

@@ -11,6 +11,7 @@
 #include <QLineEdit>
 #include <QLabel>
 #include <QHBoxLayout>
+#include "src/ui/utils/input_validation/passphrase_validator.h"
 
 class StyledMessageBox {
 public:
@@ -401,32 +402,9 @@ public:
             QString passphrase = passphraseEdit->text();
             QString verifyPassphrase = verifyEdit->text();
             
-            if (passphrase.isEmpty()) {
-                errorLabel->setText("Passphrase is required");
-                errorLabel->show();
-                return;
-            }
-            
-            if (passphrase.length() < 20) {
-                errorLabel->setText("Passphrase must be at least 20 characters long");
-                errorLabel->show();
-                return;
-            }
-            
-            if (passphrase.length() > 64) {
-                errorLabel->setText("Passphrase cannot be longer than 64 characters");
-                errorLabel->show();
-                return;
-            }
-            
-            if (verifyPassphrase.isEmpty()) {
-                errorLabel->setText("Please verify your passphrase");
-                errorLabel->show();
-                return;
-            }
-            
-            if (passphrase != verifyPassphrase) {
-                errorLabel->setText("Passphrases do not match");
+            QString validationError;
+            if (!PassphraseValidator::validate(passphrase, verifyPassphrase, validationError)) {
+                errorLabel->setText(validationError);
                 errorLabel->show();
                 return;
             }

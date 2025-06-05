@@ -4,6 +4,8 @@
 #include "ui_login.h"
 #include "../../utils/messagebox.h"
 #include "../../utils/window_manager/window_manager.h"
+#include "../../utils/input_validation/name_validator.h"
+#include "../../utils/input_validation/passphrase_validator.h"
 #include "src/sql/queries.h"
 #include "src/key_exchange/utils.h"
 #include "src/ui/utils/qr_code_generation/QRCodeGenerator.h"
@@ -38,20 +40,6 @@ void Login::setupConnections()
     connect(ui->togglePassphraseButton, &QPushButton::clicked, this, &Login::onTogglePassphraseClicked);
 }
 
-bool Login::validateUsername(const QString& username) {
-    if (username.isEmpty()) {
-        StyledMessageBox::warning(this, "Error", "Please enter a username");
-        return false;
-    }
-
-    if (username.length() < 3) {
-        StyledMessageBox::warning(this, "Error", "Username must be at least 3 characters long");
-        return false;
-    }
-
-    return true;
-}
-
 QString Login::getAndValidatePassword() {
     bool passwordAccepted;
     QString password = QInputDialog::getText(this, "Set Password", 
@@ -59,17 +47,6 @@ QString Login::getAndValidatePassword() {
         QLineEdit::Password, "", &passwordAccepted);
     
     if (!passwordAccepted || password.isEmpty()) {
-        StyledMessageBox::error(this, "Error", "Password is required");
-        return QString();
-    }
-
-    if (password.length() < 20) {
-        StyledMessageBox::error(this, "Error", "Password must be at least 20 characters long");
-        return QString();
-    }
-
-    if (password.length() > 64) {
-        StyledMessageBox::error(this, "Error", "Password cannot be longer than 64 characters");
         return QString();
     }
 
@@ -78,12 +55,12 @@ QString Login::getAndValidatePassword() {
         QLineEdit::Password, "", &passwordAccepted);
     
     if (!passwordAccepted || verifyPassword.isEmpty()) {
-        StyledMessageBox::error(this, "Error", "Password verification is required");
         return QString();
     }
 
-    if (password != verifyPassword) {
-        StyledMessageBox::error(this, "Error", "Passwords do not match");
+    QString errorMessage;
+    if (!PassphraseValidator::validate(password, verifyPassword, errorMessage)) {
+        StyledMessageBox::error(this, "Error", errorMessage);
         return QString();
     }
 
@@ -116,8 +93,11 @@ std::tuple<std::string, QImage, std::array<unsigned char, crypto_sign_PUBLICKEYB
 void Login::initializeDatabase(const std::string& username, const QString& password, 
                              std::array<unsigned char, crypto_sign_PUBLICKEYBYTES>& pk_device, 
                              std::unique_ptr<SecureMemoryBuffer>& sk_device) {
-    auto master_password = std::make_unique<std::string>(password.toStdString());
-    set_up_client_for_user(username, std::move(master_password));
+    // Move password to secure memory first
+    auto securePassword = SecureMemoryBuffer::create(password.length());
+    memcpy(securePassword->data(), password.toUtf8().constData(), password.length());
+    
+    set_up_client_for_user(username, std::move(securePassword));
 
     // Save the device keypair to the database
     unsigned char nonce[CHA_CHA_NONCE_LEN];
@@ -130,7 +110,9 @@ void Login::onContinueButtonClicked()
 {
     QString username = ui->usernameEdit->text();
     
-    if (!validateUsername(username)) {
+    QString errorMessage;
+    if (!NameValidator::validateUsername(username, errorMessage)) {
+        StyledMessageBox::warning(this, "Error", errorMessage);
         return;
     }
 
@@ -158,32 +140,24 @@ void Login::onContinueButtonClicked()
 
 void Login::onLoginButtonClicked()
 {
-    // Maximum length as per NIST SP 800-63B (allowing up to 64 characters)
-    constexpr int MAX_PASSPHRASE_LENGTH = 64;
-    constexpr int MIN_PASSPHRASE_LENGTH = 20;
-    
     QString username = ui->usernameEdit->text();
     QString passphrase = ui->passphraseEdit->text();
     
-    if (passphrase.isEmpty()) {
-        StyledMessageBox::warning(this, "Error", "Please enter your passphrase");
-        return;
-    }
-
-    if (passphrase.length() < MIN_PASSPHRASE_LENGTH) {
-        StyledMessageBox::warning(this, "Error", "Passphrase must be at least 20 characters long");
-        return;
-    }
-
-    if (passphrase.length() > MAX_PASSPHRASE_LENGTH) {
-        StyledMessageBox::warning(this, "Error", "Passphrase cannot be longer than 64 characters");
+    QString errorMessage;
+    if (!PassphraseValidator::validate(passphrase, passphrase, errorMessage)) {
+        StyledMessageBox::warning(this, "Error", errorMessage);
         return;
     }
 
     try {
-        login_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
+        auto securePassphrase = SecureMemoryBuffer::create(passphrase.length());
+        memcpy(securePassphrase->data(), passphrase.toUtf8().constData(), passphrase.length());
+        
+        // Clear the password from the UI widget directly
         ui->passphraseEdit->clear();
         ui->usernameEdit->clear();
+        login_user(username.toStdString(), std::move(securePassphrase));
+
         WindowManager::instance().showReceived();
     } catch (const std::exception& e) {
         StyledMessageBox::error(this, "Login Failed", QString("Failed to login: %1").arg(e.what()));

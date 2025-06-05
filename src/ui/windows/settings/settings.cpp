@@ -16,12 +16,12 @@
 #include <QDebug>
 #include <QPainter>
 #include <QIcon>
+#include <cstring>
 
 #include "src/auth/logout.h"
 #include "src/auth/rotate_master_key/rotate_master_key.h"
 #include "src/endpoints/endpoints.h"
 #include "src/keys/session_token_manager.h"
-#include "src/keys/kek_manager.h"
 
 Settings::Settings(QWidget *parent)
     : QWidget(parent)
@@ -144,7 +144,14 @@ void Settings::onPassphraseSaveClicked() {
     const auto old_password = ui->currentPassphrase->text().toStdString();
     const auto new_password = ui->newPassphrase->text().toStdString();
     try {
-        rotate_master_password(Database::get().get_username(), old_password, new_password);
+        auto old_password_buffer = SecureMemoryBuffer::create(old_password.size());
+        auto new_password_buffer = SecureMemoryBuffer::create(new_password.size());
+        
+        // Copy the passwords into the secure buffers
+        std::memcpy(old_password_buffer->data(), old_password.data(), old_password.size());
+        std::memcpy(new_password_buffer->data(), new_password.data(), new_password.size());
+        
+        rotate_master_password(Database::get().get_username(), std::move(old_password_buffer), std::move(new_password_buffer));
     } catch (std::runtime_error &e) {
         StyledMessageBox::error(
             this, "Invalid password", "Invalid password");

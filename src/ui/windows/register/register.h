@@ -2,10 +2,12 @@
 #define REGISTER_H
 
 #include <QWidget>
+#include "src/ui/utils/input_validation/passphrase_validator.h"
+#include "src/ui/utils/input_validation/name_validator.h"
 
-QT_BEGIN_NAMESPACE
-namespace Ui { class Register; }
-QT_END_NAMESPACE
+namespace Ui {
+class Register;
+}
 
 class Register : public QWidget {
     Q_OBJECT
@@ -24,15 +26,14 @@ signals:
 
 private slots:
     void onRegisterButtonClicked();
-
-    static void onLoginButtonClicked();
+    void onLoginButtonClicked();
     void onTogglePassphraseClicked();
     void onRegistrationSuccess() const;
     void onRegistrationError(const QString& title, const QString& message);
 
 private:
-    Ui::Register *ui;
     void setupConnections();
+    Ui::Register *ui;
     QWidget* m_loginWindow = nullptr;
     bool m_passphraseVisible = false;
 };

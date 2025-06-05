@@ -123,14 +123,24 @@ void DeviceRegister::onUserRegistered()
     } while (true);
 
     try {
-        auto master_password = std::make_unique<std::string>(passphrase.toStdString());
-        set_up_client_for_user(m_username, std::move(master_password));
+        // Convert QString to SecureMemoryBuffer
+        auto securePassphrase = SecureMemoryBuffer::create(passphrase.length());
+        memcpy(securePassphrase->data(), passphrase.toUtf8().constData(), passphrase.length());
+        
+        // Clear the QString after copying
+        passphrase.fill('\0');
+        
+        set_up_client_for_user(m_username, std::move(securePassphrase));
 
         randombytes_buf(m_nonce, CHA_CHA_NONCE_LEN);
         const auto esk_device = encrypt_secret_key(m_sk_device, m_nonce);
         save_encrypted_keypair("device", m_pk_device.data(), esk_device, m_nonce);
 
-        login_user(m_username, std::make_unique<std::string>(passphrase.toStdString()), false);
+        // Create a new SecureMemoryBuffer for login
+        auto loginPassphrase = SecureMemoryBuffer::create(passphrase.length());
+        memcpy(loginPassphrase->data(), passphrase.toUtf8().constData(), passphrase.length());
+        
+        login_user(m_username, std::move(loginPassphrase), false);
         auto signed_prekey = generate_signed_prekey();
         post_new_keybundles(
             get_decrypted_keypair("device"),

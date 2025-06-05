@@ -8,11 +8,11 @@
 #include "src/database/schema.h"
 #include "src/endpoints/endpoints.h"
 #include "src/keys/kek_manager.h"
-#include "src/sql/queries.h"
+#include "src/keys/secure_memory_buffer.h"
 
 void set_up_client_for_user(
     const std::string &username,
-    const std::unique_ptr<const std::string> &master_password,
+    std::unique_ptr<SecureMemoryBuffer>&& master_password,
     const bool DEBUG_REFRESH_TABLES = false
 ) {
     if (sodium_init() < 0) {

@@ -61,49 +61,29 @@ void Register::onRegistrationError(const QString& title, const QString& message)
 }
 
 void Register::onRegisterButtonClicked() {
-    // passphrase requirements as per NIST SP 800-63B guidelines
-    constexpr int MAX_PASSPHRASE_LENGTH = 64;
-    constexpr int MIN_PASSPHRASE_LENGTH = 20;
-    constexpr int MAX_INPUT_LENGTH = 64;
+    QString fullName = ui->fullNameEdit->text().trimmed();
+    QString username = ui->usernameEdit->text().trimmed();
+    QString passphrase = ui->passphraseEdit->text();
+    QString confirmPassphrase = ui->confirmPassphraseEdit->text();
 
-    QString fullName = ui->fullNameEdit->text().left(MAX_INPUT_LENGTH);
-    QString username = ui->usernameEdit->text().left(MAX_INPUT_LENGTH);
-    QString passphrase = ui->passphraseEdit->text().left(MAX_PASSPHRASE_LENGTH);
-    QString confirmPassphrase = ui->confirmPassphraseEdit->text().left(MAX_PASSPHRASE_LENGTH);
-
-    ui->fullNameEdit->setText(fullName);
-    ui->usernameEdit->setText(username);
-    ui->passphraseEdit->setText(passphrase);
-    ui->confirmPassphraseEdit->setText(confirmPassphrase);
-
-    if (fullName.isEmpty() || username.isEmpty() || passphrase.isEmpty() || confirmPassphrase.isEmpty()) {
-        StyledMessageBox::warning(this, "Error", "Please fill in all fields");
+    // Validate full name
+    QString nameError;
+    if (!NameValidator::validateFullName(fullName, nameError)) {
+        StyledMessageBox::warning(this, "Error", nameError);
         return;
     }
 
-    if (username.length() < 3) {
-        StyledMessageBox::warning(this, "Error", "Username must be at least 3 characters long");
+    // Validate username
+    QString usernameError;
+    if (!NameValidator::validateUsername(username, usernameError)) {
+        StyledMessageBox::warning(this, "Error", usernameError);
         return;
     }
 
-    if (fullName.length() > MAX_INPUT_LENGTH || username.length() > MAX_INPUT_LENGTH) {
-        StyledMessageBox::warning(this, "Error", "Input too long");
-        return;
-    }
-
-    if (passphrase.length() < MIN_PASSPHRASE_LENGTH) {
-        StyledMessageBox::warning(this, "Error", "Passphrase must be at least 20 characters long");
-        return;
-    }
-
-    if (passphrase.length() > MAX_PASSPHRASE_LENGTH) {
-        StyledMessageBox::warning(this, "Error", "Passphrase cannot be longer than 64 characters");
-        return;
-    }
-
-    // frontend passphrase logic
-    if (passphrase != confirmPassphrase) {
-        StyledMessageBox::warning(this, "Error", "Passphrases do not match");
+    // Validate passphrase
+    QString errorMessage;
+    if (!PassphraseValidator::validate(passphrase, confirmPassphrase, errorMessage)) {
+        StyledMessageBox::warning(this, "Error", errorMessage);
         return;
     }
 
@@ -111,12 +91,25 @@ void Register::onRegisterButtonClicked() {
     ui->registerButton->setText("Registering...");
     ui->registerButton->setEnabled(false);
 
+    // Move password to SecureMemoryBuffer immediately
+    auto securePassphrase = SecureMemoryBuffer::create(passphrase.length());
+    memcpy(securePassphrase->data(), passphrase.toUtf8().constData(), passphrase.length());
+    
+    // Clear the original QString
+    passphrase.fill('\0');
+    confirmPassphrase.fill('\0');
+
     // Run registration in separate thread to avoid blocking UI
-    const auto _ = QtConcurrent::run([this, username, passphrase]() {
+    const auto _ = QtConcurrent::run([this, username = username.toStdString(), securePassphrase = std::move(securePassphrase)]() mutable {
         try {
-            register_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
+            register_user(username, std::move(securePassphrase));
             register_first_device();
-            login_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()), false);
+            
+            // Create a new SecureMemoryBuffer for login
+            auto loginPassphrase = SecureMemoryBuffer::create(securePassphrase->size());
+            memcpy(loginPassphrase->data(), securePassphrase->data(), securePassphrase->size());
+            
+            login_user(username, std::move(loginPassphrase), false);
 
             auto signed_prekey = generate_signed_prekey();
             post_new_keybundles(
