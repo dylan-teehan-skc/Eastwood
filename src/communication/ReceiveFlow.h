@@ -88,13 +88,20 @@ struct FileData {
     std::string owner;
 };
 
-inline std::vector<FileData> get_file_metadata(bool is_sending = false) {
-    std::vector<std::tuple<std::string, std::string>> uuid_to_username = get_all_received_file_uuids();
+inline std::vector<std::tuple<std::string, std::string>> (*get_uuid_to_username(bool is_sending))(){
+    std::vector<std::tuple<std::string, std::string>> (*get_uuid_to_username)();
     if (is_sending) {
-        uuid_to_username = get_all_sent_file_uuids();
+        return &get_all_sent_file_uuids;
     } else {
-        uuid_to_username = get_all_received_file_uuids();
+        return &get_all_received_file_uuids;
     }
+}
+
+inline std::vector<FileData> get_file_metadata(bool is_sending = false) {
+    auto uuid_to_user_func = get_uuid_to_username(is_sending);
+    auto uuid_to_username = uuid_to_user_func();
+
+
     std::vector<std::string> uuids{};
     for (const auto [uuid, _]: uuid_to_username) {
         uuids.push_back(uuid);
