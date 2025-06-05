@@ -130,7 +130,8 @@ void SendFile::onSettingsButtonClicked() const {
 
 void SendFile::onShowAuthCodeClicked()
 {
-    QString authCode = "1234567890"; // TODO UPDATE THIS
-    StyledMessageBox::displayCode(this, "Authentication Code",
+    QString authCode = "12345678901234567890"; // TODO UPDATE THIS
+    StyledMessageBox::displayCode(this, "Authentication Code", 
+
         "Please verify this code with the sender's device:", authCode);
 }

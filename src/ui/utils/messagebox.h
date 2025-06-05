@@ -12,6 +12,8 @@
 #include <QLabel>
 #include <QHBoxLayout>
 #include "src/ui/utils/input_validation/passphrase_validator.h"
+#include <QApplication>
+#include <QClipboard>
 
 class StyledMessageBox {
 public:
@@ -242,58 +244,137 @@ public:
     static bool displayCode(QWidget* parent, const QString& title, const QString& text, QString& auth_code) {
         QDialog dialog(parent);
         dialog.setWindowTitle(title);
-        dialog.setMinimumWidth(400);
-        dialog.setStyleSheet("QDialog { background-color: #f5f6fa; }");
+        dialog.setMinimumWidth(550);
+        dialog.setStyleSheet("QDialog { background-color: #f8f9fa; }");
         
         QVBoxLayout* layout = new QVBoxLayout(&dialog);
+        layout->setSpacing(24);
+        layout->setContentsMargins(40, 36, 40, 36);
+        
+        // Title label
+        QLabel* titleLabel = new QLabel(title, &dialog);
+        titleLabel->setStyleSheet("font-size: 36px; font-weight: bold; color: #2d3436; letter-spacing: 1.2px; padding-bottom: 8px;");
+        titleLabel->setAlignment(Qt::AlignCenter);
+        titleLabel->setMinimumHeight(48);
+        layout->addWidget(titleLabel);
         
         // Message label
         QLabel* messageLabel = new QLabel(text, &dialog);
-        messageLabel->setStyleSheet("color: #2d3436; font-size: 14px; margin: 10px; font-weight: bold;");
+        messageLabel->setStyleSheet("font-size: 15px; color: #636e72; margin-bottom: 8px;");
         messageLabel->setWordWrap(true);
+        messageLabel->setAlignment(Qt::AlignCenter);
         layout->addWidget(messageLabel);
         
-        // Auth code display box
-        QLineEdit* codeBox = new QLineEdit(auth_code, &dialog);
-        codeBox->setReadOnly(true);
-        codeBox->setAlignment(Qt::AlignCenter);
-        codeBox->setStyleSheet(R"(
+        // Add vertical spacer
+        layout->addSpacing(10);
+        
+        // Code boxes layout
+        QVBoxLayout* codeBoxLayout = new QVBoxLayout();
+        
+        // First row of code boxes
+        QHBoxLayout* codeRow1 = new QHBoxLayout();
+        QLineEdit* codeEdit1 = new QLineEdit(&dialog);
+        QLineEdit* codeEdit2 = new QLineEdit(&dialog);
+        
+        // Second row of code boxes
+        QHBoxLayout* codeRow2 = new QHBoxLayout();
+        QLineEdit* codeEdit3 = new QLineEdit(&dialog);
+        QLineEdit* codeEdit4 = new QLineEdit(&dialog);
+        
+        // Common styling for code boxes
+        QString codeBoxStyle = R"(
             QLineEdit {
-                padding: 12px;
-                font-size: 24px;
+                padding: 8px;
+                font-size: 18px;
                 font-family: 'Courier New', monospace;
                 font-weight: bold;
                 border-radius: 8px;
-                background-color: white;
-                border: 2px solid #dfe6e9;
-                color: #2d3436;
-                margin: 10px;
+                background-color: #f5f6fa;
+                border: 1.5px solid #dfe6e9;
+                color: #222;
                 letter-spacing: 2px;
             }
+        )";
+        
+        // Configure all code boxes
+        for (auto* edit : {codeEdit1, codeEdit2, codeEdit3, codeEdit4}) {
+            edit->setReadOnly(true);
+            edit->setAlignment(Qt::AlignCenter);
+            edit->setStyleSheet(codeBoxStyle);
+            edit->setMaxLength(11);
+        }
+        
+        // Add code boxes to their respective rows
+        codeRow1->addWidget(codeEdit1);
+        codeRow1->addWidget(codeEdit2);
+        codeRow2->addWidget(codeEdit3);
+        codeRow2->addWidget(codeEdit4);
+        
+        // Add rows to the code box layout
+        codeBoxLayout->addLayout(codeRow1);
+        codeBoxLayout->addLayout(codeRow2);
+        
+        // Add the code box layout to the main layout
+        layout->addLayout(codeBoxLayout);
+        
+        // Split the auth code into 4 parts
+        int partLen = auth_code.length() / 4;
+        codeEdit1->setText(auth_code.mid(0, partLen));
+        codeEdit2->setText(auth_code.mid(partLen, partLen));
+        codeEdit3->setText(auth_code.mid(2 * partLen, partLen));
+        codeEdit4->setText(auth_code.mid(3 * partLen));
+        
+        // Copy button
+        QPushButton* copyButton = new QPushButton("Copy All Codes", &dialog);
+        copyButton->setMinimumHeight(50);
+        copyButton->setStyleSheet(R"(
+            QPushButton {
+                font-size: 16px;
+                font-weight: bold;
+                color: #6c5ce7;
+                background-color: white;
+                border-radius: 10px;
+                border: 2px solid #6c5ce7;
+            }
+            QPushButton:hover {
+                background-color: #f5f3ff;
+            }
+            QPushButton:pressed {
+                background-color: #eeeaff;
+            }
         )");
-        layout->addWidget(codeBox);
+        layout->addWidget(copyButton);
+        
+        // Add vertical spacer
+        layout->addSpacing(20);
         
         // Close button
         QPushButton* closeButton = new QPushButton("Close", &dialog);
+        closeButton->setMinimumHeight(54);
         closeButton->setStyleSheet(R"(
             QPushButton {
-                background-color: #6c5ce7;
-                color: white;
-                border-radius: 6px;
-                padding: 8px 16px;
+                font-size: 16px;
                 font-weight: bold;
-                min-width: 80px;
-                font-size: 13px;
-                margin: 10px;
+                color: #6c5ce7;
+                background-color: white;
+                border-radius: 10px;
+                border: 2px solid #6c5ce7;
             }
             QPushButton:hover {
-                background-color: #5049c9;
+                background-color: #f5f3ff;
             }
             QPushButton:pressed {
-                background-color: #4040b0;
+                background-color: #eeeaff;
             }
         )");
-        layout->addWidget(closeButton, 0, Qt::AlignCenter);
+        layout->addWidget(closeButton);
+        
+        // Connect buttons
+        QObject::connect(copyButton, &QPushButton::clicked, [&]() {
+            QClipboard *clipboard = QApplication::clipboard();
+            clipboard->setText(auth_code);
+            StyledMessageBox::success(&dialog, "Copied to Clipboard", "All codes have been successfully copied to your clipboard");
+        });
         
         QObject::connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
         
