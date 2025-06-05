@@ -109,14 +109,7 @@ void Register::onRegisterButtonClicked() {
             auto loginPassphrase = SecureMemoryBuffer::create(securePassphrase->size());
             memcpy(loginPassphrase->data(), securePassphrase->data(), securePassphrase->size());
             
-            login_user(username, std::move(loginPassphrase), false);
-
-            auto signed_prekey = generate_signed_prekey();
-            post_new_keybundles(
-                get_decrypted_keypair("device"),
-                &signed_prekey,
-                generate_onetime_keys(50)
-                );
+            login_user(username, std::move(loginPassphrase));
             emit registrationSuccess();
 
         } catch (const webwood::HttpError &e) {

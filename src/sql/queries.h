@@ -14,6 +14,7 @@
 #include "src/keys/secure_memory_buffer.h"
 #include "src/algorithms/algorithms.h"
 #include <memory>
+#include <qdatetime.h>
 
 #include "src/utils/ConversionUtils.h"
 #include "src/keys/session_token_manager.h"
@@ -941,6 +942,18 @@ inline void delete_file_from_database(const std::string& file_uuid) {
         std::cerr << "ERROR: Failed to delete file " << file_uuid << " from database: " << e.what() << std::endl;
         throw;
     }
+}
+
+inline QDateTime get_signed_prekey_last_updated() {
+    const auto &db = Database::get();
+    sqlite3_stmt *stmt;
+    db.prepare_or_throw("SELECT last_modified FROM keypairs WHERE label = 'signed'", &stmt);
+    auto rows = db.query(stmt);
+    if (rows.empty()) {
+        return QDateTime();
+    }
+    const auto &row = rows[0];
+    return row["last_modified"].toDateTime();
 }
 
 #endif //QUERIES_H

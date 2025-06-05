@@ -135,18 +135,11 @@ void DeviceRegister::onUserRegistered()
         randombytes_buf(m_nonce, CHA_CHA_NONCE_LEN);
         const auto esk_device = encrypt_secret_key(m_sk_device, m_nonce);
         save_encrypted_keypair("device", m_pk_device.data(), esk_device, m_nonce);
-
+      
         // Create a new SecureMemoryBuffer for login
         auto loginPassphrase = SecureMemoryBuffer::create(passphrase.length());
         memcpy(loginPassphrase->data(), passphrase.toUtf8().constData(), passphrase.length());
-        
-        login_user(m_username, std::move(loginPassphrase), false);
-        auto signed_prekey = generate_signed_prekey();
-        post_new_keybundles(
-            get_decrypted_keypair("device"),
-            &signed_prekey,
-            generate_onetime_keys(100)
-        );
+        login_user(m_username, std::move(loginPassphrase));
 
         WindowManager::instance().showReceived();
     } catch (const std::exception& e) {
