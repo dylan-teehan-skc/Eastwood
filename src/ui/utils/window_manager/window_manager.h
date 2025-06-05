@@ -6,13 +6,13 @@
 #include <QWidget>
 #include <QPointer>
 #include "src/keys/secure_memory_buffer.h"
+#include "../../windows/login/login.h"
 
 // Forward declarations to reduce includes
 class Received;
 class Sent;
 class SendFile;
 class Settings;
-class Login;
 class Register;
 class DeviceRegister;
 
@@ -34,6 +34,7 @@ public:
                            unsigned char* pk_dev, std::unique_ptr<SecureMemoryBuffer> sk_dev,
                            const std::string& username);
     void cleanup();
+    Login* getLoginWindow() { return m_login; }
 
 signals:
     void windowShown(const QString& windowName);

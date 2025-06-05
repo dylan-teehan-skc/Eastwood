@@ -7,13 +7,14 @@
 #include "database/schema.h"
 #include "endpoints/endpoints.h"
 #include "key_exchange/utils.h"
+#include "src/ui/utils/messagebox.h"
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     if (sodium_init() < 0) {
         throw std::runtime_error("Libsodium initialization failed");
     }
-
+    
     WindowManager::instance().showLogin();
     return app.exec();
 }

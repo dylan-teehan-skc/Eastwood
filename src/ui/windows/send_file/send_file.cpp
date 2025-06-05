@@ -24,6 +24,7 @@ SendFile::~SendFile() {
 void SendFile::setupConnections() {
     connect(ui->browseButton, &QPushButton::clicked, this, &SendFile::onBrowseClicked);
     connect(ui->sendButton, &QPushButton::clicked, this, &SendFile::onSendClicked);
+    connect(ui->showAuthCodeButton, &QPushButton::clicked, this, &SendFile::onShowAuthCodeClicked);
 
     // Connect NavBar signals
     if (NavBar *navbar = findChild<NavBar *>()) {
@@ -116,4 +117,11 @@ void SendFile::onSettingsButtonClicked() const {
     ui->fileDetailsLabel->clear();
     ui->usernameInput->clear();
     WindowManager::instance().showSettings();
+}
+
+void SendFile::onShowAuthCodeClicked()
+{
+    QString authCode = "1234567890"; // TODO UPDATE THIS
+    StyledMessageBox::displayCode(this, "Authentication Code", 
+        "Please verify this code with the sender's device:", authCode);
 }

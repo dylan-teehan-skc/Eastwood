@@ -47,6 +47,10 @@ void Register::setupConnections() {
 void Register::onRegistrationSuccess() const {
     ui->registerButton->setText("Register");
     ui->registerButton->setEnabled(true);
+    ui->passphraseEdit->clear();
+    ui->confirmPassphraseEdit->clear();
+    ui->fullNameEdit->clear();
+    ui->usernameEdit->clear();
     WindowManager::instance().showReceived();
 }
 

@@ -182,6 +182,8 @@ void Login::onLoginButtonClicked()
 
     try {
         login_user(username.toStdString(), std::make_unique<std::string>(passphrase.toStdString()));
+        ui->passphraseEdit->clear();
+        ui->usernameEdit->clear();
         WindowManager::instance().showReceived();
     } catch (const std::exception& e) {
         StyledMessageBox::error(this, "Login Failed", QString("Failed to login: %1").arg(e.what()));
@@ -190,6 +192,8 @@ void Login::onLoginButtonClicked()
 
 void Login::onRegisterButtonClicked()
 {
+    ui->passphraseEdit->clear();
+    ui->usernameEdit->clear();
     WindowManager::instance().showRegister();
 }
 
@@ -207,6 +211,15 @@ void Login::showPassphraseStage() const {
     ui->continueButton->hide();
     ui->logoLabel->hide();
     ui->passphraseEdit->setFocus();
+}
+
+void Login::hidePassphraseStage() {
+    ui->passphraseEdit->hide();
+    ui->togglePassphraseButton->hide();
+    ui->loginButton->hide();
+    ui->continueButton->show();
+    ui->logoLabel->show();
+    ui->usernameEdit->setFocus();
 }
 
 void Login::showUsernameStage() const {

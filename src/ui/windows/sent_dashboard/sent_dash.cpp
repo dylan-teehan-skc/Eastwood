@@ -44,6 +44,7 @@ void Sent::setupConnections()
     // Connect the send button
     connect(ui->sendButton, &QPushButton::clicked, this, &Sent::onSendFileButtonClicked);
     connect(ui->refreshButton, &QPushButton::clicked, this, &Sent::onRefreshButtonClicked);
+    connect(ui->showAuthCodeButton, &QPushButton::clicked, this, &Sent::onShowAuthCodeButtonClicked);
 }
 
 void Sent::setupFileList() const {
@@ -360,4 +361,19 @@ void Sent::handleRefreshSpinner()
     painter.drawLine(-6, 0, 6, 0);
     ui->refreshButton->setIcon(QIcon(pixmap));
     ui->refreshButton->setIconSize(QSize(16, 16));
+}
+
+void Sent::onShowAuthCodeButtonClicked()
+{
+    QString errorMessage;
+    QString username = StyledMessageBox::getUsername(this, errorMessage);
+    
+    if (!username.isEmpty()) {
+        // TODO: Replace this with actual auth code generation
+        QString authCode = "123456";
+        StyledMessageBox::displayCode(this, "Authentication Code", 
+            QString("Authentication code for user %1:").arg(username), authCode);
+    } else if (!errorMessage.isEmpty()) {
+        StyledMessageBox::warning(this, "Error", errorMessage);
+    }
 }

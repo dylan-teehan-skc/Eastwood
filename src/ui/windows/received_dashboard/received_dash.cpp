@@ -42,6 +42,7 @@ void Received::setupConnections()
     connect(ui->navBar, &NavBar::receivedClicked, this, &Received::onReceivedButtonClicked);
     connect(ui->sendButton, &QPushButton::clicked, this, &Received::onSendButtonClicked);
     connect(ui->refreshButton, &QPushButton::clicked, this, &Received::onRefreshButtonClicked);
+    connect(ui->showAuthCodeButton, &QPushButton::clicked, this, &Received::onShowAuthCodeButtonClicked);
 }
 
 void Received::setupFileList() const {
@@ -148,5 +149,19 @@ void Received::handleRefreshSpinner()
     painter.drawLine(-6, 0, 6, 0);
     ui->refreshButton->setIcon(QIcon(pixmap));
     ui->refreshButton->setIconSize(QSize(16, 16));
+}
+
+void Received::onShowAuthCodeButtonClicked()
+{
+    QString errorMessage;
+    QString username = StyledMessageBox::getUsername(this, errorMessage);
+    
+    if (!username.isEmpty()) {
+        QString authCode = "123456";
+        StyledMessageBox::displayCode(this, "Authentication Code", 
+            QString("Authentication code for user %1:").arg(username), authCode);
+    } else if (!errorMessage.isEmpty()) {
+        StyledMessageBox::warning(this, "Error", errorMessage);
+    }
 }
 

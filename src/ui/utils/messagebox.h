@@ -237,6 +237,68 @@ public:
         }
         return false;
     }
+
+    static bool displayCode(QWidget* parent, const QString& title, const QString& text, QString& auth_code) {
+        QDialog dialog(parent);
+        dialog.setWindowTitle(title);
+        dialog.setMinimumWidth(400);
+        dialog.setStyleSheet("QDialog { background-color: #f5f6fa; }");
+        
+        QVBoxLayout* layout = new QVBoxLayout(&dialog);
+        
+        // Message label
+        QLabel* messageLabel = new QLabel(text, &dialog);
+        messageLabel->setStyleSheet("color: #2d3436; font-size: 14px; margin: 10px; font-weight: bold;");
+        messageLabel->setWordWrap(true);
+        layout->addWidget(messageLabel);
+        
+        // Auth code display box
+        QLineEdit* codeBox = new QLineEdit(auth_code, &dialog);
+        codeBox->setReadOnly(true);
+        codeBox->setAlignment(Qt::AlignCenter);
+        codeBox->setStyleSheet(R"(
+            QLineEdit {
+                padding: 12px;
+                font-size: 24px;
+                font-family: 'Courier New', monospace;
+                font-weight: bold;
+                border-radius: 8px;
+                background-color: white;
+                border: 2px solid #dfe6e9;
+                color: #2d3436;
+                margin: 10px;
+                letter-spacing: 2px;
+            }
+        )");
+        layout->addWidget(codeBox);
+        
+        // Close button
+        QPushButton* closeButton = new QPushButton("Close", &dialog);
+        closeButton->setStyleSheet(R"(
+            QPushButton {
+                background-color: #6c5ce7;
+                color: white;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: bold;
+                min-width: 80px;
+                font-size: 13px;
+                margin: 10px;
+            }
+            QPushButton:hover {
+                background-color: #5049c9;
+            }
+            QPushButton:pressed {
+                background-color: #4040b0;
+            }
+        )");
+        layout->addWidget(closeButton, 0, Qt::AlignCenter);
+        
+        QObject::connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+        
+        dialog.exec();
+        return true;
+    }
     
     static QString getPassphraseWithVerification(QWidget* parent, QString& errorMessage) {
         QDialog dialog(parent);
@@ -379,6 +441,114 @@ public:
         }
         
         errorMessage = "Passphrase entry cancelled";
+        return QString();
+    }
+
+    static QString getUsername(QWidget* parent, QString& errorMessage) {
+        QDialog dialog(parent);
+        dialog.setWindowTitle("Enter Username");
+        dialog.setMinimumWidth(400);
+        
+        QVBoxLayout* layout = new QVBoxLayout(&dialog);
+        
+        // Username input
+        QLabel* usernameLabel = new QLabel("Enter username:", &dialog);
+        usernameLabel->setStyleSheet("color: #2d3436; font-size: 14px; margin-top: 10px;");
+        layout->addWidget(usernameLabel);
+        
+        QLineEdit* usernameEdit = new QLineEdit(&dialog);
+        usernameEdit->setStyleSheet(
+            "QLineEdit {"
+            "  padding: 8px 12px;"
+            "  font-size: 14px;"
+            "  border-radius: 6px;"
+            "  background-color: white;"
+            "  border: 1px solid #dfe6e9;"
+            "  color: #2d3436;"
+            "  margin: 4px 0;"
+            "}"
+            "QLineEdit:focus {"
+            "  border: 2px solid #6c5ce7;"
+            "}"
+        );
+        layout->addWidget(usernameEdit);
+        
+        // Error label
+        QLabel* errorLabel = new QLabel(&dialog);
+        errorLabel->setStyleSheet("color: #e74c3c; font-size: 12px; margin-top: 5px;");
+        errorLabel->setWordWrap(true);
+        errorLabel->hide();
+        layout->addWidget(errorLabel);
+        
+        // Buttons
+        QHBoxLayout* buttonLayout = new QHBoxLayout();
+        buttonLayout->addStretch();
+        
+        QPushButton* cancelButton = new QPushButton("Cancel", &dialog);
+        cancelButton->setStyleSheet(
+            "QPushButton {"
+            "  background-color: #dfe6e9;"
+            "  color: #2d3436;"
+            "  border-radius: 6px;"
+            "  padding: 8px 16px;"
+            "  font-weight: bold;"
+            "  min-width: 80px;"
+            "  font-size: 13px;"
+            "  margin: 5px;"
+            "}"
+            "QPushButton:hover {"
+            "  background-color: #b2bec3;"
+            "}"
+            "QPushButton:pressed {"
+            "  background-color: #a4b0be;"
+            "}"
+        );
+        
+        QPushButton* okButton = new QPushButton("OK", &dialog);
+        okButton->setStyleSheet(
+            "QPushButton {"
+            "  background-color: #6c5ce7;"
+            "  color: white;"
+            "  border-radius: 6px;"
+            "  padding: 8px 16px;"
+            "  font-weight: bold;"
+            "  min-width: 80px;"
+            "  font-size: 13px;"
+            "  margin: 5px;"
+            "}"
+            "QPushButton:hover {"
+            "  background-color: #5049c9;"
+            "}"
+            "QPushButton:pressed {"
+            "  background-color: #4040b0;"
+            "}"
+        );
+        
+        buttonLayout->addWidget(cancelButton);
+        buttonLayout->addWidget(okButton);
+        layout->addLayout(buttonLayout);
+        
+        // Connect buttons
+        QObject::connect(cancelButton, &QPushButton::clicked, &dialog, &QDialog::reject);
+        QObject::connect(okButton, &QPushButton::clicked, [&]() {
+            QString username = usernameEdit->text().trimmed();
+            
+            if (username.isEmpty()) {
+                errorLabel->setText("Username is required");
+                errorLabel->show();
+                return;
+            }
+            
+            dialog.accept();
+        });
+        
+        // Show dialog
+        if (dialog.exec() == QDialog::Accepted) {
+            errorMessage = QString();
+            return usernameEdit->text().trimmed();
+        }
+        
+        errorMessage = "Username entry cancelled";
         return QString();
     }
 };

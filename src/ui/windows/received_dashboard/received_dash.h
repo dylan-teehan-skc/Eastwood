@@ -26,6 +26,7 @@ private slots:
     void onReceivedButtonClicked();
     void onRefreshButtonClicked();
     void handleRefreshSpinner();
+    void onShowAuthCodeButtonClicked();
 
 private:
     Ui::Received *ui;

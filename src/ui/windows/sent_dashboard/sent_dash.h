@@ -27,6 +27,7 @@ private slots:
     void onSendFileButtonClicked();
     void onRefreshButtonClicked();
     void handleRefreshSpinner();
+    void onShowAuthCodeButtonClicked();
 
 private:
     Ui::Sent *ui;

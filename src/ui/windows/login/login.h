@@ -20,11 +20,12 @@ public:
     explicit Login(QWidget *parent = nullptr);
     ~Login() override;
 
+    void hidePassphraseStage();
+
 private slots:
     void onContinueButtonClicked();
     void onLoginButtonClicked();
-
-    static void onRegisterButtonClicked();
+    void onRegisterButtonClicked();
     void onTogglePassphraseClicked();
 
 private:

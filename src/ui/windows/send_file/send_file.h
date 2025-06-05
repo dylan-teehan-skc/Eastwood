@@ -24,6 +24,7 @@ private slots:
     void onSentButtonClicked() const;
     void onSendFileButtonClicked() const;
     void onSettingsButtonClicked() const;
+    void onShowAuthCodeClicked();
 
 private:
     Ui::SendFile *ui;
