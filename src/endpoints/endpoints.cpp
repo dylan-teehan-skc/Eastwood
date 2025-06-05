@@ -19,8 +19,6 @@ bool post_check_user_exists(const std::string &username, const unsigned char *pk
     };
 
     json response = post_unauth("/isDeviceRegistered", body);
-    std::cout << "Response from server: " << response.dump(4) << std::endl;
-
     if (!response.contains("data") || !response["data"].is_boolean()) {
         throw std::runtime_error("Invalid or missing 'data' field in response");
     }
@@ -29,7 +27,6 @@ bool post_check_user_exists(const std::string &username, const unsigned char *pk
 
 bool get_user_exists(const std::string &username) {
     json response = get_unauth("/isUserRegistered/" + username);
-    std::cout << "Response from server: " << response.dump(4) << std::endl;
     return response["data"].get<bool>();
 }
 
@@ -110,18 +107,9 @@ std::vector<std::tuple<std::string, DeviceMessage> > get_messages() {
         return std::vector<std::tuple<std::string, DeviceMessage> >();
     }
 
-    std::cout << "Raw response: " << response.dump() << std::endl;
-    std::cout << "Response keys: ";
-    for (auto &[key, value]: response.items()) {
-        std::cout << key << " ";
-    }
-    std::cout << std::endl;
-
     std::vector<std::tuple<std::string, DeviceMessage> > messages;
 
-    // Check if data array exists
     if (!response.contains("data") || !response["data"].is_array()) {
-        std::cout << "No messages in response" << std::endl;
         return messages;
     }
 
@@ -261,7 +249,6 @@ std::vector<KeyBundle *> get_keybundles(const std::string &username,
             std::string their_onetime_public_hex = bundle["one_time_key"];
             bool onetime_ok = hex_to_bin(their_onetime_public_hex, their_onetime_public.data(),
                                          crypto_sign_PUBLICKEYBYTES);
-            std::cout << "One-time key conversion: " << (onetime_ok ? "success" : "failed") << std::endl;
             if (onetime_ok) {
                 has_onetime = true;
             }
@@ -342,18 +329,10 @@ std::vector<std::tuple<std::string, KeyBundle *> > get_handshake_backlog() {
         return std::vector<std::tuple<std::string, KeyBundle *> >();
     }
 
-    std::cout << "Raw response: " << response.dump() << std::endl;
-    std::cout << "Response keys: ";
-    for (auto &[key, value]: response.items()) {
-        std::cout << key << " ";
-    }
-    std::cout << std::endl;
-
     std::vector<std::tuple<std::string, KeyBundle *> > bundles;
 
     // Check if data array exists
     if (!response.contains("data") || !response["data"].is_array()) {
-        std::cout << "No handshakes in response" << std::endl;
         return bundles;
     }
 
@@ -412,21 +391,12 @@ void post_new_keybundles(
         {"one_time_keys", json::array()}
     };
 
-    std::cout << "DEBUG: post_new_keybundles called" << std::endl;
-    std::cout << "DEBUG: signed_prekeypair pointer = " << (signed_prekeypair ? "NOT NULL" : "NULL") << std::endl;
-
     // Only include signed prekey if pointer is not nullptr
     if (signed_prekeypair != nullptr) {
         auto [pk_signed, sk_signed] = std::move(*signed_prekeypair);
 
-        std::cout << "DEBUG: pk_signed pointer = " << (pk_signed ? "NOT NULL" : "NULL") << std::endl;
-        if (pk_signed) {
-            std::cout << "DEBUG: pk_signed value = " << bin2hex(pk_signed, 32) << std::endl;
-        }
-
         // Only sign if pk_signed is not nullptr
         if (pk_signed != nullptr) {
-            std::cout << "DEBUG: Adding signed prekey to JSON body" << std::endl;
 
             //sign the public key with device key
             unsigned char signature[crypto_sign_BYTES];
@@ -439,19 +409,13 @@ void post_new_keybundles(
             body["signedpre_key"] = signed_prekey_pub_hex;
             body["signedpk_signature"] = signature_hex;
 
-            std::cout << "DEBUG: signed_prekey_pub_hex = " << signed_prekey_pub_hex << std::endl;
-        } else {
-            std::cout << "DEBUG: pk_signed is NULL, not adding to body" << std::endl;
         }
-    } else {
-        std::cout << "DEBUG: signed_prekeypair is NULL, not adding to body" << std::endl;
     }
 
     for (const auto &[pk, sk, nonce]: otks) {
         body["one_time_keys"].push_back(bin2hex(pk, crypto_box_PUBLICKEYBYTES));
     }
 
-    std::cout << "DEBUG: Final JSON body = " << body.dump() << std::endl;
     post("/updateKeybundle", body);
 }
 

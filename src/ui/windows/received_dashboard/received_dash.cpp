@@ -118,7 +118,6 @@ void Received::onDownloadFileClicked(FileItemWidget* widget)
 
 void Received::onReceivedButtonClicked()
 {
-    std::cout << "Received button clicked" << std::endl;
     refreshFileList();
 }
 

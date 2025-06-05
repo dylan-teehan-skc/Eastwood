@@ -40,7 +40,6 @@ void BaseClient::enforceRateLimit(const std::string &host) {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second);
         if (elapsed < rateLimitDelay) {
             auto sleepTime = rateLimitDelay - elapsed;
-            std::cout << "Rate limit reached: Too many requests to " + host << std::endl;
             std::this_thread::sleep_for(sleepTime);
         }
     }

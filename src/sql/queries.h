@@ -139,7 +139,6 @@ inline void save_encrypted_onetime_keys(
             std::cerr << "Error saving one-time key" << std::endl;
         }
     }
-    std::cout << "Finished processing all one-time keys" << std::endl;
 }
 
 inline std::unique_ptr<SecureMemoryBuffer> get_onetime_private_key(const unsigned char *public_key = nullptr) {
@@ -383,9 +382,7 @@ inline void save_message_and_key(
 inline std::vector<unsigned char> get_decrypted_message(const std::string& file_uuid) {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
-    
-    std::cout << "\n--- DEBUG: get_decrypted_message for UUID: " << file_uuid << " ---" << std::endl;
-    
+
     // Get the encrypted message data and its nonce
     db.prepare_or_throw(
         "SELECT encrypted_message, nonce FROM messages WHERE file_uuid = ?;", &stmt
@@ -394,21 +391,13 @@ inline std::vector<unsigned char> get_decrypted_message(const std::string& file_
     
     auto rows = db.query(stmt);
     if (rows.empty()) {
-        std::cout << "DEBUG: No message found in messages for UUID: " << file_uuid << std::endl;
         throw std::runtime_error("No message found with the given file_uuid");
     }
     
     const auto &row = rows[0];
     QByteArray encrypted_message = row["encrypted_message"].toByteArray();
     QByteArray message_nonce = row["nonce"].toByteArray();
-    
-    std::cout << "DEBUG: Found encrypted message in DB" << std::endl;
-    std::cout << "Encrypted message size: " << encrypted_message.size() << " bytes" << std::endl;
-    std::cout << "Message nonce size: " << message_nonce.size() << " bytes" << std::endl;
-    std::cout << "Encrypted message first 16 bytes: ";
-    for (int i = 0; i < std::min(static_cast<qsizetype>(16), encrypted_message.size()); i++) {
-        printf("%02x ", static_cast<unsigned char>(encrypted_message[i]));
-    }
+
     std::cout << std::endl;
     
     // Get the corresponding encryption key
@@ -420,31 +409,18 @@ inline std::vector<unsigned char> get_decrypted_message(const std::string& file_
     
     auto key_rows = db.query(key_stmt);
     if (key_rows.empty()) {
-        std::cout << "DEBUG: No key found in message_keys for UUID: " << file_uuid << std::endl;
         throw std::runtime_error("No key found for the given file_uuid");
     }
     
     const auto &key_row = key_rows[0];
     QByteArray encrypted_key = key_row["encrypted_key"].toByteArray();
     QByteArray key_nonce = key_row["nonce"].toByteArray();
-    
-    std::cout << "DEBUG: Found encryption key in DB" << std::endl;
-    std::cout << "Encrypted key size: " << encrypted_key.size() << " bytes" << std::endl;
-    std::cout << "Key nonce size: " << key_nonce.size() << " bytes" << std::endl;
-    
+
     // Decrypt the symmetric key using KEK
     auto decrypted_key = decrypt_symmetric_key(
         q_byte_array_to_chars(encrypted_key),
         q_byte_array_to_chars(key_nonce)
     );
-    
-    std::cout << "DEBUG: Decrypted symmetric key" << std::endl;
-    std::cout << "Decrypted key size: " << decrypted_key->size() << " bytes" << std::endl;
-    std::cout << "Decrypted key first 8 bytes: ";
-    for (size_t i = 0; i < std::min((size_t)8, decrypted_key->size()); i++) {
-        printf("%02x ", decrypted_key->data()[i]);
-    }
-    std::cout << std::endl;
     
     // Decrypt the message using the decrypted symmetric key
     auto decrypted_message = decrypt_message_with_nonce(
@@ -452,17 +428,7 @@ inline std::vector<unsigned char> get_decrypted_message(const std::string& file_
         decrypted_key,
         std::vector<unsigned char>(message_nonce.begin(), message_nonce.end())
     );
-    
-    std::cout << "DEBUG: Final decrypted message" << std::endl;
-    std::cout << "Final decrypted message size: " << decrypted_message.size() << " bytes" << std::endl;
-    if (!decrypted_message.empty()) {
-        std::cout << "Final decrypted message first 8 bytes: ";
-        for (size_t i = 0; i < std::min((size_t)8, decrypted_message.size()); i++) {
-            printf("%02x ", decrypted_message[i]);
-        }
-        std::cout << std::endl;
-    }
-    
+
     return decrypted_message;
 }
 
@@ -886,12 +852,9 @@ inline std::vector<std::string> get_file_recipients(const std::string& file_uuid
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
     
-    std::cout << "DEBUG: Getting recipients for file UUID: " << file_uuid << std::endl;
-    
     // Get current user's username to exclude them
     std::string current_username = SessionTokenManager::instance().getUsername();
-    std::cout << "DEBUG: Current user: " << current_username << std::endl;
-    
+
     // Get all unique usernames who have received this file, excluding current user
     db.prepare_or_throw(
         "SELECT DISTINCT username FROM messages WHERE file_uuid = ? AND username != ? AND is_sender = 1;", &stmt
@@ -905,39 +868,31 @@ inline std::vector<std::string> get_file_recipients(const std::string& file_uuid
     for (const auto& row : rows) {
         std::string username = row["username"].toString().toStdString();
         recipients.push_back(username);
-        std::cout << "DEBUG: Found recipient: " << username << std::endl;
     }
     
-    std::cout << "DEBUG: Total recipients for file " << file_uuid << " (excluding current user): " << recipients.size() << std::endl;
     return recipients;
 }
 
 inline void delete_file_from_database(const std::string& file_uuid) {
     const auto &db = Database::get();
     
-    std::cout << "DEBUG: Deleting file " << file_uuid << " from database" << std::endl;
-    
+
     try {
         sqlite3_stmt *stmt1;
         db.prepare_or_throw("DELETE FROM file_keys WHERE file_uuid = ?;", &stmt1);
         sqlite3_bind_text(stmt1, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
         db.execute(stmt1);
-        std::cout << "DEBUG: Deleted from file_keys table" << std::endl;
-        
+
         sqlite3_stmt *stmt2;
         db.prepare_or_throw("DELETE FROM messages WHERE file_uuid = ?;", &stmt2);
         sqlite3_bind_text(stmt2, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
         db.execute(stmt2);
-        std::cout << "DEBUG: Deleted from messages table" << std::endl;
-        
+
         sqlite3_stmt *stmt3;
         db.prepare_or_throw("DELETE FROM message_keys WHERE file_uuid = ?;", &stmt3);
         sqlite3_bind_text(stmt3, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
         db.execute(stmt3);
-        std::cout << "DEBUG: Deleted from message_keys table" << std::endl;
-        
-        std::cout << "DEBUG: Successfully deleted file " << file_uuid << " from all database tables" << std::endl;
-        
+
     } catch (const std::exception& e) {
         std::cerr << "ERROR: Failed to delete file " << file_uuid << " from database: " << e.what() << std::endl;
         throw;
