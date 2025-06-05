@@ -59,8 +59,9 @@ inline void update_messages() {
         std::array<unsigned char, CHA_CHA_NONCE_LEN> nonce_for_msg{};
         randombytes_buf(nonce_for_msg.data(), CHA_CHA_NONCE_LEN);
 
-        auto encrypted_message_for_db = encrypt_message_with_nonce(q_decrypted_message, new_db_message_key, nonce_for_msg.data());
-        
+        auto encrypted_message_for_db = encrypt_message_with_nonce(q_decrypted_message, new_db_message_key,
+                                                                   nonce_for_msg.data());
+
         std::cout << "Re-encrypted message for DB size: " << encrypted_message_for_db.size() << " bytes" << std::endl;
         std::cout << "Re-encrypted message first 16 bytes: ";
         for (size_t i = 0; i < std::min(static_cast<size_t>(16), encrypted_message_for_db.size()); i++) {
@@ -88,8 +89,8 @@ struct FileData {
     std::string owner;
 };
 
-inline std::vector<std::tuple<std::string, std::string>> (*get_uuid_to_username(bool is_sending))(){
-    std::vector<std::tuple<std::string, std::string>> (*get_uuid_to_username)();
+inline std::vector<std::tuple<std::string, std::string> > (*get_uuid_to_username(bool is_sending))() {
+    std::vector<std::tuple<std::string, std::string> > (*get_uuid_to_username)();
     if (is_sending) {
         return &get_all_sent_file_uuids;
     } else {
@@ -260,7 +261,7 @@ inline void download_file(const std::string &file_uuid, const std::string &mime_
             file_key.data());
 
         if (decrypted_data.empty()) {
-            QMessageBox::critical(parent, "Download Error", "Failed to decrypt file. The file key may be incorrect.");
+            QMessageBox::critical(parent, "Download Error", "You no longer have access to this file");
             return;
         }
 
@@ -300,8 +301,7 @@ inline void download_file(const std::string &file_uuid, const std::string &mime_
                                  .arg(fileName).arg(decrypted_data.size()));
     } catch (const std::exception &e) {
         std::cerr << "Error downloading file: " << e.what() << std::endl;
-        QMessageBox::critical(parent, "Download Error",
-                              QString("An error occurred while downloading the file:\n%1").arg(e.what()));
+        QMessageBox::critical(parent, "Download Error", QString("You no longer have access to this file"));
     }
 }
 
@@ -311,7 +311,7 @@ inline void delete_file(std::string uuid) {
         delete_file_from_database(uuid);
 
         std::cout << "Successfully deleted file " << uuid << std::endl;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << "Failed to delete file " << uuid << ": " << e.what() << std::endl;
         throw;
     }
