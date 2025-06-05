@@ -190,7 +190,8 @@ bool Settings::handleDeviceConnection(const QString& publicKey)
 
             add_trusted_device(pk_new_device, deviceName.toStdString());
             StyledMessageBox::success(this, "Connection Accepted",
-                QString("Connection request has been accepted for device: %1").arg(deviceName));
+            QString("Connection request has been accepted for device: %1").arg(deviceName));
+            updateDeviceList();
             qDebug() << "Connection accepted with public key:" << publicKey << "and device name:" << deviceName;
             return true;
         } catch (const std::runtime_error& e) {

@@ -125,8 +125,8 @@ QPushButton* FileItemWidget::createDownloadButton()
 
 QPushButton* FileItemWidget::createRevokeButton()
 {
-    revokeButton = new QPushButton("Revoke", this);
-    revokeButton->setFixedSize(75, 30);
+    revokeButton = new QPushButton("Manage Access", this);
+    revokeButton->setFixedSize(110, 30);
     revokeButton->setCursor(Qt::PointingHandCursor);
     revokeButton->setStyleSheet(R"(
         QPushButton {

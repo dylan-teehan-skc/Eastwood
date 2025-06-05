@@ -2,6 +2,7 @@
 #include "ui_sent_dash.h"
 #include "src/ui/utils/messagebox.h"
 #include "src/ui/utils/window_manager/window_manager.h"
+#include "src/ui/utils/byte_converter/byte_converter.h"
 #include <QVBoxLayout>
 #include <QDialog>
 #include <QScrollArea>
@@ -81,8 +82,12 @@ void Sent::refreshFileList()
     ui->noFilesLabel->setVisible(metadata.empty());
 
     for (const auto& [file_name, file_size, mime_type, uuid, username] : metadata) {
-        std::string file_size_str = std::to_string(file_size);
-        addFileItem(QString::fromStdString(file_name), QString::fromStdString(file_size_str), "sadfa", QString::fromStdString(username), uuid, mime_type);
+        addFileItem(QString::fromStdString(file_name), 
+                   QString::fromStdString(convertFileSizeToHumanReadable(file_size)), 
+                   "", 
+                   QString::fromStdString(username), 
+                   uuid, 
+                   mime_type);
     }
 }
 
@@ -294,6 +299,7 @@ void Sent::onDeleteFileClicked(const FileItemWidget* widget)
         delete_file(widget->getUuid());
         StyledMessageBox::info(this, "File Deleted",
                              QString("File deleted: %1").arg(widget->getFileName()));
+        refreshFileList();
     }
 }
 
