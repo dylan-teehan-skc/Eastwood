@@ -26,11 +26,13 @@ public:
 
 signals:
     void userRegistered(); // Signal emitted when background thread detects registration
+    void pingTimeout(); // Signal emitted when pinging times out
 
 private slots:
     static void onBackButtonClicked();
     void onCopyButtonClicked();
     void onUserRegistered();
+    void onPingTimeout();
 
 private:
     Ui::DeviceRegister *ui;

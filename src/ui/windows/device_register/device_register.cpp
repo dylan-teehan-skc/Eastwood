@@ -16,7 +16,17 @@
 #include "src/auth/set_up_client.h"
 
 void continuously_ping(const std::array<unsigned char, 32> &pk_device, QObject* deviceRegister, const std::string& username) {
+    const auto start_time = std::chrono::steady_clock::now();
+    constexpr auto timeout_duration = std::chrono::minutes(2);
+
     while (true) {
+        // Check if we've exceeded the timeout
+        auto current_time = std::chrono::steady_clock::now();
+        if (current_time - start_time > timeout_duration) {
+            QMetaObject::invokeMethod(deviceRegister, "pingTimeout", Qt::QueuedConnection);
+            return;
+        }
+
         std::this_thread::sleep_for(std::chrono::seconds(2));
         try {
             qDebug() << "pinging for user: " << QString::fromStdString(username);
@@ -65,6 +75,7 @@ void DeviceRegister::setupConnections()
     connect(ui->backButton, &QPushButton::clicked, this, &DeviceRegister::onBackButtonClicked);
     connect(ui->copyButton, &QPushButton::clicked, this, &DeviceRegister::onCopyButtonClicked);
     connect(this, &DeviceRegister::userRegistered, this, &DeviceRegister::onUserRegistered);
+    connect(this, &DeviceRegister::pingTimeout, this, &DeviceRegister::onPingTimeout);
 }
 
 void DeviceRegister::displayQRCode(const QImage& qr_code) const {
@@ -145,4 +156,10 @@ void DeviceRegister::onUserRegistered()
     } catch (const std::exception& e) {
         qDebug() << "Login failed:" << e.what();
     }
+}
+
+void DeviceRegister::onPingTimeout()
+{
+    StyledMessageBox::error(this, "Timeout", "Took too long, returning to login");
+    WindowManager::instance().showLogin();
 }
