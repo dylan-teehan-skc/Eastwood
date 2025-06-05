@@ -7,7 +7,10 @@
 #include <QFileDialog>
 #include <QLineEdit>
 #include <QCheckBox>
+
 #include "src/communication/send_file_to/send_file_to.h"
+#include "src/ui/utils/byte_converter/byte_converter.h"
+#include "src/algorithms/constants.h"
 
 
 SendFile::SendFile(QWidget *parent)
@@ -41,38 +44,28 @@ void SendFile::onBrowseClicked() {
         // Sanitize the file path
         QFileInfo fileInfo(filePath);
         QString canonicalPath = fileInfo.canonicalFilePath();
-        
+
         // use canonical path to avoid path traversal attacks
         if (canonicalPath.isEmpty() || !fileInfo.exists()) {
-            StyledMessageBox::error(this, "Invalid File", 
+            StyledMessageBox::error(this, "Invalid File",
                 "The selected file path is invalid or does not exist.");
             return;
         }
 
         // Get file information
         qint64 size = fileInfo.size();
-        
-        if (size > 250 * 1024) {  // 250KB in bytes
-            StyledMessageBox::error(this, "File Too Large", 
-                "The selected file is too large. Maximum file size is 250KB.");
+
+        if (size > MAX_FILE_SIZE_BYTES) {  // 250KB in bytes
+            StyledMessageBox::error(this, "File Too Large",
+                ("The selected file is too large. Maximum file size is " + convertFileSizeToHumanReadable(MAX_FILE_SIZE_BYTES)).data());
             return;
         }
 
         ui->filePathInput->setText(canonicalPath);
         QString fileName = fileInfo.fileName();
-        QString sizeStr;
 
         // Convert size to human-readable format
-        if (size < 1024) {
-            sizeStr = QString("%1 B").arg(size);
-        } else if (size < 1024 * 1024) {
-            sizeStr = QString("%1 KB").arg(size / 1024.0, 0, 'f', 1);
-        } else if (size < 1024 * 1024 * 1024) {
-            sizeStr = QString("%1 MB").arg(size / (1024.0 * 1024.0), 0, 'f', 1);
-        } else {
-            sizeStr = QString("%1 GB").arg(size / (1024.0 * 1024.0 * 1024.0), 0, 'f', 1);
-        }
-
+        const QString sizeStr = QString::fromStdString(convertFileSizeToHumanReadable(size));
         // Format the details text
         QString details = QString("File Details:\n\n"
                     "Name: %1\n"
@@ -138,6 +131,6 @@ void SendFile::onSettingsButtonClicked() const {
 void SendFile::onShowAuthCodeClicked()
 {
     QString authCode = "1234567890"; // TODO UPDATE THIS
-    StyledMessageBox::displayCode(this, "Authentication Code", 
+    StyledMessageBox::displayCode(this, "Authentication Code",
         "Please verify this code with the sender's device:", authCode);
 }
