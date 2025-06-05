@@ -114,6 +114,5 @@ void NavBar::onSettingsButtonClicked() {
 
 void NavBar::onLogoutButtonClicked() {
     logout();
-    WindowManager::instance().getLoginWindow()->hidePassphraseStage();
-    WindowManager::instance().showLogin();
+    WindowManager::instance().restart();
 }

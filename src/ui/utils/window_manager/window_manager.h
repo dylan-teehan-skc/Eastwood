@@ -34,7 +34,7 @@ public:
                            unsigned char* pk_dev, std::unique_ptr<SecureMemoryBuffer> sk_dev,
                            const std::string& username);
     void cleanup();
-    Login* getLoginWindow() { return m_login; }
+    void restart(); 
 
 signals:
     void windowShown(const QString& windowName);

@@ -6,8 +6,8 @@
 #include "../../windows/login/login.h"
 #include "../../windows/register/register.h"
 #include "../../windows/device_register/device_register.h"
-
 #include "src/endpoints/endpoints.h"
+#include <QDebug>
 
 WindowManager &WindowManager::instance() {
     static WindowManager instance;
@@ -46,6 +46,12 @@ void WindowManager::cleanup() {
 
     // Clear the windows list
     m_windows.clear();
+}
+
+void WindowManager::restart() {
+    qDebug() << "Restarting window manager";
+    cleanup();
+    showLogin();
 }
 
 template<typename T, typename... Args>
