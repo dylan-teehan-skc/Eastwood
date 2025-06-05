@@ -12,7 +12,7 @@
 void login_user(
     const std::string &username, 
     std::unique_ptr<SecureMemoryBuffer>&& master_password, 
-    bool is_new_device = false
+    bool post_new_keys = true
 );
 
 #endif // AUTH_LOGIN_H
