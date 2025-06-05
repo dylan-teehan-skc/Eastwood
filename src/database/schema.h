@@ -104,24 +104,25 @@ inline void init_schema() {
         UPDATE ratchet_keys SET last_modified = CURRENT_TIMESTAMP WHERE device_id = OLD.device_id;
     END;
 
-CREATE TABLE IF NOT EXISTS received_messages (
+    CREATE TABLE IF NOT EXISTS messages (
         username       TEXT,
         from_device_id BLOB,
         nonce         BLOB UNIQUE,
         encrypted_message         BLOB UNIQUE,
         file_uuid TEXT PRIMARY KEY,
+        is_sender INTEGER,
         created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_modified DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TRIGGER IF NOT EXISTS received_messages_last_modified_trigger
-    AFTER UPDATE ON received_messages
+    CREATE TRIGGER IF NOT EXISTS messages_last_modified_trigger
+    AFTER UPDATE ON messages
     FOR EACH ROW
     BEGIN
-        UPDATE received_messages SET last_modified = CURRENT_TIMESTAMP WHERE file_uuid = OLD.file_uuid;
+        UPDATE messages SET last_modified = CURRENT_TIMESTAMP WHERE file_uuid = OLD.file_uuid;
     END;
 
-    CREATE TABLE IF NOT EXISTS received_message_keys (
+    CREATE TABLE IF NOT EXISTS message_keys (
         username TEXT,
         device_id       BLOB,
         nonce         BLOB UNIQUE,
@@ -131,8 +132,8 @@ CREATE TABLE IF NOT EXISTS received_messages (
         last_modified DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TRIGGER IF NOT EXISTS received_message_keys_last_modified_trigger
-    AFTER UPDATE ON received_message_keys
+    CREATE TRIGGER IF NOT EXISTS message_keys_last_modified_trigger
+    AFTER UPDATE ON message_keys
     FOR EACH ROW
     BEGIN
         UPDATE received_message_keys SET last_modified = CURRENT_TIMESTAMP WHERE file_uuid = OLD.file_uuid;

@@ -526,6 +526,23 @@ std::vector<EncryptedMetadata> get_encrypted_file_metadata(const std::vector<std
 
     return output;
 }
+void post_revoke_file_access(const std::string &file_uuid) {
+    const json body = {
+        {"file_id", file_uuid}
+    };
+
+    post("/revokeFileAccess", body);
+}
+
+void post_update_file_key(const std::string &file_uuid, const std::vector<unsigned char> &new_encrypted_key) {
+    const json body = {
+        {"file_id", file_uuid},
+        {"new_encrypted_file_key", bin2hex(new_encrypted_key.data(), new_encrypted_key.size())}
+    };
+
+    post("/updateFileKey", body);
+}
+
 
 void post_delete_file(const std::string &uuid) {
     const json body = {

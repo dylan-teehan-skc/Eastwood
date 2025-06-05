@@ -16,11 +16,14 @@
 #include "src/algorithms/algorithms.h"
 #include "src/sessions/RatchetSessionManager.h"
 
-void send_file_to(const std::string &username, const std::string &file_path) {
+void allow_access_to_file(
+    const std::string &username,
+    const std::string &uuid,
+    const std::unique_ptr<SecureMemoryBuffer> &f_kek
+) {
     const auto file_key = SecureMemoryBuffer::create(SYM_KEY_LEN);
     randombytes_buf(file_key->data(), SYM_KEY_LEN);
 
-    const std::string uuid = upload_file(file_path, file_key);
     std::map<std::array<unsigned char, 32>, std::tuple<std::array<unsigned char, 32>, MessageHeader> > keys_to_send_key
             = RatchetSessionManager::instance().get_keys_for_identity(username);
 
@@ -35,7 +38,7 @@ void send_file_to(const std::string &username, const std::string &file_path) {
             message->header.file_uuid[sizeof(message->header.file_uuid) - 1] = '\0';
 
             // Encrypt the file key using the message key
-            message->ciphertext = encrypt_message_given_key(file_key->data(), file_key->size(), key.data());
+            message->ciphertext = encrypt_message_given_key(f_kek->data(), f_kek->size(), key.data());
 
             messages.push_back(std::make_tuple(device_id, message));
         }
@@ -58,7 +61,7 @@ void send_file_to(const std::string &username, const std::string &file_path) {
 
             // Encrypt the file key (which was the original "message" content)
             auto encrypted_message_again = encrypt_message_with_nonce(
-                QByteArray(reinterpret_cast<const char *>(file_key->data()), file_key->size()),
+                QByteArray(reinterpret_cast<const char *>(f_kek->data()), f_kek->size()),
                 std::move(message_encryption_key),
                 message_nonce
             );
@@ -71,12 +74,9 @@ void send_file_to(const std::string &username, const std::string &file_path) {
             // Extract file_uuid from header
             std::string file_uuid(msg->header.file_uuid);
 
-            // Get current username and save the message
-            std::string current_username = SessionTokenManager::instance().getUsername();
-
             // Save using current user as sender (since this is a sent message)
-            save_message_and_key(current_username, device_id, file_uuid, encrypted_message_again, message_nonce,
-                                 encrypted_key, key_nonce);
+            save_message_and_key(username, device_id, file_uuid, encrypted_message_again, message_nonce,
+                                 encrypted_key, key_nonce, true);
         }
 
         // Clean up DeviceMessage objects after posting
@@ -84,4 +84,12 @@ void send_file_to(const std::string &username, const std::string &file_path) {
             delete msg; // DeviceMessage destructor handles header and ciphertext cleanup
         }
     }
+}
+
+void send_file_to(const std::string &username, const std::string &file_path) {
+    const auto f_kek = SecureMemoryBuffer::create(SYM_KEY_LEN);
+    randombytes_buf(f_kek->data(), f_kek->size());
+
+    const std::string uuid = upload_file(file_path, f_kek);
+    allow_access_to_file(username, uuid, f_kek);
 }

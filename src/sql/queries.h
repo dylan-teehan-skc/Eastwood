@@ -347,26 +347,28 @@ inline void save_message_and_key(
     const std::vector<unsigned char>& encrypted_message,
     const unsigned char* message_nonce, 
     const std::unique_ptr<SecureMemoryBuffer>& encrypted_key, 
-    const unsigned char* key_nonce
+    const unsigned char* key_nonce,
+    bool sender = false
 ) {
     const auto &db = Database::get();
     
     // Save encrypted message
     sqlite3_stmt *stmt;
     db.prepare_or_throw(
-        "INSERT OR REPLACE INTO received_messages (username, from_device_id, file_uuid, nonce, encrypted_message) VALUES (?, ?, ?, ?, ?);", &stmt
+        "INSERT OR REPLACE INTO messages (username, from_device_id, file_uuid, nonce, encrypted_message, is_sender) VALUES (?, ?, ?, ?, ?, ?);", &stmt
     );
     sqlite3_bind_text(stmt, 1, username.c_str(), static_cast<int>(username.length()), SQLITE_TRANSIENT);
     sqlite3_bind_blob(stmt, 2, from_device_id.data(), 32, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 3, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
     sqlite3_bind_blob(stmt, 4, message_nonce, CHA_CHA_NONCE_LEN, SQLITE_TRANSIENT);
     sqlite3_bind_blob(stmt, 5, encrypted_message.data(), encrypted_message.size(), SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 6, sender ? 1: 0);
     db.execute(stmt);
 
     // Save encrypted key
     sqlite3_stmt *stmt2;
     db.prepare_or_throw(
-        "INSERT OR REPLACE INTO received_message_keys (username, device_id, file_uuid, nonce, encrypted_key) VALUES (?, ?, ?, ?, ?);", &stmt2
+        "INSERT OR REPLACE INTO message_keys (username, device_id, file_uuid, nonce, encrypted_key) VALUES (?, ?, ?, ?, ?);", &stmt2
     );
     sqlite3_bind_text(stmt2, 1, username.c_str(), static_cast<int>(username.length()), SQLITE_TRANSIENT);
     sqlite3_bind_blob(stmt2, 2, from_device_id.data(), 32, SQLITE_TRANSIENT);
@@ -385,13 +387,13 @@ inline std::vector<unsigned char> get_decrypted_message(const std::string& file_
     
     // Get the encrypted message data and its nonce
     db.prepare_or_throw(
-        "SELECT encrypted_message, nonce FROM received_messages WHERE file_uuid = ?;", &stmt
+        "SELECT encrypted_message, nonce FROM messages WHERE file_uuid = ?;", &stmt
     );
     sqlite3_bind_text(stmt, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
     
     auto rows = db.query(stmt);
     if (rows.empty()) {
-        std::cout << "DEBUG: No message found in received_messages for UUID: " << file_uuid << std::endl;
+        std::cout << "DEBUG: No message found in messages for UUID: " << file_uuid << std::endl;
         throw std::runtime_error("No message found with the given file_uuid");
     }
     
@@ -411,13 +413,13 @@ inline std::vector<unsigned char> get_decrypted_message(const std::string& file_
     // Get the corresponding encryption key
     sqlite3_stmt *key_stmt;
     db.prepare_or_throw(
-        "SELECT encrypted_key, nonce FROM received_message_keys WHERE file_uuid = ?;", &key_stmt
+        "SELECT encrypted_key, nonce FROM message_keys WHERE file_uuid = ?;", &key_stmt
     );
     sqlite3_bind_text(key_stmt, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
     
     auto key_rows = db.query(key_stmt);
     if (key_rows.empty()) {
-        std::cout << "DEBUG: No key found in received_message_keys for UUID: " << file_uuid << std::endl;
+        std::cout << "DEBUG: No key found in message_keys for UUID: " << file_uuid << std::endl;
         throw std::runtime_error("No key found for the given file_uuid");
     }
     
@@ -473,7 +475,7 @@ inline std::vector<unsigned char> get_decrypted_message_by_username_device(
     
     // Get the encrypted message data and its nonce
     db.prepare_or_throw(
-        "SELECT encrypted_message, nonce, file_uuid FROM received_messages WHERE username = ? AND from_device_id = ?;", &stmt
+        "SELECT encrypted_message, nonce, file_uuid FROM messages WHERE username = ? AND from_device_id = ?;", &stmt
     );
     sqlite3_bind_text(stmt, 1, username.c_str(), static_cast<int>(username.length()), SQLITE_TRANSIENT);
     sqlite3_bind_blob(stmt, 2, from_device_id.data(), 32, SQLITE_TRANSIENT);
@@ -491,7 +493,7 @@ inline std::vector<unsigned char> get_decrypted_message_by_username_device(
     // Get the corresponding encryption key
     sqlite3_stmt *key_stmt;
     db.prepare_or_throw(
-        "SELECT encrypted_key, nonce FROM received_message_keys WHERE username = ? AND device_id = ? AND file_uuid = ?;", &key_stmt
+        "SELECT encrypted_key, nonce FROM message_keys WHERE username = ? AND device_id = ? AND file_uuid = ?;", &key_stmt
     );
     sqlite3_bind_text(key_stmt, 1, username.c_str(), static_cast<int>(username.length()), SQLITE_TRANSIENT);
     sqlite3_bind_blob(key_stmt, 2, from_device_id.data(), 32, SQLITE_TRANSIENT);
@@ -529,7 +531,7 @@ inline std::vector<std::tuple<std::string, std::array<unsigned char, 32>, std::v
     
     // Get all messages for the user
     db.prepare_or_throw(
-        "SELECT from_device_id, encrypted_message, nonce, file_uuid FROM received_messages WHERE username = ?;", &stmt
+        "SELECT from_device_id, encrypted_message, nonce, file_uuid FROM messages WHERE username = ?;", &stmt
     );
     sqlite3_bind_text(stmt, 1, username.c_str(), static_cast<int>(username.length()), SQLITE_TRANSIENT);
     
@@ -554,7 +556,7 @@ inline std::vector<std::tuple<std::string, std::array<unsigned char, 32>, std::v
         sqlite3_stmt *key_stmt;
         try {
             db.prepare_or_throw(
-                "SELECT encrypted_key, nonce FROM received_message_keys WHERE username = ? AND device_id = ? AND file_uuid = ?;", &key_stmt
+                "SELECT encrypted_key, nonce FROM message_keys WHERE username = ? AND device_id = ? AND file_uuid = ?;", &key_stmt
             );
             sqlite3_bind_text(key_stmt, 1, username.c_str(), static_cast<int>(username.length()), SQLITE_TRANSIENT);
             sqlite3_bind_blob(key_stmt, 2, device_id.data(), 32, SQLITE_TRANSIENT);
@@ -601,7 +603,7 @@ inline std::vector<std::tuple<std::string, std::string, std::array<unsigned char
     
     // Get all messages except those from the current user
     db.prepare_or_throw(
-        "SELECT username, from_device_id, encrypted_message, nonce, file_uuid FROM received_messages WHERE username != ?;", &stmt
+        "SELECT username, from_device_id, encrypted_message, nonce, file_uuid FROM messages WHERE username != ?;", &stmt
     );
     sqlite3_bind_text(stmt, 1, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
     
@@ -634,7 +636,7 @@ inline std::vector<std::tuple<std::string, std::string, std::array<unsigned char
         sqlite3_stmt *key_stmt;
         try {
             db.prepare_or_throw(
-                "SELECT encrypted_key, nonce FROM received_message_keys WHERE username = ? AND device_id = ? AND file_uuid = ?;", &key_stmt
+                "SELECT encrypted_key, nonce FROM message_keys WHERE username = ? AND device_id = ? AND file_uuid = ?;", &key_stmt
             );
             sqlite3_bind_text(key_stmt, 1, username.c_str(), static_cast<int>(username.length()), SQLITE_TRANSIENT);
             sqlite3_bind_blob(key_stmt, 2, device_id.data(), 32, SQLITE_TRANSIENT);
@@ -670,7 +672,7 @@ inline std::vector<std::tuple<std::string, std::string, std::array<unsigned char
     return result;
 }
 
-inline std::vector<std::tuple<std::string,std::string>> get_all_received_file_uuids() {
+inline std::vector<std::tuple<std::string, std::string>> get_all_received_file_uuids() {
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
 
@@ -679,10 +681,9 @@ inline std::vector<std::tuple<std::string,std::string>> get_all_received_file_uu
 
     // Get all messages except those from the current user
     db.prepare_or_throw(
-        "SELECT file_uuid, username FROM received_messages WHERE username != ?;", &stmt
+        "SELECT file_uuid, username FROM messages WHERE username != ? AND is_sender = 0;", &stmt
     );
     sqlite3_bind_text(stmt, 1, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
 
     auto rows = db.query(stmt);
     std::set<std::string> seen_file_uuids; // Track unique file UUIDs
@@ -707,12 +708,10 @@ inline std::vector<std::tuple<std::string,std::string>> get_all_sent_file_uuids(
     const auto &db = Database::get();
     sqlite3_stmt *stmt;
 
-    // Get current user's username to exclude their messages
     std::string current_username = SessionTokenManager::instance().getUsername();
 
-    // Get all messages except those from the current user
     db.prepare_or_throw(
-        "SELECT file_uuid, username FROM received_messages WHERE username == ?;", &stmt
+        "SELECT file_uuid, username FROM messages WHERE username != ? AND is_sender = 1;", &stmt
     );
     sqlite3_bind_text(stmt, 1, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 2, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
@@ -813,7 +812,7 @@ inline std::vector<std::tuple<std::string, std::string, std::array<unsigned char
     
     // Get all messages sent by the current user
     db.prepare_or_throw(
-        "SELECT username, from_device_id, encrypted_message, nonce, file_uuid FROM received_messages WHERE username = ?;", &stmt
+        "SELECT username, from_device_id, encrypted_message, nonce, file_uuid FROM messages WHERE username = ?;", &stmt
     );
     sqlite3_bind_text(stmt, 1, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
     
@@ -846,7 +845,7 @@ inline std::vector<std::tuple<std::string, std::string, std::array<unsigned char
         sqlite3_stmt *key_stmt;
         try {
             db.prepare_or_throw(
-                "SELECT encrypted_key, nonce FROM received_message_keys WHERE username = ? AND device_id = ? AND file_uuid = ?;", &key_stmt
+                "SELECT encrypted_key, nonce FROM message_keys WHERE username = ? AND device_id = ? AND file_uuid = ?;", &key_stmt
             );
             sqlite3_bind_text(key_stmt, 1, username.c_str(), static_cast<int>(username.length()), SQLITE_TRANSIENT);
             sqlite3_bind_blob(key_stmt, 2, device_id.data(), 32, SQLITE_TRANSIENT);
@@ -894,7 +893,7 @@ inline std::vector<std::string> get_file_recipients(const std::string& file_uuid
     
     // Get all unique usernames who have received this file, excluding current user
     db.prepare_or_throw(
-        "SELECT DISTINCT username FROM received_messages WHERE file_uuid = ? AND username != ?;", &stmt
+        "SELECT DISTINCT username FROM messages WHERE file_uuid = ? AND username != ? AND is_sender = 1;", &stmt
     );
     sqlite3_bind_text(stmt, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 2, current_username.c_str(), static_cast<int>(current_username.length()), SQLITE_TRANSIENT);
@@ -925,16 +924,16 @@ inline void delete_file_from_database(const std::string& file_uuid) {
         std::cout << "DEBUG: Deleted from file_keys table" << std::endl;
         
         sqlite3_stmt *stmt2;
-        db.prepare_or_throw("DELETE FROM received_messages WHERE file_uuid = ?;", &stmt2);
+        db.prepare_or_throw("DELETE FROM messages WHERE file_uuid = ?;", &stmt2);
         sqlite3_bind_text(stmt2, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
         db.execute(stmt2);
-        std::cout << "DEBUG: Deleted from received_messages table" << std::endl;
+        std::cout << "DEBUG: Deleted from messages table" << std::endl;
         
         sqlite3_stmt *stmt3;
-        db.prepare_or_throw("DELETE FROM received_message_keys WHERE file_uuid = ?;", &stmt3);
+        db.prepare_or_throw("DELETE FROM message_keys WHERE file_uuid = ?;", &stmt3);
         sqlite3_bind_text(stmt3, 1, file_uuid.c_str(), static_cast<int>(file_uuid.length()), SQLITE_TRANSIENT);
         db.execute(stmt3);
-        std::cout << "DEBUG: Deleted from received_message_keys table" << std::endl;
+        std::cout << "DEBUG: Deleted from message_keys table" << std::endl;
         
         std::cout << "DEBUG: Successfully deleted file " << file_uuid << " from all database tables" << std::endl;
         

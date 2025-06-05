@@ -14,6 +14,7 @@ int main(int argc, char *argv[]) {
         throw std::runtime_error("Libsodium initialization failed");
     }
 
+    drop_all_tables();
     WindowManager::instance().showLogin();
     return app.exec();
 }

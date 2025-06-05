@@ -105,4 +105,8 @@ std::map<std::string, std::tuple<std::string, std::vector<unsigned char>> > get_
 
 void post_delete_file(const std::string &uuid);
 
+void post_revoke_file_access(const std::string &file_uuid);
+
+void post_update_file_key(const std::string &file_uuid, const std::vector<unsigned char> &new_encrypted_key);
+
 #endif //ENDPOINTS_H

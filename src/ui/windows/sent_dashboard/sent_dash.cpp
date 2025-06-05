@@ -14,6 +14,7 @@
 #include <QPixmap>
 
 #include "src/communication/ReceiveFlow.h"
+#include "src/communication/revoke_file/revoke_file.h"
 #include "src/sql/queries.h"
 
 // Sent implementation
@@ -253,24 +254,30 @@ void Sent::onRevokeAccessClicked(const FileItemWidget* widget)
 
     // Connect buttons
     connect(acceptButton, &QPushButton::clicked, [=]() {
-        QStringList selectedUsers;
+        std::vector<std::string> selectedUsers;
         for (auto* checkbox : checkboxes) {
             if (!checkbox->isChecked()) {
-                selectedUsers.append(checkbox->text());
+                selectedUsers.emplace_back(checkbox->text().toStdString());
             }
         }
 
-        if (selectedUsers.isEmpty()) {
+        if (selectedUsers.empty()) {
             StyledMessageBox::warning(this, "No Changes Made", 
                                     "Please uncheck at least one user to remove their access.");
             return;
         }
 
-        // TODO: Implement actual revoke access functionality
-        QString message = QString("Access will be removed for:\n\n%1")
-                         .arg(selectedUsers.join("\n"));
+        QString message = QString("Access will be removed for the unchecked users");
         StyledMessageBox::info(this, "Access Removed", message);
         revokeDialog->accept();
+
+        // call to fred
+        try {
+            refresh_access(selectedUsers, widget->getUuid());
+
+        } catch (...) {
+            StyledMessageBox::warning(this, "Failed. Try again: ", message);
+        }
     });
 
     connect(cancelButton, &QPushButton::clicked, revokeDialog, &QDialog::reject);
