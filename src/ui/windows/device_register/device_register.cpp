@@ -122,11 +122,11 @@ void DeviceRegister::onUserRegistered() {
             return;
         }
 
-        if (passphrase.length() >= 20 && passphrase.length() <= 64) {
+        if (passphrase.length() >= 15 && passphrase.length() <= 64) {
             break;
         }
 
-        StyledMessageBox::error(this, "Invalid Passphrase", "Passphrase must be between 20 and 64 characters");
+        StyledMessageBox::error(this, "Invalid Passphrase", "Passphrase must be between 15 and 64 characters");
     } while (true);
 
     try {
