@@ -149,9 +149,22 @@ void Login::onLoginButtonClicked()
         return;
     }
 
+    const std::optional<int> login_count = cache.get("login_count");
+    if (login_count.has_value()) {
+        int count = login_count.value();
+        if (++count > MAX_LOGIN_ATTEMPTS) {
+            StyledMessageBox::error(this, "Login Failed", QString("Too many incorrect attempts, try again later"));
+            return;
+        }
+        cache.set("login_count", count);
+    } else {
+        cache.set("login_count", 1);
+    }
+
     try {
         auto securePassphrase = SecureMemoryBuffer::create(passphrase.length());
         memcpy(securePassphrase->data(), passphrase.toUtf8().constData(), passphrase.length());
+        cache.clear();
         
         // Clear the password from the UI widget directly
         ui->passphraseEdit->clear();

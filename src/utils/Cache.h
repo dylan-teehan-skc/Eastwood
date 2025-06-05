@@ -5,8 +5,6 @@
 #include <optional>
 #include <chrono>
 
-namespace utils {
-
 template<typename T>
 class Cache {
 private:
@@ -65,5 +63,3 @@ public:
         return true;
     }
 };
-
-} // namespace utils 

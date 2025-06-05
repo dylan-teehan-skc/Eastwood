@@ -8,6 +8,9 @@
 #include <array>
 #include <sodium.h>
 #include "src/keys/secure_memory_buffer.h"
+#include "utils/Cache.h"
+#define MAX_LOGIN_ATTEMPTS 3
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Login; }
@@ -30,6 +33,8 @@ private slots:
 
 private:
     Ui::Login *ui;
+    Cache<int> cache{std::chrono::seconds(60)};
+
     void setupConnections();
     bool m_passphraseVisible = false;
     void showPassphraseStage() const;
