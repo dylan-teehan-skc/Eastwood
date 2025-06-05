@@ -38,6 +38,12 @@ Settings::Settings(QWidget *parent)
 
     // Update username from KEK manager
     updateUsername();
+    try {
+        get_public_key("identity");
+        ui->authWidget->show();
+    } catch (const std::runtime_error& e) {
+        ui->authWidget->hide();
+    }
 }
 
 Settings::~Settings()
