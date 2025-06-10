@@ -73,7 +73,6 @@ make IntegrationTests
 ![Auth Post](https://github.com/user-attachments/assets/c097ceae-31bc-4fb9-9e77-405575d33103)
 ![Auth Get](https://github.com/user-attachments/assets/e5e7bda4-ad79-4658-9486-382b03d7485e)
 
-
 ## Dependencies
 
 - **Qt6**: Core, Gui, Widgets, UiTools, Concurrent.
