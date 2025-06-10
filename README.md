@@ -73,6 +73,13 @@ make IntegrationTests
 ![Auth Post](https://github.com/user-attachments/assets/c097ceae-31bc-4fb9-9e77-405575d33103)
 ![Auth Get](https://github.com/user-attachments/assets/e5e7bda4-ad79-4658-9486-382b03d7485e)
 
+**Frontend view - Built using QT
+
+<img width="540" alt="image" src="https://github.com/user-attachments/assets/0e20dd6e-f590-4bf2-9f98-7d6371eb3a4e" />
+<img width="1020" alt="image" src="https://github.com/user-attachments/assets/6d86f547-2d93-4d10-8e25-902b9bf96bca" />
+<img width="1017" alt="image" src="https://github.com/user-attachments/assets/89032d68-0cd7-465e-ad2b-b625e174cb74" />
+
+
 ## Dependencies
 
 - **Qt6**: Core, Gui, Widgets, UiTools, Concurrent.
